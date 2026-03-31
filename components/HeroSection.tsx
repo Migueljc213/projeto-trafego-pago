@@ -7,7 +7,7 @@ import FunnelVisual from "./FunnelVisual";
 const badgeItems = [
   { icon: Shield, label: "White Glove CAPI Setup" },
   { icon: TrendingUp, label: "Full Funnel AI Diagnosis" },
-  { icon: Zap, label: "Real-time Leak Detection" },
+  { icon: Zap, label: "Detecção de Vazamentos em Tempo Real" },
 ];
 
 export default function HeroSection() {
@@ -35,7 +35,7 @@ export default function HeroSection() {
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-neon-cyan" />
               </span>
               <span className="text-xs font-semibold text-neon-cyan tracking-wider uppercase">
-                Now Accepting Beta Applications
+                Aceitando Inscrições para o Beta
               </span>
             </motion.div>
 
@@ -46,14 +46,14 @@ export default function HeroSection() {
               transition={{ duration: 0.7, delay: 0.1 }}
               className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.05] tracking-tight mb-6"
             >
-              <span className="text-white">STOP BURNING</span>
+              <span className="text-white">PARE DE QUEIMAR</span>
               <br />
-              <span className="text-gradient-cyan-purple">AD SPEND.</span>
+              <span className="text-gradient-cyan-purple">VERBA DE ADS.</span>
               <br />
               <span className="text-white text-3xl sm:text-4xl lg:text-5xl font-bold">
-                UNCOVER THE{" "}
+                DESCUBRA O{" "}
                 <span className="relative inline-block">
-                  <span className="text-neon-cyan">&ldquo;WHY&rdquo;</span>
+                  <span className="text-neon-cyan">&ldquo;PORQUÊ&rdquo;</span>
                   <motion.span
                     className="absolute -bottom-1 left-0 right-0 h-0.5 bg-neon-cyan"
                     initial={{ scaleX: 0 }}
@@ -62,7 +62,7 @@ export default function HeroSection() {
                   />
                 </span>
                 <br />
-                BEHIND EVERY LOST SALE.
+                DE CADA VENDA PERDIDA.
               </span>
             </motion.h1>
 
@@ -73,12 +73,12 @@ export default function HeroSection() {
               transition={{ duration: 0.6, delay: 0.3 }}
               className="text-lg text-gray-400 leading-relaxed mb-8 max-w-xl"
             >
-              Our AI diagnoses your{" "}
-              <span className="text-white font-semibold">funnel, not just your ads</span>. Instantly
-              identify leaks in your{" "}
+              Nossa IA diagnostica seu{" "}
+              <span className="text-white font-semibold">funil, não só seus anúncios</span>. Identifique
+              instantaneamente os vazamentos na sua{" "}
               <span className="text-neon-cyan font-semibold">Landing Page</span>,{" "}
-              <span className="text-neon-purple font-semibold">Cart</span>, and{" "}
-              <span className="text-white font-semibold">Competitor pricing</span>.
+              <span className="text-neon-purple font-semibold">Carrinho</span> e{" "}
+              <span className="text-white font-semibold">preços dos concorrentes</span>.
             </motion.p>
 
             {/* CTA Button */}
@@ -97,7 +97,7 @@ export default function HeroSection() {
                 <span className="absolute inset-0 bg-gradient-to-r from-neon-cyan via-blue-500 to-neon-purple" />
                 <span className="absolute inset-0 bg-gradient-to-r from-neon-cyan via-blue-500 to-neon-purple opacity-0 group-hover:opacity-100 blur-xl transition-opacity duration-500" />
                 <Zap className="relative w-5 h-5" />
-                <span className="relative">Get Your Free Funnel Diagnosis</span>
+                <span className="relative">Receba Seu Diagnóstico de Funil Gratuito</span>
                 <ArrowRight className="relative w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />
               </motion.a>
 
@@ -112,7 +112,7 @@ export default function HeroSection() {
                   ))}
                 </div>
                 <span className="text-xs text-gray-500">
-                  <span className="text-white font-semibold">47 brands</span> on waitlist
+                  <span className="text-white font-semibold">47 marcas</span> na lista de espera
                 </span>
               </div>
             </motion.div>
@@ -172,9 +172,9 @@ export default function HeroSection() {
               {/* Bottom stat row */}
               <div className="mt-6 grid grid-cols-3 gap-3 border-t border-dark-border/60 pt-5">
                 {[
-                  { label: "Revenue Leaked", value: "$23,400", color: "text-red-400" },
-                  { label: "Issues Found", value: "7 Critical", color: "text-yellow-400" },
-                  { label: "Potential ROAS", value: "+4.1x", color: "text-neon-cyan" },
+                  { label: "Receita Perdida", value: "$23.400", color: "text-red-400" },
+                  { label: "Problemas Encontrados", value: "7 Críticos", color: "text-yellow-400" },
+                  { label: "ROAS Potencial", value: "+4.1x", color: "text-neon-cyan" },
                 ].map((stat) => (
                   <div key={stat.label} className="text-center">
                     <div className={`text-base font-bold font-mono ${stat.color}`}>{stat.value}</div>

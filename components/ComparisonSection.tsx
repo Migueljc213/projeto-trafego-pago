@@ -8,53 +8,53 @@ import AnimatedSection from "./AnimatedSection";
 
 const comparisonRows = [
   {
-    feature: "Ad Performance Monitoring",
-    madgicx: { status: "yes", note: "Core feature" },
-    funnelguard: { status: "yes", note: "Included" },
+    feature: "Monitoramento de Performance de Ads",
+    tradicional: { status: "yes", note: "Funcionalidade principal" },
+    funnelguard: { status: "yes", note: "Incluído" },
   },
   {
     feature: "Landing Page UX Analysis",
-    madgicx: { status: "no", note: "Not available" },
+    tradicional: { status: "no", note: "Indisponível" },
     funnelguard: { status: "yes", note: "AI-powered audit" },
   },
   {
     feature: "Mobile/iOS Rendering Check",
-    madgicx: { status: "no", note: "Not available" },
-    funnelguard: { status: "yes", note: "Real-time monitoring" },
+    tradicional: { status: "no", note: "Indisponível" },
+    funnelguard: { status: "yes", note: "Monitoramento em tempo real" },
   },
   {
-    feature: "Competitor Price Monitoring",
-    madgicx: { status: "no", note: "Not available" },
-    funnelguard: { status: "yes", note: "Daily benchmarking" },
+    feature: "Monitoramento de Preços dos Concorrentes",
+    tradicional: { status: "no", note: "Indisponível" },
+    funnelguard: { status: "yes", note: "Benchmarking diário" },
   },
   {
-    feature: "Checkout Abandonment Diagnosis",
-    madgicx: { status: "partial", note: "Limited" },
-    funnelguard: { status: "yes", note: "Root cause analysis" },
+    feature: "Diagnóstico de Abandono de Checkout",
+    tradicional: { status: "partial", note: "Limitado" },
+    funnelguard: { status: "yes", note: "Análise de causa raiz" },
   },
   {
     feature: "CAPI Setup (White Glove)",
-    madgicx: { status: "no", note: "DIY only" },
-    funnelguard: { status: "yes", note: "Done for you" },
+    tradicional: { status: "no", note: "DIY only" },
+    funnelguard: { status: "yes", note: "Feito para você" },
   },
   {
     feature: "Meta Pixel Audit & Repair",
-    madgicx: { status: "partial", note: "Basic check" },
-    funnelguard: { status: "yes", note: "Full setup + validation" },
+    tradicional: { status: "partial", note: "Verificação básica" },
+    funnelguard: { status: "yes", note: "Setup completo + validação" },
   },
   {
-    feature: "Full Funnel Revenue Attribution",
-    madgicx: { status: "partial", note: "Ad-level only" },
-    funnelguard: { status: "yes", note: "Click to purchase" },
+    feature: "Atribuição de Receita do Funil Completo",
+    tradicional: { status: "partial", note: "Apenas nível de ad" },
+    funnelguard: { status: "yes", note: "Do clique à compra" },
   },
   {
-    feature: "AI-Generated Fix Recommendations",
-    madgicx: { status: "partial", note: "Ad suggestions" },
-    funnelguard: { status: "yes", note: "Full funnel fixes" },
+    feature: "Recomendações de Correção por IA",
+    tradicional: { status: "partial", note: "Sugestões de ads" },
+    funnelguard: { status: "yes", note: "Correções de funil completo" },
   },
   {
-    feature: "Dedicated Onboarding Specialist",
-    madgicx: { status: "no", note: "Self-serve" },
+    feature: "Especialista de Onboarding Dedicado",
+    tradicional: { status: "no", note: "Self-serve" },
     funnelguard: { status: "yes", note: "White glove only" },
   },
 ];
@@ -104,20 +104,20 @@ export default function ComparisonSection() {
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-neon-purple/30 bg-neon-purple/5 mb-6">
             <Zap className="w-3.5 h-3.5 text-neon-purple" />
             <span className="text-xs font-semibold text-neon-purple tracking-wider uppercase">
-              The Unfair Advantage
+              A Vantagem Injusta
             </span>
           </div>
 
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black leading-tight mb-6">
-            <span className="text-white">Our Solution</span>
-            <span className="text-gradient-cyan-purple"> vs. Madgicx</span>
+            <span className="text-white">Nossa Solução</span>
+            <span className="text-gradient-cyan-purple"> vs. Ferramentas Tradicionais</span>
           </h2>
 
           <p className="text-lg text-gray-400 max-w-2xl mx-auto">
-            Tools like Madgicx are great{" "}
-            <span className="text-white font-semibold">inside the ad platform</span>. FunnelGuard AI
-            covers the other{" "}
-            <span className="text-neon-cyan font-semibold">80% of your funnel</span> they ignore.
+            Ferramentas tradicionais são ótimas{" "}
+            <span className="text-white font-semibold">dentro da plataforma de anúncios</span>. FunnelGuard AI
+            cobre os outros{" "}
+            <span className="text-neon-cyan font-semibold">80% do seu funil</span> que elas ignoram.
           </p>
         </AnimatedSection>
 
@@ -128,26 +128,26 @@ export default function ComparisonSection() {
             <AnimatedSection>
               <div className="grid grid-cols-[1fr_180px_180px] gap-3 mb-3 px-4">
                 <div className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Capability
+                  Capacidade
                 </div>
                 <div className="text-center">
                   <div className="glass-card border border-dark-border rounded-xl px-4 py-3">
                     <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                      Madgicx
+                      Tradicional
                     </div>
-                    <div className="text-xs text-gray-600 mt-0.5">Ad Focus Only</div>
+                    <div className="text-xs text-gray-600 mt-0.5">Foco Apenas em Ads</div>
                   </div>
                 </div>
                 <div className="text-center">
                   <div className="relative rounded-xl px-4 py-3 border border-neon-cyan/30 bg-neon-cyan/5">
                     <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-gradient-to-r from-neon-cyan to-neon-purple text-xs font-bold text-white whitespace-nowrap">
-                      Recommended
+                      Recomendado
                     </div>
                     <div className="flex items-center justify-center gap-1.5 mt-1">
                       <Zap className="w-3 h-3 text-neon-cyan" />
                       <span className="text-xs font-bold text-neon-cyan">FunnelGuard AI</span>
                     </div>
-                    <div className="text-xs text-gray-500 mt-0.5">Full Funnel Diagnosis</div>
+                    <div className="text-xs text-gray-500 mt-0.5">Diagnóstico de Funil Completo</div>
                   </div>
                 </div>
               </div>
@@ -170,10 +170,10 @@ export default function ComparisonSection() {
                 >
                   <div className="text-sm text-gray-300 font-medium">{row.feature}</div>
 
-                  {/* Madgicx */}
+                  {/* Tradicional */}
                   <div className="flex items-center justify-center gap-2">
-                    <StatusIcon status={row.madgicx.status} />
-                    <span className="text-xs text-gray-600 hidden sm:block">{row.madgicx.note}</span>
+                    <StatusIcon status={row.tradicional.status} />
+                    <span className="text-xs text-gray-600 hidden sm:block">{row.tradicional.note}</span>
                   </div>
 
                   {/* FunnelGuard */}
@@ -198,9 +198,9 @@ export default function ComparisonSection() {
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="glass-card rounded-2xl border border-dark-border p-6 text-center">
               <div className="text-4xl font-black text-gray-600 mb-1">3/10</div>
-              <div className="text-sm text-gray-500">Madgicx / Human Ad Manager</div>
+              <div className="text-sm text-gray-500">Ferramenta / Gestor Tradicional</div>
               <div className="text-xs text-gray-600 mt-2">
-                Excellent at ad optimization. Blind to everything else.
+                Excelente em otimização de ads. Cego para tudo mais.
               </div>
             </div>
             <div className="relative glass-card rounded-2xl border border-neon-cyan/30 bg-neon-cyan/5 p-6 text-center overflow-hidden">
@@ -208,7 +208,7 @@ export default function ComparisonSection() {
               <div className="relative text-4xl font-black text-gradient-cyan-purple mb-1">10/10</div>
               <div className="relative text-sm text-gray-300 font-semibold">FunnelGuard AI</div>
               <div className="relative text-xs text-gray-500 mt-2">
-                Full funnel coverage from click to conversion.
+                Cobertura total do funil, do clique à conversão.
               </div>
             </div>
           </div>
@@ -220,7 +220,7 @@ export default function ComparisonSection() {
               whileTap={{ scale: 0.97 }}
               className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl text-sm font-bold text-dark-base bg-gradient-to-r from-neon-cyan to-neon-purple hover:opacity-90 transition-opacity"
             >
-              Get Full Funnel Coverage
+              Obtenha Cobertura Total do Funil
               <ArrowRight className="w-4 h-4" />
             </motion.a>
           </div>

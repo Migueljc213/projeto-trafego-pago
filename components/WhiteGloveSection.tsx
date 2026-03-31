@@ -12,8 +12,8 @@ const steps = [
     icon: Headphones,
     title: "Discovery Call (30 min)",
     description:
-      "A dedicated specialist maps your entire tech stack: CRM, e-commerce platform, ad accounts, and current pixel setup. No forms, no bots.",
-    highlight: "Human-led",
+      "Um especialista dedicado mapeia toda a sua stack: CRM, plataforma de e-commerce, contas de anúncios e configuração atual do pixel. Sem formulários, sem bots.",
+    highlight: "Conduzido por humanos",
     color: "neon-cyan",
   },
   {
@@ -21,8 +21,8 @@ const steps = [
     icon: Code2,
     title: "CAPI + Pixel Setup",
     description:
-      "We manually configure your Conversions API server-side integration, ensuring 100% event deduplication and iOS-proof data accuracy. We write the code. We verify every event.",
-    highlight: "Done for you",
+      "Configuramos manualmente sua integração server-side com a Conversions API, garantindo 100% de deduplicação de eventos e precisão de dados à prova de iOS. Escrevemos o código. Verificamos cada evento.",
+    highlight: "Feito para você",
     color: "neon-purple",
   },
   {
@@ -30,17 +30,17 @@ const steps = [
     icon: BarChart3,
     title: "Funnel Baseline Audit",
     description:
-      "Our AI runs a full diagnostic on your landing pages, checkout flow, and competitor pricing. You get a prioritized fix list within 24h.",
+      "Nossa IA executa um diagnóstico completo nas suas landing pages, fluxo de checkout e preços dos concorrentes. Você recebe uma lista priorizada de correções em até 24h.",
     highlight: "AI-powered",
     color: "blue-500",
   },
   {
     step: "04",
     icon: Shield,
-    title: "Go Live & Monitor",
+    title: "Go Live & Monitoramento",
     description:
-      "FunnelGuard AI goes live, monitoring your funnel 24/7. You receive weekly profit reports with specific action items. No dashboards to check — we surface what matters.",
-    highlight: "Automated",
+      "FunnelGuard AI entra em operação monitorando seu funil 24/7. Você recebe relatórios semanais de lucro com ações específicas. Sem dashboards para verificar — a gente traz o que importa.",
+    highlight: "Automatizado",
     color: "emerald-500",
   },
 ];
@@ -48,21 +48,21 @@ const steps = [
 const guarantees = [
   {
     icon: Lock,
-    title: "100% Data Accuracy Guarantee",
+    title: "Garantia de 100% de Precisão nos Dados",
     description:
-      "If your CAPI setup doesn't capture at least 95% of your actual purchase events within 7 days, we fix it free — no questions.",
+      "Se o seu CAPI setup não capturar pelo menos 95% dos seus eventos de compra reais em 7 dias, corrigimos gratuitamente — sem perguntas.",
   },
   {
     icon: CheckCircle,
-    title: "No Lock-in Contracts",
+    title: "Sem Contratos de Fidelidade",
     description:
-      "Cancel anytime. Your CAPI code, pixel setup, and audit reports belong to you. We earn retention by delivering results, not by trapping you.",
+      "Cancele quando quiser. O código do CAPI, a configuração do pixel e os relatórios de auditoria são seus. Ganhamos sua fidelidade entregando resultados, não te prendendo.",
   },
   {
     icon: Shield,
-    title: "SOC 2 Compliant Data Handling",
+    title: "Conformidade SOC 2 no Tratamento de Dados",
     description:
-      "Your business data never trains public AI models. All processing is isolated per account with enterprise-grade encryption.",
+      "Seus dados empresariais nunca treinam modelos públicos de IA. Todo o processamento é isolado por conta com criptografia de nível empresarial.",
   },
 ];
 
@@ -117,17 +117,17 @@ export default function WhiteGloveSection() {
           </div>
 
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black leading-tight mb-6">
-            <span className="text-white">We Don&apos;t Give You a Login.</span>
+            <span className="text-white">Não Entregamos um Login.</span>
             <br />
-            <span className="text-gradient-cyan-purple">We Set Everything Up.</span>
+            <span className="text-gradient-cyan-purple">Configuramos Tudo.</span>
           </h2>
 
           <p className="text-lg text-gray-400 max-w-2xl mx-auto leading-relaxed">
-            Most tools dump you in a dashboard and wish you luck. FunnelGuard AI is different:{" "}
+            A maioria das ferramentas te joga num dashboard e te deseja boa sorte. FunnelGuard AI é diferente:{" "}
             <span className="text-white font-semibold">
-              a human specialist configures your CAPI and Pixel manually
+              um especialista humano configura seu CAPI e Pixel manualmente
             </span>{" "}
-            to guarantee 100% data accuracy before the AI takes over.
+            para garantir 100% de precisão nos dados antes de a IA assumir.
           </p>
         </AnimatedSection>
 
@@ -162,7 +162,7 @@ export default function WhiteGloveSection() {
                     <div className="flex items-start justify-between gap-4 mb-3">
                       <div>
                         <span className="text-xs font-mono text-gray-600 mb-1 block">
-                          Step {step.step}
+                          Etapa {step.step}
                         </span>
                         <h3 className="text-lg font-bold text-white group-hover:text-neon-cyan transition-colors duration-300">
                           {step.title}
@@ -185,7 +185,7 @@ export default function WhiteGloveSection() {
         {/* Guarantees */}
         <AnimatedSection delay={0.3} className="mt-16">
           <div className="text-center mb-8">
-            <h3 className="text-xl font-bold text-white">Our Guarantees</h3>
+            <h3 className="text-xl font-bold text-white">Nossas Garantias</h3>
           </div>
           <div className="grid sm:grid-cols-3 gap-5">
             {guarantees.map((g, i) => {

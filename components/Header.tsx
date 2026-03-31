@@ -5,10 +5,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, Zap } from "lucide-react";
 
 const navLinks = [
-  { label: "Features", href: "#features" },
-  { label: "Comparison", href: "#comparison" },
-  { label: "Simulator", href: "#simulator" },
-  { label: "Waitlist", href: "#waitlist" },
+  { label: "Funcionalidades", href: "#features" },
+  { label: "Comparativo", href: "#comparison" },
+  { label: "Simulador", href: "#simulator" },
+  { label: "Lista de Espera", href: "#waitlist" },
 ];
 
 export default function Header() {
@@ -72,7 +72,7 @@ export default function Header() {
               <span className="absolute inset-0 bg-gradient-to-r from-neon-cyan to-neon-purple opacity-90 group-hover:opacity-100 transition-opacity" />
               <span className="absolute inset-0 border border-neon-cyan/30 rounded-lg" />
               <Zap className="relative w-3.5 h-3.5" />
-              <span className="relative">Request Early Access</span>
+              <span className="relative">Solicitar Acesso Antecipado</span>
             </motion.a>
           </div>
 
@@ -113,7 +113,7 @@ export default function Header() {
                 onClick={() => setMobileOpen(false)}
                 className="block mt-3 px-4 py-3 rounded-lg text-sm font-semibold text-center text-white bg-gradient-to-r from-neon-cyan to-neon-purple"
               >
-                Request Early Access
+                Solicitar Acesso Antecipado
               </a>
             </div>
           </motion.div>

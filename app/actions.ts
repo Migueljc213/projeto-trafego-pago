@@ -32,19 +32,19 @@ export async function submitWaitlist(
   const errors: WaitlistFormState["errors"] = {};
 
   if (!email) {
-    errors.email = ["Email is required."];
+    errors.email = ["E-mail obrigatório."];
   } else if (!isValidEmail(email)) {
-    errors.email = ["Please enter a valid email address."];
+    errors.email = ["Insira um endereço de e-mail válido."];
   }
 
   if (!website) {
-    errors.website = ["Website URL is required."];
+    errors.website = ["URL do site obrigatória."];
   } else if (!isValidUrl(website)) {
-    errors.website = ["Please enter a valid website URL."];
+    errors.website = ["Insira uma URL de site válida."];
   }
 
   if (Object.keys(errors).length > 0) {
-    return { success: false, message: "Please fix the errors below.", errors };
+    return { success: false, message: "Por favor, corrija os erros abaixo.", errors };
   }
 
   // In production, save to your database or send to CRM/email service
@@ -59,6 +59,6 @@ export async function submitWaitlist(
   return {
     success: true,
     message:
-      "You're on the list! We'll reach out within 48 hours to schedule your White Glove onboarding.",
+      "Você está na lista! Entraremos em contato em até 48 horas para agendar seu White Glove onboarding.",
   };
 }

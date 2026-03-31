@@ -7,8 +7,8 @@ const funnelSteps = [
   {
     id: "ad",
     icon: MousePointerClick,
-    label: "Ad Click",
-    sublabel: "1,000 clicks",
+    label: "Clique no Ad",
+    sublabel: "1.000 cliques",
     color: "from-neon-cyan to-blue-500",
     borderColor: "border-neon-cyan/40",
     bgColor: "bg-neon-cyan/10",
@@ -19,35 +19,35 @@ const funnelSteps = [
     id: "lp",
     icon: FileText,
     label: "Landing Page",
-    sublabel: "340 visits",
+    sublabel: "340 visitas",
     color: "from-yellow-400 to-orange-500",
     borderColor: "border-yellow-500/40",
     bgColor: "bg-yellow-500/10",
     width: "w-4/5",
     leak: {
-      label: 'Error: Button Hidden (iOS)',
-      sublabel: "-660 lost here",
+      label: 'Erro: Botão Oculto (iOS)',
+      sublabel: "-660 perdidos aqui",
     },
   },
   {
     id: "cart",
     icon: ShoppingCart,
     label: "Checkout",
-    sublabel: "89 sessions",
+    sublabel: "89 sessões",
     color: "from-orange-500 to-red-500",
     borderColor: "border-orange-500/40",
     bgColor: "bg-orange-500/10",
     width: "w-3/5",
     leak: {
-      label: "Competitor 15% Cheaper",
-      sublabel: "-251 abandoned",
+      label: "Concorrente 15% Mais Barato",
+      sublabel: "-251 abandonaram",
     },
   },
   {
     id: "purchase",
     icon: CreditCard,
-    label: "Purchase",
-    sublabel: "24 conversions",
+    label: "Compra",
+    sublabel: "24 conversões",
     color: "from-green-400 to-emerald-500",
     borderColor: "border-green-500/40",
     bgColor: "bg-green-500/10",
@@ -174,9 +174,9 @@ export default function FunnelVisual() {
         transition={{ delay: 1.2, duration: 0.5 }}
         className="mt-4 glass-card border border-dark-border rounded-xl p-3 flex items-center justify-between"
       >
-        <span className="text-xs text-gray-500 font-mono">Actual Conversion Rate</span>
+        <span className="text-xs text-gray-500 font-mono">Taxa de Conversão Real</span>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-red-400 font-mono line-through">Expected: 4.8%</span>
+          <span className="text-xs text-red-400 font-mono line-through">Esperado: 4.8%</span>
           <span className="text-sm font-bold text-red-400 font-mono">2.4%</span>
           <div className="text-xs text-neon-cyan font-mono bg-neon-cyan/10 px-2 py-0.5 rounded-md">
             AI Fix: +2.4%

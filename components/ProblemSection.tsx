@@ -9,11 +9,11 @@ import AnimatedSection from "./AnimatedSection";
 const problems = [
   {
     icon: BarChart2,
-    title: "Vanity Metric Trap",
-    subtitle: "High clicks, zero conversions",
+    title: "Armadilha das Métricas de Vaidade",
+    subtitle: "Muitos cliques, zero conversões",
     description:
-      "Your manager celebrates 5,000 clicks. But nobody asks why only 12 people bought. Clicks are a cost center, not a KPI.",
-    tag: "Ad Manager Blind Spot",
+      "Seu gestor comemora 5.000 cliques. Mas ninguém pergunta por que só 12 pessoas compraram. Clique é centro de custo, não KPI.",
+    tag: "Ponto Cego do Gestor",
     tagColor: "text-red-400 bg-red-400/10 border-red-400/20",
     iconBg: "bg-red-500/10",
     iconColor: "text-red-400",
@@ -21,11 +21,11 @@ const problems = [
   },
   {
     icon: Truck,
-    title: "Shipping Cost Shock",
-    subtitle: "$18 shipping on a $35 product",
+    title: "Choque do Frete",
+    subtitle: "R$18 de frete num produto de R$35",
     description:
-      "Your competitor offers free shipping above $30. You don't know this. Your customer adds to cart, sees the shipping, and leaves. Silently.",
-    tag: "Lost at Checkout",
+      "Seu concorrente oferece frete grátis acima de R$30. Você não sabe disso. O cliente adiciona ao carrinho, vê o frete e abandona. Em silêncio.",
+    tag: "Perdido no Checkout",
     tagColor: "text-orange-400 bg-orange-400/10 border-orange-400/20",
     iconBg: "bg-orange-500/10",
     iconColor: "text-orange-400",
@@ -33,10 +33,10 @@ const problems = [
   },
   {
     icon: LayoutDashboard,
-    title: "Broken UX on Mobile",
-    subtitle: "Your CTA button is invisible on iOS",
+    title: "UX Quebrado no Mobile",
+    subtitle: "Seu botão CTA está invisível no iOS",
     description:
-      "A CSS conflict hides your buy button on Safari/iOS. 60% of your traffic is mobile. You've been paying for ads driving people to a broken page for 3 weeks.",
+      "Um conflito de CSS esconde seu botão de compra no Safari/iOS. 60% do seu tráfego é mobile. Você está pagando por anúncios que levam pessoas a uma página quebrada há 3 semanas.",
     tag: "LP UX Error",
     tagColor: "text-yellow-400 bg-yellow-400/10 border-yellow-400/20",
     iconBg: "bg-yellow-500/10",
@@ -45,11 +45,11 @@ const problems = [
   },
   {
     icon: Search,
-    title: "Zero Competitor Intel",
-    subtitle: "Flying blind in a price war",
+    title: "Zero Inteligência Competitiva",
+    subtitle: "Navegando às cegas numa guerra de preços",
     description:
-      "You set your price once and forget it. Meanwhile, competitors adjust daily. You're the most expensive option in the category and don't even know it.",
-    tag: "Competitor Blind Spot",
+      "Você definiu seu preço uma vez e esqueceu. Enquanto isso, os concorrentes ajustam diariamente. Você é a opção mais cara da categoria e nem sabe disso.",
+    tag: "Ponto Cego Competitivo",
     tagColor: "text-purple-400 bg-purple-400/10 border-purple-400/20",
     iconBg: "bg-purple-500/10",
     iconColor: "text-purple-400",
@@ -57,11 +57,11 @@ const problems = [
   },
   {
     icon: Eye,
-    title: "Ghost Data (Pixel Failures)",
-    subtitle: "Only 52% of conversions tracked",
+    title: "Dados Fantasma (Falhas no Pixel)",
+    subtitle: "Apenas 52% das conversões rastreadas",
     description:
-      "iOS 14+ destroyed your pixel. No CAPI setup means Meta's algorithm is optimizing on half the data — spending full budget, learning from noise.",
-    tag: "Data Integrity",
+      "O iOS 14+ destruiu seu pixel. Sem CAPI configurado, o algoritmo da Meta otimiza com metade dos dados — gastando orçamento total, aprendendo com ruído.",
+    tag: "Integridade de Dados",
     tagColor: "text-blue-400 bg-blue-400/10 border-blue-400/20",
     iconBg: "bg-blue-500/10",
     iconColor: "text-blue-400",
@@ -69,11 +69,11 @@ const problems = [
   },
   {
     icon: TrendingDown,
-    title: "Ad Fatigue Ignored",
-    subtitle: "Same creative for 60 days",
+    title: "Ad Fatigue Ignorado",
+    subtitle: "Mesmo criativo por 60 dias",
     description:
-      "Frequency hit 9.4. Every new impression is a reminder of something your audience already rejected. But your dashboard only shows CPM going up.",
-    tag: "Creative Performance",
+      "A frequência chegou a 9,4. Cada nova impressão é um lembrete de algo que seu público já rejeitou. Mas seu dashboard só mostra o CPM subindo.",
+    tag: "Performance do Criativo",
     tagColor: "text-cyan-400 bg-cyan-400/10 border-cyan-400/20",
     iconBg: "bg-cyan-500/10",
     iconColor: "text-cyan-400",
@@ -106,24 +106,24 @@ export default function ProblemSection() {
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-red-500/30 bg-red-500/5 mb-6">
             <TrendingDown className="w-3.5 h-3.5 text-red-400" />
             <span className="text-xs font-semibold text-red-400 tracking-wider uppercase">
-              The Real Problem
+              O Problema Real
             </span>
           </div>
 
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black leading-tight mb-6">
-            <span className="text-white">The $10,000 Question Your</span>
+            <span className="text-white">A Pergunta de R$10.000 Que Seu</span>
             <br />
-            <span className="text-gradient-cyan-purple">Manager Can&apos;t Answer:</span>
+            <span className="text-gradient-cyan-purple">Gestor Não Consegue Responder:</span>
             <br />
             <span className="text-white text-2xl sm:text-3xl lg:text-4xl font-bold">
-              Why Didn&apos;t They Buy?
+              Por Que Não Compraram?
             </span>
           </h2>
 
           <p className="text-lg text-gray-400 max-w-2xl mx-auto leading-relaxed">
-            Your ads are doing their job. The problem is everything{" "}
-            <span className="text-white font-semibold">after the click</span> — and no one is
-            watching it. Until now.
+            Seus anúncios estão fazendo o trabalho deles. O problema é tudo{" "}
+            <span className="text-white font-semibold">depois do clique</span> — e ninguém está
+            monitorando isso. Até agora.
           </p>
         </AnimatedSection>
 
@@ -167,11 +167,11 @@ export default function ProblemSection() {
         <AnimatedSection delay={0.3} className="mt-16 text-center">
           <div className="inline-block glass-card rounded-2xl border border-neon-cyan/20 bg-neon-cyan/5 px-8 py-6 max-w-2xl">
             <p className="text-lg font-semibold text-white">
-              Every one of these problems is{" "}
-              <span className="text-neon-cyan">invisible to traditional ad managers.</span>
+              Todos esses problemas são{" "}
+              <span className="text-neon-cyan">invisíveis para gestores de anúncios tradicionais.</span>
             </p>
             <p className="text-sm text-gray-400 mt-2">
-              FunnelGuard AI surfaces all of them. Automatically. In real-time.
+              FunnelGuard AI os detecta. Automaticamente. Em tempo real.
             </p>
           </div>
         </AnimatedSection>
