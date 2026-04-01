@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node_modules/.bin/next build:*)",
+      "Read(//home/miguel/.nvm/versions/node/**)",
+      "Bash(export PATH=\"/home/miguel/.nvm/versions/node/v24.14.1/bin:$PATH\")",
+      "Bash(/home/miguel/.nvm/versions/node/v24.14.1/bin/node /home/miguel/projetos/projeto-trafego-pago/node_modules/.bin/next build)",
+      "Bash(node /home/miguel/projetos/projeto-trafego-pago/node_modules/next/dist/bin/next build)",
+      "Bash(npm run:*)",
+      "Bash(npm install:*)",
+      "Bash(npx prisma:*)",
+      "Bash(node -e \"const {defineConfig} = require\\(''''prisma/config''''\\); console.log\\(Object.keys\\(defineConfig.toString\\(\\)\\)\\)\")",
+      "Bash(ls /home/miguel/projetos/projeto-trafego-pago/app/api/auth/[...nextauth]/)"
+    ],
+    "additionalDirectories": [
+      "/home/miguel/projetos/projeto-trafego-pago/app/api/auth"
+    ]
+  }
+}
