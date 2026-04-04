@@ -42,7 +42,7 @@ export async function runPriceIntelligenceAction(
     const result = await runPriceIntelligence(
       myPrice,
       myProductName,
-      adAccount.competitors.map((c) => ({ name: c.name, url: c.url }))
+      adAccount.competitors.map((c: (typeof adAccount.competitors)[number]) => ({ name: c.name, url: c.url }))
     )
 
     // Atualiza preços no banco
