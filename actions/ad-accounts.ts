@@ -73,7 +73,7 @@ export async function listAdAccountsAction(): Promise<
 
     return {
       success: true,
-      data: savedAccounts.map((a) => ({
+      data: savedAccounts.map((a: (typeof savedAccounts)[number]) => ({
         id: a.id,
         metaAccountId: a.metaAccountId,
         name: a.name,

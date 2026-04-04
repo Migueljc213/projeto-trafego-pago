@@ -235,3 +235,28 @@ export async function exchangeForLongLivedToken(
     expires_in: data.expires_in ?? 5184000, // 60 dias em segundos
   }
 }
+
+// ──────────────────────────────────────────
+// Budget update
+// ──────────────────────────────────────────
+
+/**
+ * Atualiza o orçamento diário de uma campanha na Meta API.
+ * @param campaignId - Meta campaign ID
+ * @param dailyBudgetCents - Novo orçamento em centavos (ex: 50000 = R$500,00)
+ */
+export async function updateCampaignBudget(
+  campaignId: string,
+  dailyBudgetCents: number,
+  accessToken: string
+): Promise<boolean> {
+  const result = await metaFetch<{ success: boolean }>(
+    `${campaignId}`,
+    accessToken,
+    {
+      method: 'POST',
+      body: JSON.stringify({ daily_budget: dailyBudgetCents }),
+    }
+  )
+  return result.success === true
+}

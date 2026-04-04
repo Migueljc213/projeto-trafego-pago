@@ -126,9 +126,27 @@ model Campaign {
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
-  adAccount AdAccount @relation(fields: [adAccountId], references: [id], onDelete: Cascade)
+  adAccount    AdAccount        @relation(fields: [adAccountId], references: [id], onDelete: Cascade)
+  decisionLogs AiDecisionLog[]
 
   @@index([adAccountId])
+}
+
+model AiDecisionLog {
+  id           String       @id @default(cuid())
+  campaignId   String
+  type         DecisionType
+  reason       String       @db.Text
+  metrics      Json
+  confidence   Int
+  executed     Boolean      @default(false)
+  executedAt   DateTime?
+  createdAt    DateTime     @default(now())
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@index([createdAt])
 }
 
 model Competitor {
@@ -197,4 +215,12 @@ enum IssueSeverity {
   MEDIUM
   HIGH
   CRITICAL
+}
+
+enum DecisionType {
+  PAUSE
+  SCALE
+  REDUCE_BUDGET
+  MONITOR
+  NO_ACTION
 }
