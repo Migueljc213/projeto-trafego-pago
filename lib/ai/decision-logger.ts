@@ -5,7 +5,8 @@
 
 import { prisma } from '@/lib/prisma'
 import type { AutoPilotDecision } from './auto-pilot'
-import type { DecisionType } from '@prisma/client'
+
+type DecisionType = 'PAUSE' | 'SCALE' | 'REDUCE_BUDGET' | 'MONITOR' | 'NO_ACTION'
 
 // ─── Mappers ──────────────────────────────────────────────────────────────────
 
