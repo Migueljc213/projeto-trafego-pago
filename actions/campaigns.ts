@@ -152,7 +152,7 @@ export async function listCampaignsAction(
 
     return {
       success: true,
-      data: campaigns.map((c) => ({
+      data: campaigns.map((c: (typeof campaigns)[number]) => ({
         id: c.id,
         name: c.name,
         status: c.status,
