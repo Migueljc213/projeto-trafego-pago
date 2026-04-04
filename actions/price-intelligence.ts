@@ -48,7 +48,7 @@ export async function runPriceIntelligenceAction(
     // Atualiza preços no banco
     await Promise.all(
       result.competitors.map(async (crawled) => {
-        const competitor = adAccount.competitors.find((c) => c.url === crawled.url)
+        const competitor = adAccount.competitors.find((c: (typeof adAccount.competitors)[number]) => c.url === crawled.url)
         if (competitor && crawled.price !== null) {
           await prisma.competitor.update({
             where: { id: competitor.id },
