@@ -1,0 +1,87 @@
+{
+  "adAccountId": "act_123456789",
+  "adAccountName": "Loja Exemplo LTDA",
+  "currency": "BRL",
+  "campaigns": [
+    {
+      "id": "camp_001",
+      "name": "Black Friday - Produto X",
+      "status": "ACTIVE",
+      "dailyBudget": 200.00,
+      "metrics": {
+        "spend": 185.40,
+        "revenue": 222.48,
+        "roas": 1.2,
+        "cpa": 92.70,
+        "clicks": 320,
+        "impressions": 18500,
+        "conversions": 2,
+        "frequency": 5.2,
+        "ctr": 1.73
+      },
+      "aiAutoPilot": true,
+      "aiMinRoas": 2.0,
+      "aiMaxFrequency": 4.0
+    },
+    {
+      "id": "camp_002",
+      "name": "Remarketing - Carrinho Abandonado",
+      "status": "ACTIVE",
+      "dailyBudget": 80.00,
+      "metrics": {
+        "spend": 76.20,
+        "revenue": 533.40,
+        "roas": 7.0,
+        "cpa": 25.40,
+        "clicks": 210,
+        "impressions": 6300,
+        "conversions": 3,
+        "frequency": 2.1,
+        "ctr": 3.33
+      },
+      "aiAutoPilot": true,
+      "aiMinRoas": 2.0,
+      "aiMaxFrequency": 4.0
+    },
+    {
+      "id": "camp_003",
+      "name": "Prospecção - Lookalike 1%",
+      "status": "ACTIVE",
+      "dailyBudget": 150.00,
+      "metrics": {
+        "spend": 143.00,
+        "revenue": 343.20,
+        "roas": 2.4,
+        "cpa": 47.67,
+        "clicks": 415,
+        "impressions": 32000,
+        "conversions": 3,
+        "frequency": 1.8,
+        "ctr": 1.30
+      },
+      "aiAutoPilot": true,
+      "aiMinRoas": 2.0,
+      "aiMaxFrequency": 4.0
+    },
+    {
+      "id": "camp_004",
+      "name": "Topo de Funil - Video Views",
+      "status": "PAUSED",
+      "dailyBudget": 50.00,
+      "metrics": {
+        "spend": 12.00,
+        "revenue": 0,
+        "roas": 0,
+        "cpa": 0,
+        "clicks": 45,
+        "impressions": 9800,
+        "conversions": 0,
+        "frequency": 3.9,
+        "ctr": 0.46
+      },
+      "aiAutoPilot": false,
+      "aiMinRoas": 2.0,
+      "aiMaxFrequency": 4.0
+    }
+  ]
+}

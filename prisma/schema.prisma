@@ -128,6 +128,7 @@ model Campaign {
 
   adAccount    AdAccount        @relation(fields: [adAccountId], references: [id], onDelete: Cascade)
   decisionLogs AiDecisionLog[]
+  dailyInsights DailyInsight[]
 
   @@index([adAccountId])
 }
@@ -147,6 +148,27 @@ model AiDecisionLog {
 
   @@index([campaignId])
   @@index([createdAt])
+}
+
+model DailyInsight {
+  id          String   @id @default(cuid())
+  campaignId  String
+  date        DateTime @db.Date
+  spend       Float    @default(0)
+  revenue     Float    @default(0)
+  roas        Float    @default(0)
+  cpa         Float    @default(0)
+  clicks      Int      @default(0)
+  impressions Int      @default(0)
+  conversions Int      @default(0)
+  frequency   Float    @default(0)
+  createdAt   DateTime @default(now())
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, date])
+  @@index([campaignId])
+  @@index([date])
 }
 
 model Competitor {
