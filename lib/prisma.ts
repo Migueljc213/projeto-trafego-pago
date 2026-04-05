@@ -1,12 +1,10 @@
 import { PrismaClient } from '@prisma/client'
-import { PrismaPg } from '@prisma/adapter-pg'
+import { PrismaNeon } from '@prisma/adapter-neon'
 
 function createPrismaClient() {
-  // Prisma 7 requires a driver adapter. Falls back to a placeholder URL if
-  // DATABASE_URL is not set (e.g. during `next build` without a real DB).
   const connectionString = process.env.DATABASE_URL ?? 'postgresql://localhost/placeholder'
 
-  const adapter = new PrismaPg({ connectionString })
+  const adapter = new PrismaNeon({ connectionString })
 
   return new PrismaClient({
     adapter,
