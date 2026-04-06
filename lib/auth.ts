@@ -1,5 +1,6 @@
 import type { NextAuthOptions } from 'next-auth'
 import FacebookProvider from 'next-auth/providers/facebook'
+import CredentialsProvider from 'next-auth/providers/credentials'
 import { PrismaAdapter } from '@next-auth/prisma-adapter'
 import { prisma } from '@/lib/prisma'
 import { encrypt } from '@/lib/encryption'
@@ -20,12 +21,32 @@ export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
     FacebookProvider({
-      clientId: process.env.FACEBOOK_CLIENT_ID!,
-      clientSecret: process.env.FACEBOOK_CLIENT_SECRET!,
+      clientId: process.env.FACEBOOK_CLIENT_ID ?? 'placeholder',
+      clientSecret: process.env.FACEBOOK_CLIENT_SECRET ?? 'placeholder',
       authorization: {
         params: {
           scope: 'email,public_profile,ads_management,ads_read,business_management',
         },
+      },
+    }),
+    CredentialsProvider({
+      id: 'demo',
+      name: 'Demo',
+      credentials: {
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Senha', type: 'password' },
+      },
+      async authorize(credentials) {
+        if (
+          credentials?.email === 'demo@funnelguard.ai' &&
+          credentials?.password === 'demo123'
+        ) {
+          const user = await prisma.user.findUnique({
+            where: { email: 'demo@funnelguard.ai' },
+          })
+          if (user) return { id: user.id, name: user.name, email: user.email, image: user.image }
+        }
+        return null
       },
     }),
   ],
@@ -63,10 +84,13 @@ export const authOptions: NextAuthOptions = {
       }
       return true
     },
-    async session({ session, user }) {
-      // Adiciona userId na sessão (nunca inclua tokens aqui!)
-      if (session.user) {
-        session.user.id = user.id
+    async jwt({ token, user }) {
+      if (user) token.id = user.id
+      return token
+    },
+    async session({ session, token }) {
+      if (session.user && token.id) {
+        session.user.id = token.id as string
       }
       return session
     },
@@ -76,6 +100,6 @@ export const authOptions: NextAuthOptions = {
     error: '/login',
   },
   session: {
-    strategy: 'database',
+    strategy: 'jwt',
   },
 }

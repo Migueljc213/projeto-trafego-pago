@@ -10,7 +10,13 @@
       "Bash(npm install:*)",
       "Bash(npx prisma:*)",
       "Bash(node -e \"const {defineConfig} = require\\(''''prisma/config''''\\); console.log\\(Object.keys\\(defineConfig.toString\\(\\)\\)\\)\")",
-      "Bash(ls /home/miguel/projetos/projeto-trafego-pago/app/api/auth/[...nextauth]/)"
+      "Bash(ls /home/miguel/projetos/projeto-trafego-pago/app/api/auth/[...nextauth]/)",
+      "Bash(npx playwright:*)",
+      "Bash(/home/miguel/projetos/projeto-trafego-pago/lib/meta-api.ts:*)",
+      "Bash(vercel --yes)",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)",
+      "Bash(git push:*)"
     ],
     "additionalDirectories": [
       "/home/miguel/projetos/projeto-trafego-pago/app/api/auth"

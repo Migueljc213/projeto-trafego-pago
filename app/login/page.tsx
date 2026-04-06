@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { FacebookLoginButton } from '@/components/FacebookLoginButton'
+import { DemoLoginButton } from '@/components/DemoLoginButton'
 
 export const metadata = { title: 'Login — FunnelGuard AI' }
 
@@ -31,6 +32,17 @@ export default async function LoginPage() {
           </p>
 
           <FacebookLoginButton />
+
+          <div className="relative my-4">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-700" />
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-gray-900 px-2 text-gray-500">ou</span>
+            </div>
+          </div>
+
+          <DemoLoginButton />
 
           <p className="mt-4 text-center text-xs text-gray-500">
             Ao continuar, você autoriza o FunnelGuard AI a ler e gerenciar seus anúncios
