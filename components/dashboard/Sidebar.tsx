@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -130,7 +131,10 @@ export default function Sidebar() {
             <p className="text-xs text-gray-500 truncate">Pro Plan</p>
           </div>
         </div>
-        <button className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-all duration-200 w-full group">
+        <button
+          onClick={() => signOut({ callbackUrl: '/login' })}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-all duration-200 w-full group"
+        >
           <LogOut className="w-4 h-4 group-hover:text-red-400 flex-shrink-0" />
           <span className="text-sm font-medium">Sair</span>
         </button>

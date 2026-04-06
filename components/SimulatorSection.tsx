@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { TrendingUp, DollarSign, Zap, ArrowRight, Info } from "lucide-react";
 import AnimatedSection from "./AnimatedSection";
 
-const MIN_BUDGET = 3000;
+const MIN_BUDGET = 3001;
 const MAX_BUDGET = 100000;
 
 function formatCurrency(value: number): string {
@@ -36,7 +36,7 @@ interface SimResult {
 }
 
 function calculateResults(budget: number): SimResult {
-  const currentROAS = 2.1 + (budget > 30000 ? 0.4 : 0);
+  const currentROAS = 2.1 + (budget > 30010 ? 0.4 : 0);
   const currentRevenue = budget * currentROAS;
 
   // Each fix adds a percentage improvement

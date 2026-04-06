@@ -21,8 +21,8 @@ export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
     FacebookProvider({
-      clientId: process.env.FACEBOOK_CLIENT_ID ?? 'placeholder',
-      clientSecret: process.env.FACEBOOK_CLIENT_SECRET ?? 'placeholder',
+      clientId: process.env.FACEBOOK_CLIENT_ID || 'placeholder',
+      clientSecret: process.env.FACEBOOK_CLIENT_SECRET || 'placeholder',
       authorization: {
         params: {
           scope: 'email,public_profile,ads_management,ads_read,business_management',
