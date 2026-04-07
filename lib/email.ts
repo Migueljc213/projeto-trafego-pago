@@ -31,7 +31,7 @@ export async function sendAutoPilotAlert({
   const { emoji, label, color } = actionLabels[action]
 
   await resend.emails.send({
-    from: 'FunnelGuard AI <alertas@funnelguard.ai>',
+    from: 'FunnelGuard AI <onboarding@resend.dev>',
     to,
     subject: `${emoji} Campanha ${label}: ${campaignName}`,
     html: `
@@ -94,7 +94,7 @@ export async function sendPriceAlert({
   diffPercent,
 }: PriceAlertParams) {
   await resend.emails.send({
-    from: 'FunnelGuard AI <alertas@funnelguard.ai>',
+    from: 'FunnelGuard AI <onboarding@resend.dev>',
     to,
     subject: `🔴 Alerta de Preço: ${productName} está ${diffPercent.toFixed(0)}% mais caro`,
     html: `
