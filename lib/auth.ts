@@ -60,33 +60,8 @@ export const authOptions: NextAuthOptions = {
           const encryptedToken = encrypt(longLivedToken)
           const tokenExpiresAt = new Date(Date.now() + expires_in * 1000)
 
-          // Busca o usuário real no banco pelo providerAccountId (garante que o registro já existe)
-          const dbAccount = await prisma.account.findFirst({
-            where: { provider: 'facebook', providerAccountId: account.providerAccountId },
-            select: { userId: true },
-          })
-          const userId = dbAccount?.userId ?? user.id
-
-          if (userId) {
-            // Confirma que o user existe antes de criar o BusinessManager
-            const userExists = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } })
-            if (userExists) {
-              await prisma.businessManager.upsert({
-                where: { metaBmId: account.providerAccountId },
-                create: {
-                  userId,
-                  metaBmId: account.providerAccountId,
-                  name: user.name ?? 'Minha Conta',
-                  accessTokenEnc: encryptedToken,
-                  tokenExpiresAt,
-                },
-                update: {
-                  accessTokenEnc: encryptedToken,
-                  tokenExpiresAt,
-                },
-              })
-            }
-          }
+          // Salva token no JWT para ser processado no dashboard (evita FK race condition)
+          // O BusinessManager é criado em app/dashboard/layout.tsx após user estar no banco
         } catch (error) {
           console.error('[Auth] Falha ao trocar token:', error)
           // Não bloqueia o login se a troca falhar
@@ -94,13 +69,23 @@ export const authOptions: NextAuthOptions = {
       }
       return true
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
       if (user) token.id = user.id
+      if (account?.provider === 'facebook' && account.access_token) {
+        token.fbAccessToken = account.access_token
+        token.fbProviderAccountId = account.providerAccountId
+        token.fbName = user?.name
+      }
       return token
     },
     async session({ session, token }) {
       if (session.user && token.id) {
         session.user.id = token.id as string
+      }
+      if (token.fbAccessToken) {
+        (session as Record<string, unknown>).fbAccessToken = token.fbAccessToken
+        ;(session as Record<string, unknown>).fbProviderAccountId = token.fbProviderAccountId
+        ;(session as Record<string, unknown>).fbName = token.fbName
       }
       return session
     },
