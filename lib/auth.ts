@@ -60,22 +60,32 @@ export const authOptions: NextAuthOptions = {
           const encryptedToken = encrypt(longLivedToken)
           const tokenExpiresAt = new Date(Date.now() + expires_in * 1000)
 
-          // Salva ou atualiza o BusinessManager do usuário com o token longo criptografado
-          if (user.id) {
-            await prisma.businessManager.upsert({
-              where: { metaBmId: account.providerAccountId },
-              create: {
-                userId: user.id,
-                metaBmId: account.providerAccountId,
-                name: user.name ?? 'Minha Conta',
-                accessTokenEnc: encryptedToken,
-                tokenExpiresAt,
-              },
-              update: {
-                accessTokenEnc: encryptedToken,
-                tokenExpiresAt,
-              },
-            })
+          // Busca o usuário real no banco pelo providerAccountId (garante que o registro já existe)
+          const dbAccount = await prisma.account.findFirst({
+            where: { provider: 'facebook', providerAccountId: account.providerAccountId },
+            select: { userId: true },
+          })
+          const userId = dbAccount?.userId ?? user.id
+
+          if (userId) {
+            // Confirma que o user existe antes de criar o BusinessManager
+            const userExists = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } })
+            if (userExists) {
+              await prisma.businessManager.upsert({
+                where: { metaBmId: account.providerAccountId },
+                create: {
+                  userId,
+                  metaBmId: account.providerAccountId,
+                  name: user.name ?? 'Minha Conta',
+                  accessTokenEnc: encryptedToken,
+                  tokenExpiresAt,
+                },
+                update: {
+                  accessTokenEnc: encryptedToken,
+                  tokenExpiresAt,
+                },
+              })
+            }
           }
         } catch (error) {
           console.error('[Auth] Falha ao trocar token:', error)
