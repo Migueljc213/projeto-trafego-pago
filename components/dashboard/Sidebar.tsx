@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { signOut } from 'next-auth/react';
+import { signOut, useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -54,6 +54,9 @@ const navItems = [
 export default function Sidebar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { data: session } = useSession();
+  const userName = session?.user?.name ?? 'Usuário';
+  const userInitial = userName.charAt(0).toUpperCase();
 
   const isActive = (href: string) => {
     if (href === '/dashboard') {
@@ -124,10 +127,10 @@ export default function Sidebar() {
       <div className="p-4 border-t border-gray-800">
         <div className="flex items-center gap-3 px-3 py-2 mb-3 rounded-lg bg-white/5">
           <div className="w-7 h-7 rounded-full bg-gradient-to-br from-neon-cyan to-neon-purple flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
-            M
+            {userInitial}
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-medium text-gray-200 truncate">Miguel Silva</p>
+            <p className="text-xs font-medium text-gray-200 truncate">{userName}</p>
             <p className="text-xs text-gray-500 truncate">Pro Plan</p>
           </div>
         </div>
