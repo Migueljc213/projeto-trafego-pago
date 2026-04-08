@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import Providers from "@/components/Providers";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://funnelguard.ai"),
@@ -80,7 +81,7 @@ export default function RootLayout({
         />
       </head>
       <body className="bg-dark-base text-gray-100 antialiased">
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
