@@ -14,9 +14,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const session = await getServerSession(authOptions)
 
   // Cria/atualiza BusinessManager após user estar confirmado no banco
-  const fbToken = (session as Record<string, unknown>)?.fbAccessToken as string | undefined
-  const fbAccountId = (session as Record<string, unknown>)?.fbProviderAccountId as string | undefined
-  const fbName = ((session as Record<string, unknown>)?.fbName ?? session?.user?.name) as string | undefined
+  const s = session as unknown as Record<string, unknown> | null
+  const fbToken = s?.fbAccessToken as string | undefined
+  const fbAccountId = s?.fbProviderAccountId as string | undefined
+  const fbName = (s?.fbName ?? session?.user?.name) as string | undefined
 
   if (fbToken && fbAccountId && session?.user?.id) {
     try {

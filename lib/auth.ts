@@ -83,9 +83,10 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id as string
       }
       if (token.fbAccessToken) {
-        (session as Record<string, unknown>).fbAccessToken = token.fbAccessToken
-        ;(session as Record<string, unknown>).fbProviderAccountId = token.fbProviderAccountId
-        ;(session as Record<string, unknown>).fbName = token.fbName
+        const s = session as unknown as Record<string, unknown>
+        s.fbAccessToken = token.fbAccessToken
+        s.fbProviderAccountId = token.fbProviderAccountId
+        s.fbName = token.fbName
       }
       return session
     },
