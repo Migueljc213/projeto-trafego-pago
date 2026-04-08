@@ -1,7 +1,12 @@
 /**
  * Motor de decisão do AI Auto-Pilot.
  * Toda lógica roda no servidor — nunca exposta ao cliente.
+ *
+ * v2: Aceita CorrelationContext opcional para decisões multivariáveis
+ * que combinam ROAS, Price Intelligence e LP Audit em um único julgamento.
  */
+
+import type { CorrelationResult } from './correlation-engine'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -171,6 +176,98 @@ export function runAutoPilot(
     type: 'NO_ACTION',
     reason: `Campanha com performance estável. ROAS: ${metrics.roas.toFixed(2)}x | CPA: R$${metrics.cpa.toFixed(2)} | Frequência: ${metrics.frequency.toFixed(1)}`,
     confidence: 90,
+    urgent: false,
+    metrics,
+  }
+}
+
+// ─── Motor Multivariável com Correlação ───────────────────────────────────────
+
+/**
+ * Versão aprimorada do Auto-Pilot que incorpora o resultado do Motor de
+ * Correlação Estratégica antes de tomar uma decisão.
+ *
+ * Regras de prioridade:
+ * 1. Cenários A/B/C da correlação têm prioridade total (causa raiz identificada)
+ * 2. Stop-loss clássico como fallback quando correlação não encontra gargalo
+ * 3. Scaling apenas quando correlação confirma que o funil está saudável
+ */
+export function runCorrelatedAutoPilot(
+  metrics: CampaignMetrics,
+  correlation: CorrelationResult,
+  aiMaxFrequency: number = 4.0
+): AutoPilotDecision {
+  // Dados insuficientes — aguardar
+  if (correlation.trigger === 'INSUFFICIENT_DATA') {
+    return {
+      type: 'NO_ACTION',
+      reason: `Dados insuficientes para análise correlacionada. Aguardando mais spend para avaliação segura.`,
+      confidence: 20,
+      urgent: false,
+      metrics,
+    }
+  }
+
+  // Cenário B: Checkout quebrado — pausa imediata (urgente)
+  if (correlation.trigger === 'SCENARIO_B_CHECKOUT_BROKEN' && correlation.shouldPause) {
+    return {
+      type: 'PAUSE',
+      reason: `[Motor de Correlação] ${correlation.alertEmailBody}`,
+      confidence: correlation.confidence,
+      urgent: true,
+      metrics,
+    }
+  }
+
+  // Cenário A: Concorrência agressiva — pausa com alerta de preço
+  if (correlation.trigger === 'SCENARIO_A_AGGRESSIVE_COMPETITOR' && correlation.shouldPause) {
+    return {
+      type: 'PAUSE',
+      reason: `[Motor de Correlação] ${correlation.alertEmailBody}`,
+      confidence: correlation.confidence,
+      urgent: false,
+      metrics,
+    }
+  }
+
+  // Cenário C: Pixel com falha — não pausa, mas alerta (dados comprometidos)
+  if (correlation.trigger === 'SCENARIO_C_PIXEL_FAILURE') {
+    return {
+      type: 'MONITOR',
+      reason: `[Motor de Correlação] Pixel da Meta com falha detectado. ${correlation.details.join(' | ')}`,
+      confidence: correlation.confidence,
+      urgent: true,
+      metrics,
+    }
+  }
+
+  // Cenário D: Página lenta — reduz orçamento para minimizar desperdício
+  if (correlation.trigger === 'SCENARIO_D_SLOW_PAGE') {
+    const suggestedBudget = Math.round(metrics.dailyBudget * 0.7) // Reduz 30%
+    return {
+      type: 'REDUCE_BUDGET',
+      reason: `[Motor de Correlação] Página lenta identificada como gargalo. Reduzindo orçamento em 30% até correção técnica.`,
+      confidence: correlation.confidence,
+      urgent: false,
+      suggestedBudget,
+      metrics,
+    }
+  }
+
+  // Funil saudável — avalia scaling normalmente (não existe risco de site/preço)
+  if (correlation.trigger === 'HEALTHY' && correlation.siteScore >= 70 && correlation.priceScore >= 70) {
+    const scaling = evaluateScaling(metrics)
+    if (scaling) return scaling
+  }
+
+  // Fallback: stop-loss clássico para casos não cobertos pela correlação
+  const stopLoss = evaluateStopLoss(metrics, aiMaxFrequency)
+  if (stopLoss) return stopLoss
+
+  return {
+    type: 'NO_ACTION',
+    reason: `Campanha estável. ROAS: ${metrics.roas.toFixed(2)}x | Anúncio: ${correlation.adScore}/100 | Preço: ${correlation.priceScore}/100 | Site: ${correlation.siteScore}/100`,
+    confidence: 85,
     urgent: false,
     metrics,
   }

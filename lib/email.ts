@@ -74,6 +74,85 @@ export async function sendAutoPilotAlert({
   })
 }
 
+// ─── Correlation Engine Alerts ────────────────────────────────────────────────
+
+interface CorrelationAlertParams {
+  to: string
+  userName: string
+  campaignName: string
+  subject: string
+  body: string
+  roas: number
+  spend: number
+  trigger: string
+  details: string[]
+}
+
+export async function sendCorrelationAlert({
+  to,
+  userName,
+  campaignName,
+  subject,
+  body,
+  roas,
+  spend,
+  trigger,
+  details,
+}: CorrelationAlertParams) {
+  const isScenarioB = trigger === 'SCENARIO_B_CHECKOUT_BROKEN'
+  const isScenarioA = trigger === 'SCENARIO_A_AGGRESSIVE_COMPETITOR'
+  const accentColor = isScenarioB ? '#ef4444' : isScenarioA ? '#f97316' : '#eab308'
+  const icon = isScenarioB ? '🚨' : isScenarioA ? '⏸️' : '⚠️'
+
+  const detailsHtml = details.length > 0
+    ? `<ul style="margin: 0; padding: 0 0 0 16px; color: #9ca3af; font-size: 13px;">${details.map(d => `<li style="margin-bottom: 4px;">${d}</li>`).join('')}</ul>`
+    : ''
+
+  await resend.emails.send({
+    from: 'FunnelGuard AI <onboarding@resend.dev>',
+    to,
+    subject: `${icon} ${subject}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 560px; margin: 0 auto; background: #0a0a0a; color: #fff; padding: 32px; border-radius: 12px;">
+        <p style="color: #6b7280; font-size: 13px; margin: 0 0 24px;">FunnelGuard AI · Motor de Correlação Estratégica</p>
+
+        <h1 style="font-size: 20px; margin: 0 0 8px;">Olá, ${userName} ${icon}</h1>
+        <p style="color: #9ca3af; font-size: 15px; margin: 0 0 24px;">${body}</p>
+
+        <div style="background: #111; border: 1px solid #1f2937; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+          <p style="margin: 0 0 4px; font-size: 13px; color: #6b7280;">Campanha afetada</p>
+          <p style="margin: 0 0 16px; font-size: 16px; font-weight: 600;">${campaignName}</p>
+
+          <div style="display: flex; gap: 24px; margin-bottom: ${detailsHtml ? '16px' : '0'};">
+            <div>
+              <p style="margin: 0; font-size: 12px; color: #6b7280;">ROAS</p>
+              <p style="margin: 0; font-size: 20px; font-weight: 700; font-family: monospace; color: ${roas >= 2 ? '#22c55e' : '#ef4444'};">${roas.toFixed(2)}x</p>
+            </div>
+            <div>
+              <p style="margin: 0; font-size: 12px; color: #6b7280;">Gasto</p>
+              <p style="margin: 0; font-size: 20px; font-weight: 700; font-family: monospace;">R$ ${spend.toFixed(2)}</p>
+            </div>
+          </div>
+
+          ${detailsHtml ? `
+          <div style="margin-top: 16px; padding: 12px; background: ${accentColor}18; border-radius: 6px; border-left: 3px solid ${accentColor};">
+            <p style="margin: 0 0 8px; font-size: 12px; font-weight: 600; color: ${accentColor};">Sinais detectados:</p>
+            ${detailsHtml}
+          </div>` : ''}
+        </div>
+
+        <a href="${process.env.NEXTAUTH_URL}/dashboard/campanhas" style="display: inline-block; background: #00D4FF; color: #000; font-weight: 600; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-size: 14px;">
+          Ver no Dashboard →
+        </a>
+
+        <p style="margin-top: 32px; font-size: 12px; color: #374151;">
+          Ação executada automaticamente pelo Motor de Correlação Estratégica. Para ajustar sensibilidade, acesse Configurações → Auto-Pilot.
+        </p>
+      </div>
+    `,
+  })
+}
+
 interface PriceAlertParams {
   to: string
   userName: string

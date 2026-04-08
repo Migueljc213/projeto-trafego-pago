@@ -16,6 +16,7 @@ import {
   X,
   Zap,
   Shield,
+  CreditCard,
 } from 'lucide-react';
 
 const navItems = [
@@ -38,6 +39,11 @@ const navItems = [
     href: '/dashboard/precos',
     label: 'Monitor de Precos',
     icon: TrendingUp,
+  },
+  {
+    href: '/dashboard/planos',
+    label: 'Planos',
+    icon: CreditCard,
   },
   {
     href: '/dashboard/configuracoes',

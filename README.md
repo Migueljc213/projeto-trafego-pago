@@ -11,7 +11,7 @@ npm install
 npm run dev
 ```
 
-Acesse `http://localhost:3000/login` e clique em **Entrar em Modo Demo**.
+Acesse `http://localhost:3001/login` e clique em **Entrar em Modo Demo**.
 
 ---
 
@@ -24,7 +24,7 @@ Crie o arquivo `.env.local` na raiz com:
 DATABASE_URL="postgresql://..."
 
 # NextAuth
-NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_URL="http://localhost:3001"
 NEXTAUTH_SECRET=""           # openssl rand -base64 32
 
 # Meta (Facebook) App — aguardando aprovação

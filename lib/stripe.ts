@@ -24,21 +24,33 @@ export const stripe = new Proxy({} as Stripe, {
 export const PLANS = {
   starter: {
     name: 'Starter',
-    priceId: process.env.STRIPE_PRICE_STARTER ?? '',
+    priceId: process.env.STRIPE_PRICE_ID_STARTER ?? '',
     maxAdAccounts: 1,
-    price: 'R$ 197/mês',
+    price: 'R$ 197',
+    description: 'Para quem está começando a escalar',
+    features: [
+      '1 conta de anúncio',
+      'AI Auto-Pilot (pause e escala automática)',
+      'Monitor de preços (5 concorrentes)',
+      'Auditoria de Landing Page',
+      'Alertas por email',
+      'Dashboard completo',
+    ],
   },
   pro: {
     name: 'Pro',
-    priceId: process.env.STRIPE_PRICE_PRO ?? '',
+    priceId: process.env.STRIPE_PRICE_ID_PRO ?? '',
     maxAdAccounts: 5,
-    price: 'R$ 397/mês',
-  },
-  agency: {
-    name: 'Agency',
-    priceId: process.env.STRIPE_PRICE_AGENCY ?? '',
-    maxAdAccounts: 999,
-    price: 'R$ 797/mês',
+    price: 'R$ 397',
+    description: 'Para gestores e agências em crescimento',
+    features: [
+      '5 contas de anúncio',
+      'Tudo do Starter',
+      'Análise de criativos com GPT-4o Vision',
+      'Monitor de preços ilimitado',
+      'Relatórios avançados',
+      'Suporte prioritário',
+    ],
   },
 } as const
 

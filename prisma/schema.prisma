@@ -112,10 +112,11 @@ model AdAccount {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  businessManager BusinessManager @relation(fields: [businessManagerId], references: [id], onDelete: Cascade)
-  campaigns       Campaign[]
-  competitors     Competitor[]
-  funnelAudits    FunnelAudit[]
+  businessManager   BusinessManager    @relation(fields: [businessManagerId], references: [id], onDelete: Cascade)
+  campaigns         Campaign[]
+  competitors       Competitor[]
+  funnelAudits      FunnelAudit[]
+  strategicInsights StrategicInsight[]
 
   @@index([businessManagerId])
 }
@@ -144,9 +145,11 @@ model Campaign {
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
-  adAccount    AdAccount        @relation(fields: [adAccountId], references: [id], onDelete: Cascade)
-  decisionLogs AiDecisionLog[]
-  dailyInsights DailyInsight[]
+  adAccount        AdAccount         @relation(fields: [adAccountId], references: [id], onDelete: Cascade)
+  decisionLogs     AiDecisionLog[]
+  dailyInsights    DailyInsight[]
+  competitorPrices CompetitorPrice[]
+  strategicInsights StrategicInsight[]
 
   @@index([adAccountId])
 }
@@ -200,9 +203,50 @@ model Competitor {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  adAccount AdAccount @relation(fields: [adAccountId], references: [id], onDelete: Cascade)
+  adAccount     AdAccount        @relation(fields: [adAccountId], references: [id], onDelete: Cascade)
+  priceHistory  CompetitorPrice[]
 
   @@index([adAccountId])
+}
+
+/// Histórico de preços de um competidor — vinculado opcionalmente a uma campanha
+/// para correlacionar variações de ROAS com mudanças de preço.
+model CompetitorPrice {
+  id           String   @id @default(cuid())
+  competitorId String
+  campaignId   String?
+  price        Float
+  currency     String   @default("BRL")
+  recordedAt   DateTime @default(now())
+
+  competitor Competitor @relation(fields: [competitorId], references: [id], onDelete: Cascade)
+  campaign   Campaign?  @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  @@index([competitorId])
+  @@index([campaignId])
+  @@index([recordedAt])
+}
+
+/// Insight estratégico semanal gerado pela IA correlacionando anúncio + preço + site.
+model StrategicInsight {
+  id          String   @id @default(cuid())
+  adAccountId String
+  campaignId  String?
+  weekStart   DateTime @db.Date
+  rootCause   String   @db.Text
+  bottleneck  String   // 'AD' | 'PRICE' | 'SITE' | 'MIXED' | 'HEALTHY'
+  adScore     Int      // 0–100 (100 = saudável)
+  priceScore  Int
+  siteScore   Int
+  rawData     Json
+  createdAt   DateTime @default(now())
+
+  adAccount AdAccount  @relation(fields: [adAccountId], references: [id], onDelete: Cascade)
+  campaign  Campaign?  @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  @@index([adAccountId])
+  @@index([campaignId])
+  @@index([weekStart])
 }
 
 model FunnelAudit {

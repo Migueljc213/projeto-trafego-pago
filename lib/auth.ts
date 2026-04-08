@@ -3,8 +3,6 @@ import FacebookProvider from 'next-auth/providers/facebook'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { PrismaAdapter } from '@next-auth/prisma-adapter'
 import { prisma } from '@/lib/prisma'
-import { encrypt } from '@/lib/encryption'
-import { exchangeForLongLivedToken } from '@/lib/meta-api'
 
 declare module 'next-auth' {
   interface Session {
@@ -51,22 +49,7 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async signIn({ user, account }) {
-      // Troca token curto por token longo (60 dias) e salva criptografado
-      if (account?.provider === 'facebook' && account.access_token) {
-        try {
-          const { access_token: longLivedToken, expires_in } =
-            await exchangeForLongLivedToken(account.access_token)
-          const encryptedToken = encrypt(longLivedToken)
-          const tokenExpiresAt = new Date(Date.now() + expires_in * 1000)
-
-          // Salva token no JWT para ser processado no dashboard (evita FK race condition)
-          // O BusinessManager é criado em app/dashboard/layout.tsx após user estar no banco
-        } catch (error) {
-          console.error('[Auth] Falha ao trocar token:', error)
-          // Não bloqueia o login se a troca falhar
-        }
-      }
+    async signIn() {
       return true
     },
     async jwt({ token, user, account }) {
