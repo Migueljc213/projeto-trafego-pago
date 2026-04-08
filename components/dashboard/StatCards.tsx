@@ -15,8 +15,8 @@ export default function StatCards({ stats }: { stats: DashboardStats }) {
       id: 'investment',
       title: 'Investimento Total',
       value: fmt(stats.totalSpend, 'currency'),
-      change: 12.4,
-      changeLabel: 'vs. mês anterior',
+      change: stats.totalSpend > 0 ? null : null,
+      changeLabel: stats.totalSpend > 0 ? 'vs. mês anterior' : 'sem dados ainda',
       type: 'currency' as const,
       icon: DollarSign,
     },
@@ -24,8 +24,8 @@ export default function StatCards({ stats }: { stats: DashboardStats }) {
       id: 'roas',
       title: 'ROAS Médio',
       value: fmt(stats.avgRoas, 'roas'),
-      change: stats.avgRoas >= 2 ? 8.2 : -14.3,
-      changeLabel: 'vs. mês anterior',
+      change: stats.avgRoas > 0 ? null : null,
+      changeLabel: stats.avgRoas > 0 ? 'vs. mês anterior' : 'sem dados ainda',
       type: 'percentage' as const,
       icon: BarChart2,
     },
@@ -33,8 +33,8 @@ export default function StatCards({ stats }: { stats: DashboardStats }) {
       id: 'conversions',
       title: 'Conversões',
       value: fmt(stats.totalConversions, 'number'),
-      change: 5.1,
-      changeLabel: 'vs. mês anterior',
+      change: stats.totalConversions > 0 ? null : null,
+      changeLabel: stats.totalConversions > 0 ? 'vs. mês anterior' : 'sem dados ainda',
       type: 'number' as const,
       icon: ShoppingCart,
     },
@@ -53,7 +53,7 @@ export default function StatCards({ stats }: { stats: DashboardStats }) {
     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
       {cards.map((card) => {
         const isWarning = card.type === 'warning'
-        const isPositive = card.change > 0
+        const isPositive = (card.change ?? 0) > 0
         return (
           <div
             key={card.id}
@@ -79,14 +79,15 @@ export default function StatCards({ stats }: { stats: DashboardStats }) {
             </p>
 
             <div className="flex items-center gap-1.5">
-              {!isWarning && (isPositive
-                ? <TrendingUp className="w-3 h-3 text-green-400 flex-shrink-0" />
-                : <TrendingDown className="w-3 h-3 text-red-400 flex-shrink-0" />
-              )}
               {isWarning && <AlertTriangle className="w-3 h-3 text-orange-400 flex-shrink-0" />}
-              {!isWarning && (
-                <span className={`text-xs font-medium ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
-                  {isPositive ? '+' : ''}{card.change}%
+              {!isWarning && card.change !== null && (
+                card.change > 0
+                  ? <TrendingUp className="w-3 h-3 text-green-400 flex-shrink-0" />
+                  : <TrendingDown className="w-3 h-3 text-red-400 flex-shrink-0" />
+              )}
+              {!isWarning && card.change !== null && (
+                <span className={`text-xs font-medium ${card.change > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {card.change > 0 ? '+' : ''}{card.change}%
                 </span>
               )}
               <span className="text-xs text-gray-500">{card.changeLabel}</span>
