@@ -1,5 +1,6 @@
 'use client'
 
+import React from 'react'
 import { TrendingUp, TrendingDown, DollarSign, BarChart2, ShoppingCart, AlertTriangle } from 'lucide-react'
 import type { DashboardStats } from '@/lib/dashboard-data'
 
@@ -9,8 +10,18 @@ function fmt(value: number, type: 'currency' | 'roas' | 'number') {
   return value.toLocaleString('pt-BR')
 }
 
+interface StatCard {
+  id: string
+  title: string
+  value: string
+  change: number | null
+  changeLabel: string
+  type: 'currency' | 'percentage' | 'number' | 'warning'
+  icon: React.ElementType
+}
+
 export default function StatCards({ stats }: { stats: DashboardStats }) {
-  const cards = [
+  const cards: StatCard[] = [
     {
       id: 'investment',
       title: 'Investimento Total',
