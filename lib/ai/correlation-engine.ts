@@ -97,7 +97,8 @@ export interface CorrelationResult {
   shouldSendAlert: boolean
   alertEmailSubject: string
   alertEmailBody: string
-  rootCauseInsight: string            // Parágrafo gerado pelo GPT-4o (exibido no dashboard)
+  rootCauseInsight: string            // Parágrafo técnico gerado pelo GPT-4o (exibido no dashboard)
+  executiveSummary: string            // Resumo executivo de 3 parágrafos, foco em lucratividade
   confidence: number                  // 0–100
   adScore: number                     // Saúde do anúncio (0–100, 100=saudável)
   priceScore: number                  // Saúde do preço (0–100)
@@ -177,7 +178,7 @@ function calcSiteScore(audit: LpAuditData): number {
  * Avalia os dados cruzados e retorna o trigger mais relevante.
  * A IA NUNCA toma decisão de preço se os dados do scraper são não-confiáveis.
  */
-export function evaluateCorrelation(payload: CorrelationPayload): Omit<CorrelationResult, 'rootCauseInsight'> {
+export function evaluateCorrelation(payload: CorrelationPayload): Omit<CorrelationResult, 'rootCauseInsight' | 'executiveSummary'> {
   const { campaign, competitorPrices, lpAudit } = payload
   const details: string[] = []
 
@@ -333,7 +334,7 @@ function getOpenAI(): OpenAI {
  */
 export async function generateRootCauseInsight(
   payload: CorrelationPayload,
-  evaluation: Omit<CorrelationResult, 'rootCauseInsight'>
+  evaluation: Omit<CorrelationResult, 'rootCauseInsight' | 'executiveSummary'>
 ): Promise<string> {
   const { campaign, competitorPrices, lpAudit } = payload
 
@@ -394,6 +395,90 @@ DIAGNÓSTICO DO SISTEMA:
   }
 }
 
+// ─── GPT-4o Executive Summary (3 parágrafos, foco em lucratividade) ──────────
+
+/**
+ * Gera um resumo executivo de 3 parágrafos voltado para o cliente de negócios.
+ * Diferente do rootCauseInsight (técnico, 1 parágrafo), este é orientado a lucro:
+ * § 1 — Situação atual e impacto financeiro
+ * § 2 — Causa raiz em linguagem de negócio
+ * § 3 — Ações concretas para recuperar ROI
+ */
+export async function generateExecutiveSummary(
+  payload: CorrelationPayload,
+  evaluation: Omit<CorrelationResult, 'rootCauseInsight' | 'executiveSummary'>
+): Promise<string> {
+  const { campaign, competitorPrices, lpAudit } = payload
+
+  const minCompetitor = getMinReliableCompetitorPrice(competitorPrices)
+  const myPrice = competitorPrices.find((c) => c.myPrice !== null)?.myPrice ?? null
+
+  const priceContext = minCompetitor && myPrice
+    ? `Concorrente mais barato: ${minCompetitor.name} a R$${minCompetitor.price.toFixed(2)} (seu preço: R$${myPrice.toFixed(2)}).`
+    : 'Dados de preço indisponíveis.'
+
+  const siteIssues = [
+    lpAudit.hasCheckoutError && 'erro no checkout',
+    lpAudit.hasPixelFailure && 'pixel da Meta com falha',
+    lpAudit.hasSlowPage && 'página lenta',
+    lpAudit.hasBrokenCta && 'CTA quebrado',
+  ].filter(Boolean).join(', ') || 'nenhum problema técnico grave'
+
+  const roasDiff = campaign.targetRoas > 0
+    ? `${((campaign.roas / campaign.targetRoas - 1) * 100).toFixed(0)}%`
+    : '0%'
+
+  const estimatedWaste = campaign.spend > 0 && campaign.roas < campaign.targetRoas
+    ? (campaign.spend * (1 - campaign.roas / campaign.targetRoas)).toFixed(2)
+    : '0'
+
+  const prompt = `Você é um consultor sênior de e-commerce e marketing de performance, responsável por um relatório executivo mensal para o CEO de uma empresa de varejo online. Escreva exatamente 3 parágrafos sobre a performance de campanhas, focando em impacto financeiro e ações de negócio. NÃO use métricas técnicas de marketing (CTR, CPC, frequência). Use linguagem de negócio: lucro, faturamento, competitividade, retorno.
+
+DADOS FINANCEIROS DA CAMPANHA:
+- Campanha: "${campaign.campaignName}"
+- Retorno sobre investimento (ROAS): ${campaign.roas.toFixed(2)}x (meta: ${campaign.targetRoas}x)
+- Investimento total: R$${campaign.spend.toFixed(2)}
+- Desperdício estimado: R$${estimatedWaste} (${roasDiff} ${campaign.roas < campaign.targetRoas ? 'abaixo' : 'acima'} da meta)
+- Vendas geradas: ${campaign.conversions} conversões
+- Custo por venda: R$${campaign.cpa.toFixed(2)}
+
+CENÁRIO COMPETITIVO:
+${priceContext}
+
+SITUAÇÃO DO PONTO DE VENDA DIGITAL:
+Problemas encontrados: ${siteIssues}
+Pontuação de saúde: ${evaluation.siteScore}/100
+
+DIAGNÓSTICO DO SISTEMA:
+Gargalo principal: ${evaluation.bottleneck}
+Scores — Anúncio: ${evaluation.adScore}/100 | Preço: ${evaluation.priceScore}/100 | Site: ${evaluation.siteScore}/100
+
+§1 - Descreva a situação financeira atual e o impacto no caixa da empresa (2-3 frases).
+§2 - Explique a causa raiz do problema em linguagem de negócio, sem termos técnicos de marketing (2-3 frases).
+§3 - Indique 2-3 ações concretas e priorizadas que o gestor deve tomar esta semana para recuperar o retorno (2-3 frases).
+
+Separe os parágrafos com uma linha em branco. Não use títulos, bullets, markdown ou emojis.`
+
+  try {
+    const res = await getOpenAI().chat.completions.create({
+      model: 'gpt-4o',
+      max_tokens: 400,
+      temperature: 0.4,
+      messages: [
+        {
+          role: 'system',
+          content: 'Você é um consultor de negócios digital. Responda APENAS com os 3 parágrafos solicitados, separados por linha em branco. Sem introduções, títulos, bullets ou markdown.',
+        },
+        { role: 'user', content: prompt },
+      ],
+    })
+    return res.choices[0]?.message?.content?.trim() ?? 'Resumo executivo indisponível.'
+  } catch (err) {
+    console.error('[correlation-engine] Falha ao gerar resumo executivo:', err)
+    return `Gargalo identificado: ${evaluation.bottleneck}. Scores — Anúncio: ${evaluation.adScore}/100, Preço: ${evaluation.priceScore}/100, Site: ${evaluation.siteScore}/100.`
+  }
+}
+
 // ─── Função Principal Exportada ───────────────────────────────────────────────
 
 /**
@@ -414,8 +499,11 @@ export async function getStrategicInsight(
   // Avaliação de correlações (síncrona, sem IO)
   const evaluation = evaluateCorrelation(payload)
 
-  // Geração de insight por GPT-4o (assíncrona)
-  const rootCauseInsight = await generateRootCauseInsight(payload, evaluation)
+  // Geração de insights por GPT-4o em paralelo (insight técnico + resumo executivo)
+  const [rootCauseInsight, executiveSummary] = await Promise.all([
+    generateRootCauseInsight(payload, evaluation),
+    generateExecutiveSummary(payload, evaluation),
+  ])
 
-  return { ...evaluation, rootCauseInsight }
+  return { ...evaluation, rootCauseInsight, executiveSummary }
 }

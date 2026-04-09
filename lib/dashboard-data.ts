@@ -200,3 +200,144 @@ export async function getCompetitorRows(): Promise<CompetitorRow[]> {
     orderBy: { lastChecked: 'desc' },
   })
 }
+
+// ─── Latest Strategic Insight ─────────────────────────────────────────────────
+
+export interface LatestDiagnostic {
+  id: string
+  campaignId: string | null
+  campaignName: string | null
+  weekStart: Date
+  rootCause: string
+  executiveSummary: string | null
+  bottleneck: string
+  adScore: number
+  priceScore: number
+  siteScore: number
+  createdAt: Date
+}
+
+export async function getLatestStrategicInsight(): Promise<LatestDiagnostic | null> {
+  const adAccount = await getUserAdAccount()
+  if (!adAccount) return null
+
+  const insight = await prisma.strategicInsight.findFirst({
+    where: { adAccountId: adAccount.id },
+    orderBy: { createdAt: 'desc' },
+    include: { campaign: { select: { name: true } } },
+  })
+
+  if (!insight) return null
+
+  // executiveSummary é armazenado em rawData.executiveSummary (campo JSON)
+  const raw = insight.rawData as Record<string, unknown> | null
+  const executiveSummary = typeof raw?.executiveSummary === 'string'
+    ? raw.executiveSummary
+    : null
+
+  return {
+    id: insight.id,
+    campaignId: insight.campaignId,
+    campaignName: insight.campaign?.name ?? null,
+    weekStart: insight.weekStart,
+    rootCause: insight.rootCause,
+    executiveSummary,
+    bottleneck: insight.bottleneck,
+    adScore: insight.adScore,
+    priceScore: insight.priceScore,
+    siteScore: insight.siteScore,
+    createdAt: insight.createdAt,
+  }
+}
+
+// ─── ROI / Dinheiro Salvo pela IA ─────────────────────────────────────────────
+
+export interface AiSavings {
+  totalSaved: number       // R$ estimados economizados por pausas executadas (30 dias)
+  pauseCount: number       // Nº de campanhas pausadas
+  scaleCount: number       // Nº de campanhas escaladas
+  totalDecisions: number   // Total de decisões executadas
+}
+
+/**
+ * Calcula o dinheiro estimado que a IA economizou nos últimos 30 dias
+ * ao pausar campanhas com ROAS abaixo do alvo.
+ * Estimativa: cada pausa economizou 50% do dailyBudget diário × 1 dia.
+ */
+export async function getMoneySavedByAI(): Promise<AiSavings> {
+  const adAccount = await getUserAdAccount()
+  if (!adAccount) return { totalSaved: 0, pauseCount: 0, scaleCount: 0, totalDecisions: 0 }
+
+  const thirtyDaysAgo = new Date()
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+  const logs = await prisma.aiDecisionLog.findMany({
+    where: {
+      executed: true,
+      createdAt: { gte: thirtyDaysAgo },
+      campaign: { adAccountId: adAccount.id },
+      type: { in: ['PAUSE', 'SCALE', 'REDUCE_BUDGET'] },
+    },
+    include: {
+      campaign: { select: { dailyBudget: true, roas: true, aiMinRoas: true } },
+    },
+  })
+
+  let totalSaved = 0
+  let pauseCount = 0
+  let scaleCount = 0
+
+  for (const log of logs) {
+    const budget = log.campaign.dailyBudget ?? 0
+    if (log.type === 'PAUSE') {
+      // Estimativa conservadora: pausa economizou metade do orçamento diário
+      totalSaved += budget * 0.5
+      pauseCount++
+    } else if (log.type === 'SCALE') {
+      scaleCount++
+    } else if (log.type === 'REDUCE_BUDGET') {
+      // Redução de orçamento economizou ~20% do orçamento diário
+      totalSaved += budget * 0.2
+    }
+  }
+
+  return {
+    totalSaved,
+    pauseCount,
+    scaleCount,
+    totalDecisions: logs.length,
+  }
+}
+
+export async function getAllStrategicInsights(limit = 10): Promise<LatestDiagnostic[]> {
+  const adAccount = await getUserAdAccount()
+  if (!adAccount) return []
+
+  const insights = await prisma.strategicInsight.findMany({
+    where: { adAccountId: adAccount.id },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+    include: { campaign: { select: { name: true } } },
+  })
+
+  return insights.map((insight) => {
+    const raw = insight.rawData as Record<string, unknown> | null
+    const executiveSummary = typeof raw?.executiveSummary === 'string'
+      ? raw.executiveSummary
+      : null
+
+    return {
+      id: insight.id,
+      campaignId: insight.campaignId,
+      campaignName: insight.campaign?.name ?? null,
+      weekStart: insight.weekStart,
+      rootCause: insight.rootCause,
+      executiveSummary,
+      bottleneck: insight.bottleneck,
+      adScore: insight.adScore,
+      priceScore: insight.priceScore,
+      siteScore: insight.siteScore,
+      createdAt: insight.createdAt,
+    }
+  })
+}

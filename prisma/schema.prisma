@@ -19,6 +19,11 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  // Onboarding
+  hasCompletedOnboarding Boolean @default(false)
+  onboardingStep         Int     @default(0)
+  targetRoas             Float?
+
   accounts         Account[]
   sessions         Session[]
   businessManagers BusinessManager[]

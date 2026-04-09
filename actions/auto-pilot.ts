@@ -384,7 +384,10 @@ export async function runCorrelatedAutoPilotAction(campaignId: string): Promise<
       adScore: correlation.adScore,
       priceScore: correlation.priceScore,
       siteScore: correlation.siteScore,
-      rawData: correlationPayload as object,
+      rawData: {
+        ...(correlationPayload as object),
+        executiveSummary: correlation.executiveSummary,
+      },
     },
   })
 

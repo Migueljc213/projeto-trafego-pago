@@ -5,6 +5,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { runPriceIntelligence } from '@/lib/scraping/price-crawler'
 import { auditLandingPage } from '@/lib/scraping/lp-audit'
+import { sendPredictivePriceDropAlert } from '@/lib/email'
 import type { ActionResult } from './ad-accounts'
 import type { PriceComparisonResult } from '@/lib/scraping/price-crawler'
 import type { LpAuditResult } from '@/lib/scraping/lp-audit'
@@ -45,11 +46,35 @@ export async function runPriceIntelligenceAction(
       adAccount.competitors.map((c: (typeof adAccount.competitors)[number]) => ({ name: c.name, url: c.url }))
     )
 
-    // Atualiza preços no banco
+    // Busca o usuário para alertas por email
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { email: true, name: true },
+    })
+
+    // Atualiza preços no banco + dispara alertas preditivos se o concorrente baixou o preço
     await Promise.all(
       result.competitors.map(async (crawled) => {
         const competitor = adAccount.competitors.find((c: (typeof adAccount.competitors)[number]) => c.url === crawled.url)
         if (competitor && crawled.price !== null) {
+          // Detecção de queda de preço do concorrente (alerta preditivo)
+          const oldPrice = competitor.lastPrice
+          if (oldPrice && oldPrice > 0) {
+            const dropPct = ((oldPrice - crawled.price) / oldPrice) * 100
+            // Se o concorrente baixou o preço em >5%, dispara alerta antes do ROAS cair
+            if (dropPct >= 5 && user?.email) {
+              sendPredictivePriceDropAlert({
+                to: user.email,
+                userName: user.name ?? 'Usuário',
+                competitorName: competitor.name,
+                productContext: myProductName,
+                previousPrice: oldPrice,
+                newPrice: crawled.price,
+                dropPercent: dropPct,
+              }).catch((e) => console.error('[price-drop-alert]', e))
+            }
+          }
+
           await prisma.competitor.update({
             where: { id: competitor.id },
             data: {

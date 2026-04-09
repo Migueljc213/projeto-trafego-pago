@@ -5,6 +5,9 @@ import FunnelVisualizer from '@/components/dashboard/FunnelVisualizer'
 import AIInsightsFeed from '@/components/dashboard/AIInsightsFeed'
 import CampaignList from '@/components/dashboard/CampaignList'
 import PriceTable from '@/components/dashboard/PriceTable'
+import DiagnosticCenter from '@/components/dashboard/DiagnosticCenter'
+import ROISavingsCard from '@/components/dashboard/ROISavingsCard'
+import type { DiagnosticData } from '@/components/dashboard/DiagnosticCenter'
 import { SkeletonStatCard, SkeletonChartCard, SkeletonFeedItem } from '@/components/dashboard/SkeletonCards'
 import {
   getDashboardStats,
@@ -12,17 +15,34 @@ import {
   getAIInsightsFeed,
   getCampaignRows,
   getCompetitorRows,
+  getLatestStrategicInsight,
+  getMoneySavedByAI,
 } from '@/lib/dashboard-data'
 
 export default async function DashboardPage() {
   // Busca dados em paralelo no servidor
-  const [stats, chartData, feedInsights, campaigns, competitors] = await Promise.all([
+  const [stats, chartData, feedInsights, campaigns, competitors, latestInsight, savings] = await Promise.all([
     getDashboardStats(),
     getRevenueChartData(),
     getAIInsightsFeed(),
     getCampaignRows(),
     getCompetitorRows(),
+    getLatestStrategicInsight(),
+    getMoneySavedByAI(),
   ])
+
+  const diagnosticData: DiagnosticData | null = latestInsight
+    ? {
+        campaignName: latestInsight.campaignName,
+        bottleneck: latestInsight.bottleneck as DiagnosticData['bottleneck'],
+        adScore: latestInsight.adScore,
+        priceScore: latestInsight.priceScore,
+        siteScore: latestInsight.siteScore,
+        rootCause: latestInsight.rootCause,
+        executiveSummary: latestInsight.executiveSummary,
+        createdAt: new Date(latestInsight.createdAt),
+      }
+    : null
 
   const now = new Date()
   const monthLabel = now.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
@@ -67,10 +87,30 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Bottom */}
+      {/* ROI Counter — Dinheiro Salvo pela IA */}
+      <ROISavingsCard savings={savings} />
+
+      {/* Bottom: Campanhas + Preços */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <CampaignList campaigns={campaigns} />
         <PriceTable competitors={competitors} />
+      </div>
+
+      {/* Diagnóstico de Causa Raiz */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <DiagnosticCenter data={diagnosticData} />
+        <div className="glass-card rounded-xl border border-gray-800 p-5 flex flex-col justify-center items-center gap-3 text-center min-h-[200px]">
+          <p className="text-sm font-semibold text-white">Diagnóstico Completo</p>
+          <p className="text-xs text-gray-500 max-w-[260px]">
+            Selecione uma campanha e execute o motor de correlação multivariável para ver a análise completa com resumo executivo.
+          </p>
+          <a
+            href="/dashboard/diagnostico"
+            className="mt-1 px-4 py-2 rounded-lg bg-neon-cyan/10 border border-neon-cyan/30 text-neon-cyan text-sm font-medium hover:bg-neon-cyan/20 transition-all"
+          >
+            Abrir Centro de Diagnóstico →
+          </a>
+        </div>
       </div>
     </div>
   )

@@ -17,6 +17,8 @@ import {
   Zap,
   Shield,
   CreditCard,
+  ScanSearch,
+  FlaskConical,
 } from 'lucide-react';
 
 const navItems = [
@@ -31,6 +33,12 @@ const navItems = [
     icon: Megaphone,
   },
   {
+    href: '/dashboard/diagnostico',
+    label: 'Centro de Diagnostico',
+    icon: ScanSearch,
+    badge: 'NOVO',
+  },
+  {
     href: '/dashboard/auditoria',
     label: 'Auditoria de Funil',
     icon: GitBranch,
@@ -39,6 +47,12 @@ const navItems = [
     href: '/dashboard/precos',
     label: 'Monitor de Precos',
     icon: TrendingUp,
+  },
+  {
+    href: '/dashboard/laboratorio',
+    label: 'Lab de Criativos',
+    icon: FlaskConical,
+    badge: 'IA',
   },
   {
     href: '/dashboard/planos',
@@ -121,6 +135,11 @@ export default function Sidebar() {
                 }`}
               />
               <span className="text-sm font-medium">{item.label}</span>
+              {'badge' in item && item.badge && !active && (
+                <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                  {item.badge}
+                </span>
+              )}
               {active && (
                 <span className="ml-auto w-1.5 h-1.5 rounded-full bg-neon-cyan flex-shrink-0"></span>
               )}
