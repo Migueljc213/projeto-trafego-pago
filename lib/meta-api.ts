@@ -87,16 +87,6 @@ async function metaFetch<T>(
     },
   })
 
-  // Log usage headers
-  const businessUsage = response.headers.get('x-business-use-case-usage')
-  const appUsage = response.headers.get('x-app-usage')
-  if (businessUsage) {
-    console.log('[Meta API] Business use case usage:', businessUsage)
-  }
-  if (appUsage) {
-    console.log('[Meta API] App usage:', appUsage)
-  }
-
   // Handle rate limiting via HTTP status
   if (response.status === 429) {
     const retryAfterHeader = response.headers.get('retry-after')

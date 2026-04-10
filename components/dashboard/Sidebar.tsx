@@ -19,6 +19,7 @@ import {
   CreditCard,
   ScanSearch,
   FlaskConical,
+  ShieldAlert,
 } from 'lucide-react';
 
 const navItems = [
@@ -77,6 +78,8 @@ export default function Sidebar() {
   const { data: session } = useSession();
   const userName = session?.user?.name ?? 'Usuário';
   const userInitial = userName.charAt(0).toUpperCase();
+
+  const isAdmin = session?.user?.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL
 
   const isActive = (href: string) => {
     if (href === '/dashboard') {
@@ -159,6 +162,16 @@ export default function Sidebar() {
             <p className="text-xs text-gray-500 truncate">Ver perfil</p>
           </div>
         </Link>
+        {isAdmin && (
+          <Link
+            href="/admin"
+            onClick={() => setMobileOpen(false)}
+            className="flex items-center gap-3 px-3 py-2.5 mb-1 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-400/10 transition-all duration-200 border border-transparent"
+          >
+            <ShieldAlert className="w-4 h-4 flex-shrink-0" />
+            <span className="text-sm font-medium">Super Admin</span>
+          </Link>
+        )}
         <button
           onClick={() => signOut({ callbackUrl: '/login' })}
           className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-all duration-200 w-full group"
