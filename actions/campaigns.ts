@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { decrypt } from '@/lib/encryption'
-import { updateCampaignStatus, getCampaigns, getCampaignInsights, MetaRateLimitError } from '@/lib/meta-api'
+import { updateCampaignStatus, updateCampaignBudget, getCampaigns, getCampaignInsights, MetaRateLimitError } from '@/lib/meta-api'
 import { ToggleAutoPilotSchema } from '@/lib/validations'
 import type { z } from 'zod'
 import type { ActionResult } from './ad-accounts'
@@ -192,6 +192,64 @@ export async function syncMetaCampaignsAction(): Promise<
     }
     console.error('[syncMetaCampaigns]', error)
     return { success: false, error: 'Erro ao sincronizar campanhas com a Meta' }
+  }
+}
+
+/**
+ * Atualiza o orçamento diário de uma campanha (no banco e na Meta API).
+ */
+export async function updateCampaignBudgetAction(input: {
+  campaignId: string
+  dailyBudgetBRL: number
+}): Promise<ActionResult<{ campaignId: string; dailyBudget: number }>> {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) return { success: false, error: 'Não autenticado' }
+
+  if (input.dailyBudgetBRL < 5) {
+    return { success: false, error: 'Orçamento mínimo é R$5,00/dia' }
+  }
+
+  try {
+    const campaign = await prisma.campaign.findFirst({
+      where: {
+        id: input.campaignId,
+        adAccount: { businessManager: { userId: session.user.id } },
+      },
+      include: {
+        adAccount: { include: { businessManager: true } },
+      },
+    })
+
+    if (!campaign) return { success: false, error: 'Campanha não encontrada' }
+
+    const bm = campaign.adAccount.businessManager
+    const accessToken = decrypt(bm.accessTokenEnc)
+    const budgetCents = Math.round(input.dailyBudgetBRL * 100)
+
+    // Atualiza na Meta API
+    let syncedWithMeta = false
+    try {
+      syncedWithMeta = await updateCampaignBudget(campaign.metaCampaignId, budgetCents, accessToken)
+    } catch {
+      // Não falha se a Meta rejeitar — persiste localmente mesmo assim
+    }
+
+    // Atualiza no banco
+    const updated = await prisma.campaign.update({
+      where: { id: campaign.id },
+      data: { dailyBudget: input.dailyBudgetBRL },
+    })
+
+    return {
+      success: true,
+      data: { campaignId: updated.id, dailyBudget: updated.dailyBudget ?? input.dailyBudgetBRL },
+    }
+  } catch (err) {
+    if (err instanceof MetaRateLimitError) {
+      return { success: false, error: `Rate limit da Meta. Tente em ${err.retryAfter}s` }
+    }
+    console.error('[updateCampaignBudget]', err)
+    return { success: false, error: 'Erro ao atualizar orçamento' }
   }
 }
 

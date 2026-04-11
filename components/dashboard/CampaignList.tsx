@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Zap, Pause, Clock, TrendingUp, TrendingDown, Loader2, RefreshCw, Plus } from 'lucide-react'
+import { Zap, Pause, Clock, TrendingUp, TrendingDown, Loader2, RefreshCw, Plus, Pencil, Check, X } from 'lucide-react'
 import Link from 'next/link'
 import type { CampaignRow } from '@/lib/dashboard-data'
-import { toggleAutoPilotAction } from '@/actions/campaigns'
+import { toggleAutoPilotAction, updateCampaignBudgetAction } from '@/actions/campaigns'
 
 function StatusBadge({ status }: { status: string }) {
   if (status === 'ACTIVE') {
@@ -33,7 +33,27 @@ function CampaignCard({ campaign }: { campaign: CampaignRow }) {
   const [autoPilot, setAutoPilot] = useState(campaign.aiAutoPilot)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const [editingBudget, setEditingBudget] = useState(false)
+  const [budgetInput, setBudgetInput] = useState(String(campaign.dailyBudget ?? ''))
+  const [budgetPending, startBudgetTransition] = useTransition()
   const isGood = campaign.roas >= 3.0
+
+  function handleSaveBudget() {
+    const val = parseFloat(budgetInput)
+    if (isNaN(val) || val < 5) {
+      setError('Orçamento mínimo: R$5,00/dia')
+      return
+    }
+    setError(null)
+    startBudgetTransition(async () => {
+      const result = await updateCampaignBudgetAction({ campaignId: campaign.id, dailyBudgetBRL: val })
+      if (result.success) {
+        setEditingBudget(false)
+      } else {
+        setError(result.error ?? 'Erro ao atualizar orçamento')
+      }
+    })
+  }
 
   function handleToggle() {
     const newValue = !autoPilot
@@ -87,6 +107,39 @@ function CampaignCard({ campaign }: { campaign: CampaignRow }) {
         </div>
 
         <div className="flex flex-wrap items-center gap-4 text-right">
+          <div>
+            <p className="text-xs text-gray-500 mb-0.5">Orçamento/dia</p>
+            {editingBudget ? (
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-gray-400">R$</span>
+                <input
+                  type="number"
+                  min={5}
+                  step={1}
+                  value={budgetInput}
+                  onChange={e => setBudgetInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleSaveBudget(); if (e.key === 'Escape') setEditingBudget(false) }}
+                  autoFocus
+                  className="w-16 bg-gray-800 border border-neon-cyan/40 rounded px-1.5 py-0.5 text-xs text-white font-mono focus:outline-none"
+                />
+                <button onClick={handleSaveBudget} disabled={budgetPending} className="text-green-400 hover:text-green-300 disabled:opacity-50">
+                  {budgetPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                </button>
+                <button onClick={() => setEditingBudget(false)} className="text-gray-500 hover:text-gray-300">
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 justify-end">
+                <p className="text-sm font-semibold font-mono text-gray-200">
+                  R$ {(campaign.dailyBudget ?? 0).toFixed(0)}
+                </p>
+                <button onClick={() => { setEditingBudget(true); setBudgetInput(String(campaign.dailyBudget ?? '')) }} className="text-gray-600 hover:text-gray-400 transition-colors">
+                  <Pencil className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+          </div>
           <div>
             <p className="text-xs text-gray-500 mb-0.5">Spend</p>
             <p className="text-sm font-semibold font-mono text-gray-200">

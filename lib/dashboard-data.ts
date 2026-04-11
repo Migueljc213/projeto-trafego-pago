@@ -151,6 +151,7 @@ export interface CampaignRow {
   id: string
   name: string
   status: string
+  dailyBudget: number
   spend: number
   roas: number
   conversions: number
@@ -172,6 +173,7 @@ export async function getCampaignRows(): Promise<CampaignRow[]> {
     id: c.id,
     name: c.name,
     status: c.status,
+    dailyBudget: c.dailyBudget ?? 0,
     spend: c.spend,
     roas: c.roas,
     conversions: c.conversions,
