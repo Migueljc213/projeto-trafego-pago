@@ -50,6 +50,12 @@ const navItems = [
     icon: TrendingUp,
   },
   {
+    href: '/dashboard/criar-campanha',
+    label: 'Nova Campanha',
+    icon: Megaphone,
+    badge: 'NEW',
+  },
+  {
     href: '/dashboard/laboratorio',
     label: 'Lab de Criativos',
     icon: FlaskConical,

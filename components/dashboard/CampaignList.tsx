@@ -1,8 +1,10 @@
 'use client'
 
-import { useState } from 'react'
-import { Zap, Pause, Clock, TrendingUp, TrendingDown } from 'lucide-react'
+import { useState, useTransition } from 'react'
+import { Zap, Pause, Clock, TrendingUp, TrendingDown, Loader2, RefreshCw, Plus } from 'lucide-react'
+import Link from 'next/link'
 import type { CampaignRow } from '@/lib/dashboard-data'
+import { toggleAutoPilotAction } from '@/actions/campaigns'
 
 function StatusBadge({ status }: { status: string }) {
   if (status === 'ACTIVE') {
@@ -29,7 +31,26 @@ function StatusBadge({ status }: { status: string }) {
 
 function CampaignCard({ campaign }: { campaign: CampaignRow }) {
   const [autoPilot, setAutoPilot] = useState(campaign.aiAutoPilot)
+  const [isPending, startTransition] = useTransition()
+  const [error, setError] = useState<string | null>(null)
   const isGood = campaign.roas >= 3.0
+
+  function handleToggle() {
+    const newValue = !autoPilot
+    setAutoPilot(newValue) // optimistic update
+    setError(null)
+
+    startTransition(async () => {
+      const result = await toggleAutoPilotAction({
+        campaignId: campaign.id,
+        enabled: newValue,
+      })
+      if (!result.success) {
+        setAutoPilot(!newValue) // rollback
+        setError(result.error ?? 'Erro ao atualizar Auto-Pilot')
+      }
+    })
+  }
 
   return (
     <div className={`glass-card rounded-xl p-4 border transition-all duration-300 ${
@@ -55,11 +76,14 @@ function CampaignCard({ campaign }: { campaign: CampaignRow }) {
           <div className="flex flex-wrap items-center gap-2 mb-2">
             <StatusBadge status={campaign.status} />
             {campaign.lastAiAction && (
-              <span className="text-xs text-gray-500 font-mono">
+              <span className="text-xs text-gray-500 font-mono truncate max-w-[200px]">
                 última ação: {campaign.lastAiAction}
               </span>
             )}
           </div>
+          {error && (
+            <p className="text-xs text-red-400 mt-1">{error}</p>
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-4 text-right">
@@ -88,10 +112,20 @@ function CampaignCard({ campaign }: { campaign: CampaignRow }) {
           <div className="flex flex-col items-end gap-1">
             <p className="text-xs text-gray-500">Auto-Pilot</p>
             <button
-              onClick={() => setAutoPilot(!autoPilot)}
-              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-300 ${autoPilot ? 'bg-neon-cyan' : 'bg-gray-700'}`}
+              onClick={handleToggle}
+              disabled={isPending}
+              title={autoPilot ? 'Desativar Auto-Pilot' : 'Ativar Auto-Pilot'}
+              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-300 disabled:opacity-60 ${
+                autoPilot ? 'bg-neon-cyan' : 'bg-gray-700'
+              }`}
             >
-              <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform duration-300 ${autoPilot ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
+              {isPending ? (
+                <Loader2 className="w-3 h-3 text-white absolute left-1 animate-spin" />
+              ) : (
+                <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform duration-300 ${
+                  autoPilot ? 'translate-x-[18px]' : 'translate-x-0.5'
+                }`} />
+              )}
             </button>
           </div>
         </div>
@@ -100,14 +134,42 @@ function CampaignCard({ campaign }: { campaign: CampaignRow }) {
   )
 }
 
-export default function CampaignList({ campaigns }: { campaigns: CampaignRow[] }) {
+interface Props {
+  campaigns: CampaignRow[]
+  onSync?: () => void
+  syncing?: boolean
+}
+
+export default function CampaignList({ campaigns, onSync, syncing }: Props) {
   const activeCount = campaigns.filter(c => c.status === 'ACTIVE').length
   const autoPilotCount = campaigns.filter(c => c.aiAutoPilot).length
 
   if (campaigns.length === 0) {
     return (
-      <div className="glass-card rounded-xl border border-gray-800 p-8 text-center">
-        <p className="text-gray-500 text-sm">Nenhuma campanha encontrada.</p>
+      <div className="glass-card rounded-xl border border-gray-800 p-10 text-center space-y-4">
+        <p className="text-gray-400 text-sm font-medium">Nenhuma campanha encontrada</p>
+        <p className="text-gray-600 text-xs">
+          Conecte sua conta Meta ou crie sua primeira campanha para começar.
+        </p>
+        <div className="flex items-center justify-center gap-3">
+          {onSync && (
+            <button
+              onClick={onSync}
+              disabled={syncing}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-700 text-xs text-gray-400 hover:text-white hover:border-gray-500 transition-all disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
+              Sincronizar com Meta
+            </button>
+          )}
+          <Link
+            href="/dashboard/criar-campanha"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-neon-cyan/10 border border-neon-cyan/30 text-neon-cyan text-xs font-semibold hover:bg-neon-cyan/20 transition-all"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Nova Campanha
+          </Link>
+        </div>
       </div>
     )
   }
@@ -121,9 +183,29 @@ export default function CampaignList({ campaigns }: { campaigns: CampaignRow[] }
             {activeCount} ativas &bull; {autoPilotCount} com AI Auto-Pilot
           </p>
         </div>
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neon-purple/10 border border-neon-purple/20">
-          <Zap className="w-3.5 h-3.5 text-neon-purple" />
-          <span className="text-xs font-medium text-neon-purple">{autoPilotCount} em Auto-Pilot</span>
+        <div className="flex items-center gap-2">
+          {onSync && (
+            <button
+              onClick={onSync}
+              disabled={syncing}
+              title="Sincronizar campanhas com a Meta agora"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-700 text-xs text-gray-400 hover:text-white hover:border-gray-500 transition-all disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
+              Sincronizar
+            </button>
+          )}
+          <Link
+            href="/dashboard/criar-campanha"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neon-cyan/10 border border-neon-cyan/30 text-neon-cyan text-xs font-semibold hover:bg-neon-cyan/20 transition-all"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Nova Campanha
+          </Link>
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neon-purple/10 border border-neon-purple/20">
+            <Zap className="w-3.5 h-3.5 text-neon-purple" />
+            <span className="text-xs font-medium text-neon-purple">{autoPilotCount} em Auto-Pilot</span>
+          </div>
         </div>
       </div>
       <div className="p-4 space-y-3">

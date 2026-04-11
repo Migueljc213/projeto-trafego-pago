@@ -1,4 +1,4 @@
-import CampaignList from '@/components/dashboard/CampaignList'
+import CampanhasClient from './CampanhasClient'
 import AIInsightsFeed from '@/components/dashboard/AIInsightsFeed'
 import { getCampaignRows, getAIInsightsFeed } from '@/lib/dashboard-data'
 
@@ -49,7 +49,7 @@ export default async function CampanhasPage() {
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div className="xl:col-span-2">
-          <CampaignList campaigns={campaigns} />
+          <CampanhasClient campaigns={campaigns} />
         </div>
         <div className="xl:col-span-1">
           <AIInsightsFeed insights={feedInsights} />

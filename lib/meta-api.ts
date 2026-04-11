@@ -1,6 +1,85 @@
 const META_GRAPH_URL = 'https://graph.facebook.com/v21.0'
 
 // ──────────────────────────────────────────
+// Campaign creation types
+// ──────────────────────────────────────────
+
+export type CampaignObjective =
+  | 'OUTCOME_TRAFFIC'
+  | 'OUTCOME_SALES'
+  | 'OUTCOME_LEADS'
+  | 'OUTCOME_AWARENESS'
+  | 'OUTCOME_ENGAGEMENT'
+  | 'OUTCOME_APP_PROMOTION'
+
+export type OptimizationGoal =
+  | 'LINK_CLICKS'
+  | 'LANDING_PAGE_VIEWS'
+  | 'CONVERSIONS'
+  | 'REACH'
+  | 'IMPRESSIONS'
+  | 'LEAD_GENERATION'
+
+export type CallToActionType =
+  | 'SHOP_NOW'
+  | 'LEARN_MORE'
+  | 'SIGN_UP'
+  | 'CONTACT_US'
+  | 'SUBSCRIBE'
+  | 'DOWNLOAD'
+  | 'GET_OFFER'
+  | 'BOOK_TRAVEL'
+
+export interface CreateCampaignParams {
+  name: string
+  objective: CampaignObjective
+  status: 'ACTIVE' | 'PAUSED'
+  specialAdCategories?: string[] // ex: ['CREDIT', 'EMPLOYMENT', 'HOUSING'] — deixe [] para evitar restrições
+}
+
+export interface CreateAdSetParams {
+  name: string
+  campaignId: string
+  dailyBudgetCents: number        // ex: 5000 = R$50,00
+  optimizationGoal: OptimizationGoal
+  billingEvent?: 'IMPRESSIONS' | 'LINK_CLICKS'
+  bidStrategy?: 'LOWEST_COST_WITHOUT_CAP' | 'COST_CAP'
+  targeting: {
+    ageMin?: number               // padrão 18
+    ageMax?: number               // padrão 65
+    genders?: (1 | 2)[]           // 1=masculino, 2=feminino, omitir para ambos
+    countries?: string[]          // ex: ['BR']
+    interests?: Array<{ id: string; name: string }>
+  }
+  startTime?: string              // ISO 8601; omitir para iniciar imediatamente
+}
+
+export interface CreateAdCreativeParams {
+  name: string
+  pageId: string                  // ID da Página do Facebook do anunciante
+  message: string                 // Primary text
+  link: string                    // URL de destino
+  headline: string
+  description?: string
+  callToAction?: CallToActionType
+  imageHash?: string              // Hash da imagem previamente carregada via uploadAdImage
+}
+
+export interface CreateAdParams {
+  name: string
+  adSetId: string
+  creativeId: string
+  status: 'ACTIVE' | 'PAUSED'
+}
+
+export interface MetaFacebookPage {
+  id: string
+  name: string
+  access_token?: string
+  category?: string
+}
+
+// ──────────────────────────────────────────
 // Custom error classes
 // ──────────────────────────────────────────
 
@@ -229,6 +308,188 @@ export async function exchangeForLongLivedToken(
 // ──────────────────────────────────────────
 // Budget update
 // ──────────────────────────────────────────
+
+// ──────────────────────────────────────────
+// Campaign creation API
+// ──────────────────────────────────────────
+
+/**
+ * Busca as Páginas do Facebook associadas ao token do usuário.
+ * Necessário para criar criativos — o page_id é obrigatório.
+ */
+export async function getMyPages(accessToken: string): Promise<MetaFacebookPage[]> {
+  const data = await metaFetch<{ data: MetaFacebookPage[] }>(
+    `/me/accounts?fields=id,name,category`,
+    accessToken
+  )
+  return data.data ?? []
+}
+
+/**
+ * Cria uma Campanha na conta de anúncio.
+ * Retorna o ID da campanha criada.
+ */
+export async function createCampaign(
+  adAccountId: string,
+  params: CreateCampaignParams,
+  accessToken: string
+): Promise<string> {
+  const body = {
+    name: params.name,
+    objective: params.objective,
+    status: params.status,
+    special_ad_categories: params.specialAdCategories ?? [],
+  }
+
+  const data = await metaFetch<{ id: string }>(
+    `/${adAccountId}/campaigns`,
+    accessToken,
+    { method: 'POST', body: JSON.stringify(body) }
+  )
+  return data.id
+}
+
+/**
+ * Cria um Conjunto de Anúncios (AdSet) dentro de uma campanha.
+ * Define orçamento, público-alvo e otimização.
+ */
+export async function createAdSet(
+  adAccountId: string,
+  params: CreateAdSetParams,
+  accessToken: string
+): Promise<string> {
+  const targeting: Record<string, unknown> = {
+    age_min: params.targeting.ageMin ?? 18,
+    age_max: params.targeting.ageMax ?? 65,
+    geo_locations: {
+      countries: params.targeting.countries ?? ['BR'],
+    },
+  }
+
+  if (params.targeting.genders?.length) {
+    targeting.genders = params.targeting.genders
+  }
+
+  if (params.targeting.interests?.length) {
+    targeting.interests = params.targeting.interests
+  }
+
+  const body: Record<string, unknown> = {
+    name: params.name,
+    campaign_id: params.campaignId,
+    daily_budget: params.dailyBudgetCents,
+    optimization_goal: params.optimizationGoal,
+    billing_event: params.billingEvent ?? 'IMPRESSIONS',
+    bid_strategy: params.bidStrategy ?? 'LOWEST_COST_WITHOUT_CAP',
+    targeting,
+    status: 'PAUSED', // sempre começa pausado; ativado depois junto com o anúncio
+  }
+
+  if (params.startTime) {
+    body.start_time = params.startTime
+  }
+
+  const data = await metaFetch<{ id: string }>(
+    `/${adAccountId}/adsets`,
+    accessToken,
+    { method: 'POST', body: JSON.stringify(body) }
+  )
+  return data.id
+}
+
+/**
+ * Cria um Criativo de Anúncio com copy e link.
+ * Suporta link ads com imagem existente (via imageHash) ou sem imagem.
+ */
+export async function createAdCreative(
+  adAccountId: string,
+  params: CreateAdCreativeParams,
+  accessToken: string
+): Promise<string> {
+  const linkData: Record<string, unknown> = {
+    message: params.message,
+    link: params.link,
+    name: params.headline,
+    call_to_action: {
+      type: params.callToAction ?? 'LEARN_MORE',
+      value: { link: params.link },
+    },
+  }
+
+  if (params.description) {
+    linkData.description = params.description
+  }
+
+  if (params.imageHash) {
+    linkData.image_hash = params.imageHash
+  }
+
+  const body = {
+    name: params.name,
+    object_story_spec: {
+      page_id: params.pageId,
+      link_data: linkData,
+    },
+  }
+
+  const data = await metaFetch<{ id: string }>(
+    `/${adAccountId}/adcreatives`,
+    accessToken,
+    { method: 'POST', body: JSON.stringify(body) }
+  )
+  return data.id
+}
+
+/**
+ * Cria o Anúncio final vinculando AdSet + Creative.
+ */
+export async function createAd(
+  adAccountId: string,
+  params: CreateAdParams,
+  accessToken: string
+): Promise<string> {
+  const body = {
+    name: params.name,
+    adset_id: params.adSetId,
+    creative: { creative_id: params.creativeId },
+    status: params.status,
+  }
+
+  const data = await metaFetch<{ id: string }>(
+    `/${adAccountId}/ads`,
+    accessToken,
+    { method: 'POST', body: JSON.stringify(body) }
+  )
+  return data.id
+}
+
+/**
+ * Faz upload de uma imagem para a biblioteca de mídia da conta de anúncio.
+ * Retorna o hash da imagem para usar em createAdCreative.
+ */
+export async function uploadAdImage(
+  adAccountId: string,
+  imageUrl: string,
+  accessToken: string
+): Promise<string> {
+  // Baixa a imagem e converte para base64
+  const imgRes = await fetch(imageUrl, { signal: AbortSignal.timeout(15_000) })
+  if (!imgRes.ok) throw new MetaApiError(0, `Não foi possível baixar a imagem: ${imgRes.status}`)
+
+  const buffer = await imgRes.arrayBuffer()
+  const base64 = Buffer.from(buffer).toString('base64')
+  const bytes = JSON.stringify({ bytes: base64 })
+
+  const data = await metaFetch<{ images: Record<string, { hash: string }> }>(
+    `/${adAccountId}/adimages`,
+    accessToken,
+    { method: 'POST', body: bytes }
+  )
+
+  const hash = Object.values(data.images ?? {})[0]?.hash
+  if (!hash) throw new MetaApiError(0, 'Meta não retornou hash da imagem')
+  return hash
+}
 
 /**
  * Atualiza o orçamento diário de uma campanha na Meta API.

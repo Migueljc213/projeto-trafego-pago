@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { decrypt } from '@/lib/encryption'
-import { updateCampaignStatus, MetaRateLimitError } from '@/lib/meta-api'
+import { updateCampaignStatus, getCampaigns, getCampaignInsights, MetaRateLimitError } from '@/lib/meta-api'
 import { ToggleAutoPilotSchema } from '@/lib/validations'
 import type { z } from 'zod'
 import type { ActionResult } from './ad-accounts'
@@ -107,6 +107,91 @@ export async function toggleAutoPilotAction(
   } catch (error) {
     console.error('[toggleAutoPilot]', error)
     return { success: false, error: 'Erro interno ao atualizar campanha' }
+  }
+}
+
+/**
+ * Sincroniza campanhas e métricas da Meta API para o banco local.
+ * Substitui o botão "Sincronizar Agora" na página de Campanhas.
+ */
+export async function syncMetaCampaignsAction(): Promise<
+  ActionResult<{ synced: number; updated: number }>
+> {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) return { success: false, error: 'Não autenticado' }
+
+  try {
+    const bm = await prisma.businessManager.findFirst({
+      where: { userId: session.user.id },
+      include: { adAccounts: true },
+    })
+
+    if (!bm) return { success: false, error: 'Nenhuma conta Meta conectada' }
+
+    const accessToken = decrypt(bm.accessTokenEnc)
+    let synced = 0
+    let updated = 0
+
+    for (const adAccount of bm.adAccounts) {
+      const campaigns = await getCampaigns(adAccount.metaAccountId, accessToken)
+
+      for (const c of campaigns) {
+        // Busca insights para métricas atualizadas
+        const insights = await getCampaignInsights(c.id, accessToken).catch(() => null)
+
+        const spend = insights ? parseFloat(insights.spend ?? '0') : 0
+        const impressions = insights ? parseInt(insights.impressions ?? '0', 10) : 0
+        const clicks = insights ? parseInt(insights.clicks ?? '0', 10) : 0
+        const conversions = insights
+          ? parseInt(insights.actions?.find(a => a.action_type === 'purchase')?.value ?? '0', 10)
+          : 0
+        const revenue = insights
+          ? parseFloat(insights.purchase_roas?.[0]?.value ?? '0') * spend
+          : 0
+        const roas = spend > 0 ? revenue / spend : 0
+        const frequency = insights ? parseFloat(insights.frequency ?? '0') : 0
+        const cpm = insights ? parseFloat(insights.cpm ?? '0') : 0
+
+        const existing = await prisma.campaign.findUnique({
+          where: { metaCampaignId: c.id },
+        })
+
+        if (existing) {
+          await prisma.campaign.update({
+            where: { metaCampaignId: c.id },
+            data: {
+              name: c.name,
+              status: c.status as 'ACTIVE' | 'PAUSED' | 'DELETED' | 'ARCHIVED',
+              dailyBudget: c.daily_budget ? Number(c.daily_budget) / 100 : existing.dailyBudget,
+              spend, impressions, clicks, conversions, revenue, roas, frequency, cpm,
+              metricsUpdatedAt: new Date(),
+            },
+          })
+          updated++
+        } else {
+          await prisma.campaign.create({
+            data: {
+              adAccountId: adAccount.id,
+              metaCampaignId: c.id,
+              name: c.name,
+              status: c.status as 'ACTIVE' | 'PAUSED' | 'DELETED' | 'ARCHIVED',
+              dailyBudget: c.daily_budget ? Number(c.daily_budget) / 100 : null,
+              spend, impressions, clicks, conversions, revenue, roas, frequency, cpm,
+              metricsUpdatedAt: new Date(),
+            },
+          })
+          synced++
+        }
+      }
+    }
+
+    return { success: true, data: { synced, updated } }
+  } catch (error) {
+    if (error instanceof MetaRateLimitError) {
+      return { success: false, error: `Rate limit da Meta. Tente em ${error.retryAfter}s` }
+    }
+    console.error('[syncMetaCampaigns]', error)
+    return { success: false, error: 'Erro ao sincronizar campanhas com a Meta' }
   }
 }
 
