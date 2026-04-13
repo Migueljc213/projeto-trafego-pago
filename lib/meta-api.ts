@@ -95,11 +95,19 @@ export class MetaRateLimitError extends Error {
 
 export class MetaApiError extends Error {
   code: number
+  subcode?: number
+  fbtrace?: string
 
-  constructor(code: number, message: string) {
-    super(message)
+  constructor(code: number, message: string, subcode?: number, fbtrace?: string) {
+    const extras = [
+      subcode ? `subcode=${subcode}` : '',
+      fbtrace ? `trace=${fbtrace}` : '',
+    ].filter(Boolean).join(', ')
+    super(extras ? `${message} (${extras})` : message)
     this.name = 'MetaApiError'
     this.code = code
+    this.subcode = subcode
+    this.fbtrace = fbtrace
   }
 }
 
@@ -155,6 +163,7 @@ interface MetaErrorResponse {
     message: string
     type: string
     code: number
+    error_subcode?: number
     fbtrace_id?: string
   }
 }
@@ -190,14 +199,14 @@ async function metaFetch<T>(
 
   // Handle Meta API errors in response body
   if (data.error) {
-    const { code, message } = data.error
+    const { code, message, error_subcode, fbtrace_id } = data.error
 
     // Rate limit error codes
     if ([17, 32, 80004].includes(code)) {
       throw new MetaRateLimitError(60)
     }
 
-    throw new MetaApiError(code, message)
+    throw new MetaApiError(code, message, error_subcode, fbtrace_id)
   }
 
   return data
@@ -419,12 +428,18 @@ export async function createAdSet(
     targeting.interests = params.targeting.interests
   }
 
+  // billing_event must be compatible with optimization_goal:
+  // LINK_CLICKS optimization → bill per LINK_CLICKS
+  // everything else → bill per IMPRESSIONS
+  const derivedBillingEvent: 'IMPRESSIONS' | 'LINK_CLICKS' =
+    params.billingEvent ?? (params.optimizationGoal === 'LINK_CLICKS' ? 'LINK_CLICKS' : 'IMPRESSIONS')
+
   const body: Record<string, unknown> = {
     name: params.name,
     campaign_id: params.campaignId,
     daily_budget: params.dailyBudgetCents,
     optimization_goal: params.optimizationGoal,
-    billing_event: params.billingEvent ?? 'IMPRESSIONS',
+    billing_event: derivedBillingEvent,
     bid_strategy: params.bidStrategy ?? 'LOWEST_COST_WITHOUT_CAP',
     targeting,
     status: 'PAUSED', // sempre começa pausado; ativado depois junto com o anúncio
@@ -452,9 +467,9 @@ export async function createAdCreative(
   accessToken: string
 ): Promise<string> {
   const linkData: Record<string, unknown> = {
-    message: params.message,
     link: params.link,
-    name: params.headline,
+    name: params.headline,         // headline (title below image)
+    message: params.message,       // primary text (above image)
     call_to_action: {
       type: params.callToAction ?? 'LEARN_MORE',
       value: { link: params.link },
@@ -469,7 +484,7 @@ export async function createAdCreative(
     linkData.image_hash = params.imageHash
   }
 
-  const body = {
+  const body: Record<string, unknown> = {
     name: params.name,
     object_story_spec: {
       page_id: params.pageId,

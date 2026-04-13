@@ -109,9 +109,22 @@ export async function createCampaignAction(
   const budgetCents = Math.round(input.dailyBudgetBRL * 100)
   const campaignStatus = input.startPaused ? 'PAUSED' : 'ACTIVE'
 
+  const genderMap = {
+    all: undefined,
+    male: [1] as (1 | 2)[],
+    female: [2] as (1 | 2)[],
+  }
+
+  let step = 'campanha'
+  let metaCampaignId = ''
+  let metaAdSetId = ''
+  let metaCreativeId = ''
+  let metaAdId = ''
+
   try {
     // ── 1. Criar Campanha ──────────────────────────────────────────────────
-    const metaCampaignId = await createCampaign(
+    step = 'campanha'
+    metaCampaignId = await createCampaign(
       actAccountId,
       {
         name: input.campaignName,
@@ -123,13 +136,8 @@ export async function createCampaignAction(
     )
 
     // ── 2. Criar Conjunto de Anúncios ──────────────────────────────────────
-    const genderMap = {
-      all: undefined,
-      male: [1] as (1 | 2)[],
-      female: [2] as (1 | 2)[],
-    }
-
-    const metaAdSetId = await createAdSet(
+    step = 'conjunto de anúncios'
+    metaAdSetId = await createAdSet(
       actAccountId,
       {
         name: `${input.campaignName} — Conjunto 1`,
@@ -159,7 +167,8 @@ export async function createCampaignAction(
     }
 
     // ── 4. Criar Criativo ─────────────────────────────────────────────────
-    const metaCreativeId = await createAdCreative(
+    step = 'criativo'
+    metaCreativeId = await createAdCreative(
       actAccountId,
       {
         name: `${input.campaignName} — Criativo 1`,
@@ -175,7 +184,8 @@ export async function createCampaignAction(
     )
 
     // ── 5. Criar Anúncio ──────────────────────────────────────────────────
-    const metaAdId = await createAd(
+    step = 'anúncio'
+    metaAdId = await createAd(
       actAccountId,
       {
         name: `${input.campaignName} — Anúncio 1`,
@@ -225,7 +235,7 @@ export async function createCampaignAction(
       return { success: false, error: `Rate limit da Meta. Aguarde ${err.retryAfter}s e tente novamente.` }
     }
     const msg = err instanceof Error ? err.message : String(err)
-    console.error('[createCampaignAction]', err)
-    return { success: false, error: `Erro ao criar campanha na Meta: ${msg}` }
+    console.error(`[createCampaignAction] Falha na etapa "${step}":`, err)
+    return { success: false, error: `Erro ao criar ${step} na Meta: ${msg}` }
   }
 }
