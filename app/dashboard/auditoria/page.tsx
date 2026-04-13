@@ -95,7 +95,7 @@ export default async function AuditoriaPage() {
             </div>
           )}
 
-          <FunnelVisualizer />
+          <FunnelVisualizer stages={[]} />
         </div>
 
         <div className="xl:col-span-1">

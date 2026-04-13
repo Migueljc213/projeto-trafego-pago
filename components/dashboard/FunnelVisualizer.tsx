@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { AlertTriangle, ChevronDown } from 'lucide-react';
-import { mockFunnelStages } from '@/lib/mock-data';
+import { AlertTriangle, ChevronDown, BarChart3 } from 'lucide-react';
 import type { FunnelStage } from '@/lib/types';
 
 function StageBar({ stage, isLast }: { stage: FunnelStage; isLast: boolean }) {
@@ -67,7 +66,6 @@ function StageBar({ stage, isLast }: { stage: FunnelStage; isLast: boolean }) {
           </div>
         </div>
 
-        {/* Progress bar */}
         <div className="h-2 rounded-full bg-gray-800 mb-3 overflow-hidden">
           <div
             className={`h-full rounded-full bg-gradient-to-r ${colors.bar} transition-all duration-1000 ease-out`}
@@ -106,8 +104,27 @@ function StageBar({ stage, isLast }: { stage: FunnelStage; isLast: boolean }) {
   );
 }
 
-export default function FunnelVisualizer() {
-  const stages = mockFunnelStages;
+interface Props {
+  stages?: FunnelStage[]
+}
+
+export default function FunnelVisualizer({ stages = [] }: Props) {
+  if (stages.length === 0) {
+    return (
+      <div className="glass-card rounded-xl p-8 border border-gray-800 flex flex-col items-center justify-center text-center gap-3">
+        <div className="w-12 h-12 rounded-xl bg-gray-800 border border-gray-700 flex items-center justify-center">
+          <BarChart3 className="w-6 h-6 text-gray-600" />
+        </div>
+        <div>
+          <p className="text-sm font-medium text-gray-400">Nenhum dado de funil disponível</p>
+          <p className="text-xs text-gray-600 mt-1">
+            Execute uma auditoria de LP para visualizar as etapas do funil com dados reais.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const firstStage = stages[0];
   const lastStage = stages[stages.length - 1];
   const overallRate = firstStage
@@ -137,13 +154,18 @@ export default function FunnelVisualizer() {
         ))}
       </div>
 
-      <div className="mt-4 p-3 rounded-lg bg-white/3 border border-gray-800">
-        <p className="text-xs text-gray-400">
-          <span className="text-orange-400 font-medium">2 problemas detectados</span> no funil.
-          Corrigindo os gargalos identificados, estima-se recuperar{' '}
-          <span className="text-neon-cyan font-semibold">R$ 8.400/mes</span> em receita perdida.
-        </p>
-      </div>
+      {stages.filter(s => s.hasIssue).length > 0 && (
+        <div className="mt-4 p-3 rounded-lg bg-orange-500/10 border border-orange-500/20">
+          <p className="text-xs text-orange-300">
+            <span className="font-bold">{stages.filter(s => s.hasIssue).length} problema{stages.filter(s => s.hasIssue).length > 1 ? 's' : ''} detectado{stages.filter(s => s.hasIssue).length > 1 ? 's' : ''}</span>
+            {' '}no funil. Corrigindo os gargalos identificados, estima-se recuperar{' '}
+            <span className="font-bold text-orange-200">
+              R$ {stages.reduce((s, st) => s + (st.hasIssue ? (st.visitors * 0.1) : 0), 0).toFixed(0)}/mês
+            </span>{' '}
+            em receita perdida.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

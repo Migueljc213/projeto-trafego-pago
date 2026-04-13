@@ -1,11 +1,33 @@
 import WhiteGloveChecklist from '@/components/dashboard/WhiteGloveChecklist';
 import { Headphones, MessageCircle, Calendar, BookOpen } from 'lucide-react';
+import { getOnboardingStatusAction } from '@/actions/onboarding';
+import { prisma } from '@/lib/prisma';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 
 export const metadata = {
   title: 'Suporte White Glove | FunnelGuard AI',
 };
 
-export default function SuportePage() {
+export default async function SuportePage() {
+  const session = await getServerSession(authOptions);
+  const onboarding = await getOnboardingStatusAction();
+
+  const hasAudit = session?.user?.id
+    ? (await prisma.funnelAudit.count({
+        where: { adAccount: { businessManager: { userId: session.user.id } } },
+      })) > 0
+    : false;
+
+  const hasAutoPilot = session?.user?.id
+    ? (await prisma.campaign.count({
+        where: {
+          aiAutoPilot: true,
+          adAccount: { businessManager: { userId: session.user.id } },
+        },
+      })) > 0
+    : false;
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -45,55 +67,24 @@ export default function SuportePage() {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Checklist */}
         <div className="xl:col-span-1">
-          <WhiteGloveChecklist />
+          <WhiteGloveChecklist
+            hasFacebookConnected={onboarding.hasFacebookConnected}
+            hasAdAccount={onboarding.hasAdAccount}
+            hasCompetitors={onboarding.hasCompetitors}
+            hasAudit={hasAudit}
+            hasAutoPilot={hasAutoPilot}
+          />
         </div>
 
         {/* Timeline + Resources */}
         <div className="xl:col-span-2 space-y-6">
           {/* Recent Interactions */}
           <div className="glass-card rounded-xl p-5 border border-gray-800">
-            <h3 className="text-sm font-semibold text-white mb-4">Historico de Atendimento</h3>
-            <div className="space-y-3">
-              {[
-                {
-                  date: '18 Nov, 10:30',
-                  type: 'Video Call',
-                  specialist: 'Ana Costa',
-                  topic: 'Configuracao do CAPI e validacao de eventos',
-                  duration: '45 min',
-                  color: 'text-green-400 bg-green-500/15 border-green-500/25',
-                },
-                {
-                  date: '17 Nov, 14:00',
-                  type: 'Auditoria',
-                  specialist: 'Pedro Alves',
-                  topic: 'Revisao completa do Meta Pixel em todas as paginas',
-                  duration: '60 min',
-                  color: 'text-neon-cyan bg-neon-cyan/15 border-neon-cyan/25',
-                },
-                {
-                  date: '15 Nov, 09:00',
-                  type: 'Discovery',
-                  specialist: 'Ana Costa',
-                  topic: 'Discovery call inicial — objetivos e estrutura de campanhas',
-                  duration: '30 min',
-                  color: 'text-neon-purple bg-neon-purple/15 border-neon-purple/25',
-                },
-              ].map((item, i) => (
-                <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-white/3 border border-gray-800">
-                  <span className={`text-xs px-2 py-1 rounded-full border font-medium flex-shrink-0 ${item.color}`}>
-                    {item.type}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-medium text-gray-200">{item.topic}</p>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      {item.specialist} &bull; {item.date} &bull; {item.duration}
-                    </p>
-                  </div>
-                </div>
-              ))}
+            <h3 className="text-sm font-semibold text-white mb-4">Histórico de Atendimento</h3>
+            <div className="flex flex-col items-center justify-center py-8 text-center gap-2">
+              <MessageCircle className="w-8 h-8 text-gray-700" />
+              <p className="text-sm text-gray-500">Nenhum atendimento registrado ainda.</p>
+              <p className="text-xs text-gray-600">Agende uma call para iniciar seu onboarding personalizado.</p>
             </div>
           </div>
 

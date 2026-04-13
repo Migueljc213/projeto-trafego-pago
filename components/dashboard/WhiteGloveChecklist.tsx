@@ -2,10 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import { Check, Clock, Loader2, Headphones } from 'lucide-react';
-import { mockWhiteGloveSteps } from '@/lib/mock-data';
-import type { WhiteGloveStep } from '@/lib/types';
 
-function StepItem({ step, index }: { step: WhiteGloveStep; index: number }) {
+interface SetupStep {
+  id: string
+  title: string
+  description: string
+  completed: boolean
+  inProgress: boolean
+}
+
+function StepItem({ step, index }: { step: SetupStep; index: number }) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -19,7 +25,6 @@ function StepItem({ step, index }: { step: WhiteGloveStep; index: number }) {
         visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
       }`}
     >
-      {/* Icon */}
       <div
         className={`
           w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 border transition-all duration-300
@@ -40,7 +45,6 @@ function StepItem({ step, index }: { step: WhiteGloveStep; index: number }) {
         )}
       </div>
 
-      {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <p
@@ -59,9 +63,6 @@ function StepItem({ step, index }: { step: WhiteGloveStep; index: number }) {
               Em progresso...
             </span>
           )}
-          {step.date && (
-            <span className="text-xs text-gray-600 font-mono">{step.date}</span>
-          )}
         </div>
         <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{step.description}</p>
       </div>
@@ -69,28 +70,77 @@ function StepItem({ step, index }: { step: WhiteGloveStep; index: number }) {
   );
 }
 
-export default function WhiteGloveChecklist() {
-  const steps = mockWhiteGloveSteps;
+interface Props {
+  hasFacebookConnected: boolean
+  hasAdAccount: boolean
+  hasCompetitors: boolean
+  hasAudit: boolean
+  hasAutoPilot: boolean
+}
+
+export default function WhiteGloveChecklist({
+  hasFacebookConnected,
+  hasAdAccount,
+  hasCompetitors,
+  hasAudit,
+  hasAutoPilot,
+}: Props) {
+  const steps: SetupStep[] = [
+    {
+      id: '1',
+      title: 'Conta Meta conectada',
+      description: 'Facebook OAuth autorizado e token de acesso salvo com segurança.',
+      completed: hasFacebookConnected,
+      inProgress: false,
+    },
+    {
+      id: '2',
+      title: 'Conta de anúncios sincronizada',
+      description: 'Ad Account vinculada e campanhas disponíveis para monitoramento.',
+      completed: hasAdAccount,
+      inProgress: hasFacebookConnected && !hasAdAccount,
+    },
+    {
+      id: '3',
+      title: 'Concorrentes adicionados',
+      description: 'Monitor de preços configurado para rastrear concorrentes em tempo real.',
+      completed: hasCompetitors,
+      inProgress: hasAdAccount && !hasCompetitors,
+    },
+    {
+      id: '4',
+      title: 'Primeira auditoria de funil',
+      description: 'LP analisada pela IA para detectar gargalos de conversão.',
+      completed: hasAudit,
+      inProgress: hasAdAccount && !hasAudit,
+    },
+    {
+      id: '5',
+      title: 'AI Auto-Pilot ativado',
+      description: 'Campanhas sendo gerenciadas automaticamente com base em ROAS e frequência.',
+      completed: hasAutoPilot,
+      inProgress: hasAdAccount && !hasAutoPilot,
+    },
+  ];
+
   const completedCount = steps.filter(s => s.completed).length;
   const progressPct = Math.round((completedCount / steps.length) * 100);
 
   return (
     <div className="glass-card rounded-xl p-5 border border-gray-800">
-      {/* Header */}
       <div className="flex items-start justify-between mb-5">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-neon-purple/15 border border-neon-purple/25 flex items-center justify-center">
             <Headphones className="w-4 h-4 text-neon-purple" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-white">Suporte White Glove</h3>
-            <p className="text-xs text-gray-500">{completedCount}/{steps.length} etapas concluidas</p>
+            <h3 className="text-sm font-semibold text-white">Setup do FunnelGuard</h3>
+            <p className="text-xs text-gray-500">{completedCount}/{steps.length} etapas concluídas</p>
           </div>
         </div>
         <span className="text-lg font-bold font-mono text-neon-purple">{progressPct}%</span>
       </div>
 
-      {/* Progress Bar */}
       <div className="h-1.5 rounded-full bg-gray-800 mb-5 overflow-hidden">
         <div
           className="h-full rounded-full bg-gradient-to-r from-neon-cyan to-neon-purple transition-all duration-1000 ease-out"
@@ -98,14 +148,12 @@ export default function WhiteGloveChecklist() {
         ></div>
       </div>
 
-      {/* Steps */}
       <div className="space-y-4">
         {steps.map((step, idx) => (
           <StepItem key={step.id} step={step} index={idx} />
         ))}
       </div>
 
-      {/* CTA */}
       <div className="mt-5 p-3 rounded-lg bg-neon-purple/10 border border-neon-purple/20">
         <p className="text-xs text-gray-400">
           Precisa de ajuda?{' '}

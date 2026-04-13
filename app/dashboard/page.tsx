@@ -78,7 +78,7 @@ export default async function DashboardPage() {
           <Suspense fallback={<SkeletonChartCard />}>
             <RevenueChart data={chartData} />
           </Suspense>
-          <FunnelVisualizer />
+          <FunnelVisualizer stages={[]} />
         </div>
         <div className="xl:col-span-1">
           <Suspense fallback={<div className="space-y-2">{Array.from({length:4}).map((_,i)=><SkeletonFeedItem key={i}/>)}</div>}>
