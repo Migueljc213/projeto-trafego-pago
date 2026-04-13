@@ -3,6 +3,7 @@ import FacebookProvider from 'next-auth/providers/facebook'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { PrismaAdapter } from '@next-auth/prisma-adapter'
 import { prisma } from '@/lib/prisma'
+import { encrypt } from '@/lib/encryption'
 
 declare module 'next-auth' {
   interface Session {
@@ -49,7 +50,39 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async signIn() {
+    async signIn({ user, account, profile }) {
+      if (account?.provider === 'facebook' && account.access_token && user.id) {
+        try {
+          const accessTokenEnc = encrypt(account.access_token)
+          const tokenExpiresAt = account.expires_at
+            ? new Date(account.expires_at * 1000)
+            : null
+          const bmName =
+            (profile as Record<string, unknown> | undefined)?.name as string | undefined
+            ?? user.name
+            ?? 'Minha Business Manager'
+          const metaBmId = account.providerAccountId
+
+          await prisma.businessManager.upsert({
+            where: { metaBmId },
+            create: {
+              userId: user.id,
+              metaBmId,
+              name: bmName,
+              accessTokenEnc,
+              tokenExpiresAt,
+            },
+            update: {
+              accessTokenEnc,
+              tokenExpiresAt,
+              name: bmName,
+            },
+          })
+        } catch (err) {
+          console.error('[auth] Erro ao salvar BusinessManager:', err)
+          // Não bloqueia o login em caso de falha
+        }
+      }
       return true
     },
     async jwt({ token, user, account }) {
