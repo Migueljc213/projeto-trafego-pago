@@ -124,17 +124,30 @@ interface MetaCampaign {
   lifetime_budget?: string
 }
 
-interface MetaCampaignInsight {
+export interface MetaCampaignInsight {
   campaign_id: string
   spend: string
   impressions: string
   clicks: string
+  reach: string
   actions?: Array<{ action_type: string; value: string }>
   purchase_roas?: Array<{ action_type: string; value: string }>
+  video_thruplay_watched_actions?: Array<{ action_type: string; value: string }>
+  estimated_ad_recallers?: string
+  cost_per_estimated_ad_recallers?: string
   frequency: string
   cpm: string
   date_start: string
   date_stop: string
+}
+
+/**
+ * Intervalo de datas para consulta de insights.
+ * Formato: 'YYYY-MM-DD'
+ */
+export interface InsightDateRange {
+  since: string
+  until: string
 }
 
 interface MetaErrorResponse {
@@ -222,18 +235,50 @@ export async function getCampaigns(
   return data.data ?? []
 }
 
+const INSIGHT_FIELDS = [
+  'spend', 'impressions', 'clicks', 'reach',
+  'actions', 'purchase_roas', 'frequency', 'cpm',
+  'video_thruplay_watched_actions',
+  'estimated_ad_recallers', 'cost_per_estimated_ad_recallers',
+].join(',')
+
 /**
- * Busca os insights dos últimos 30 dias de uma campanha específica.
+ * Busca os insights agregados de uma campanha.
+ * @param dateRange Intervalo customizado. Se omitido, usa os últimos 30 dias.
  */
 export async function getCampaignInsights(
   campaignId: string,
-  accessToken: string
+  accessToken: string,
+  dateRange?: InsightDateRange
 ): Promise<MetaCampaignInsight | null> {
+  const timeParam = dateRange
+    ? `time_range=${encodeURIComponent(JSON.stringify({ since: dateRange.since, until: dateRange.until }))}`
+    : 'date_preset=last_30d'
+
   const data = await metaFetch<{ data: MetaCampaignInsight[] }>(
-    `/${campaignId}/insights?fields=spend,impressions,clicks,actions,purchase_roas,frequency,cpm&date_preset=last_30d`,
+    `/${campaignId}/insights?fields=${INSIGHT_FIELDS}&${timeParam}`,
     accessToken
   )
   return data.data?.[0] ?? null
+}
+
+/**
+ * Busca os insights diários de uma campanha (série temporal).
+ * Retorna um registro por dia no intervalo informado.
+ */
+export async function getDailyCampaignInsights(
+  campaignId: string,
+  accessToken: string,
+  dateRange: InsightDateRange
+): Promise<MetaCampaignInsight[]> {
+  const timeRange = encodeURIComponent(
+    JSON.stringify({ since: dateRange.since, until: dateRange.until })
+  )
+  const data = await metaFetch<{ data: MetaCampaignInsight[] }>(
+    `/${campaignId}/insights?fields=${INSIGHT_FIELDS},date_start,date_stop&time_range=${timeRange}&time_increment=1&limit=90`,
+    accessToken
+  )
+  return data.data ?? []
 }
 
 /**

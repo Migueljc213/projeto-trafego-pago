@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { decrypt } from '@/lib/encryption'
-import { updateCampaignStatus, updateCampaignBudget, getCampaigns, getCampaignInsights, MetaRateLimitError } from '@/lib/meta-api'
+import { updateCampaignStatus, updateCampaignBudget, getCampaigns, getCampaignInsights, getDailyCampaignInsights, MetaRateLimitError, type InsightDateRange } from '@/lib/meta-api'
 import { ToggleAutoPilotSchema } from '@/lib/validations'
 import type { z } from 'zod'
 import type { ActionResult } from './ad-accounts'
@@ -132,18 +132,32 @@ export async function syncMetaCampaignsAction(): Promise<
     let synced = 0
     let updated = 0
 
+    // Últimos 30 dias como janela padrão de métricas
+    const now = new Date()
+    const thirtyDaysAgo = new Date(now)
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+    const dateRange: InsightDateRange = {
+      since: thirtyDaysAgo.toISOString().split('T')[0],
+      until: now.toISOString().split('T')[0],
+    }
+
     for (const adAccount of bm.adAccounts) {
       const campaigns = await getCampaigns(adAccount.metaAccountId, accessToken)
 
       for (const c of campaigns) {
-        // Busca insights para métricas atualizadas
-        const insights = await getCampaignInsights(c.id, accessToken).catch(() => null)
+        // Busca insights agregados com date range e campos expandidos
+        const insights = await getCampaignInsights(c.id, accessToken, dateRange).catch(() => null)
 
         const spend = insights ? parseFloat(insights.spend ?? '0') : 0
         const impressions = insights ? parseInt(insights.impressions ?? '0', 10) : 0
         const clicks = insights ? parseInt(insights.clicks ?? '0', 10) : 0
         const conversions = insights
-          ? parseInt(insights.actions?.find(a => a.action_type === 'purchase')?.value ?? '0', 10)
+          ? parseInt(
+              (insights.actions?.find(
+                a => a.action_type === 'purchase' || a.action_type === 'offsite_conversion.fb_pixel_purchase'
+              ))?.value ?? '0',
+              10
+            )
           : 0
         const revenue = insights
           ? parseFloat(insights.purchase_roas?.[0]?.value ?? '0') * spend
@@ -156,6 +170,8 @@ export async function syncMetaCampaignsAction(): Promise<
           where: { metaCampaignId: c.id },
         })
 
+        let campaignDbId: string
+
         if (existing) {
           await prisma.campaign.update({
             where: { metaCampaignId: c.id },
@@ -167,9 +183,10 @@ export async function syncMetaCampaignsAction(): Promise<
               metricsUpdatedAt: new Date(),
             },
           })
+          campaignDbId = existing.id
           updated++
         } else {
-          await prisma.campaign.create({
+          const created = await prisma.campaign.create({
             data: {
               adAccountId: adAccount.id,
               metaCampaignId: c.id,
@@ -180,7 +197,46 @@ export async function syncMetaCampaignsAction(): Promise<
               metricsUpdatedAt: new Date(),
             },
           })
+          campaignDbId = created.id
           synced++
+        }
+
+        // Busca e salva série temporal diária (últimos 30 dias)
+        const dailyData = await getDailyCampaignInsights(c.id, accessToken, dateRange).catch(() => [])
+        for (const day of dailyData) {
+          const daySpend = parseFloat(day.spend ?? '0')
+          const dayConversions = parseInt(
+            (day.actions?.find(
+              a => a.action_type === 'purchase' || a.action_type === 'offsite_conversion.fb_pixel_purchase'
+            ))?.value ?? '0',
+            10
+          )
+          const dayRevenue = parseFloat(day.purchase_roas?.[0]?.value ?? '0') * daySpend
+          await prisma.dailyInsight.upsert({
+            where: { campaignId_date: { campaignId: campaignDbId, date: new Date(day.date_start) } },
+            create: {
+              campaignId: campaignDbId,
+              date: new Date(day.date_start),
+              spend: daySpend,
+              impressions: parseInt(day.impressions ?? '0', 10),
+              clicks: parseInt(day.clicks ?? '0', 10),
+              conversions: dayConversions,
+              revenue: dayRevenue,
+              roas: daySpend > 0 ? dayRevenue / daySpend : 0,
+              cpa: dayConversions > 0 ? daySpend / dayConversions : 0,
+              frequency: parseFloat(day.frequency ?? '0'),
+            },
+            update: {
+              spend: daySpend,
+              impressions: parseInt(day.impressions ?? '0', 10),
+              clicks: parseInt(day.clicks ?? '0', 10),
+              conversions: dayConversions,
+              revenue: dayRevenue,
+              roas: daySpend > 0 ? dayRevenue / daySpend : 0,
+              cpa: dayConversions > 0 ? daySpend / dayConversions : 0,
+              frequency: parseFloat(day.frequency ?? '0'),
+            },
+          })
         }
       }
     }

@@ -25,9 +25,20 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   if (fbToken && fbAccountId && session?.user?.id) {
     try {
-      const { access_token: longLivedToken, expires_in } = await exchangeForLongLivedToken(fbToken)
-      const encryptedToken = encrypt(longLivedToken)
-      const tokenExpiresAt = new Date(Date.now() + expires_in * 1000)
+      // Tenta trocar por token de longa duração (60 dias)
+      // Se falhar (app dev mode, credenciais inválidas), usa o token curto como fallback
+      let tokenToSave = fbToken
+      let tokenExpiresAt: Date | null = null
+
+      try {
+        const { access_token: longLivedToken, expires_in } = await exchangeForLongLivedToken(fbToken)
+        tokenToSave = longLivedToken
+        tokenExpiresAt = new Date(Date.now() + expires_in * 1000)
+      } catch (exchangeError) {
+        console.warn('[Dashboard] Token de longa duração indisponível, usando token curto:', exchangeError)
+      }
+
+      const encryptedToken = encrypt(tokenToSave)
 
       await prisma.businessManager.upsert({
         where: { metaBmId: fbAccountId },
