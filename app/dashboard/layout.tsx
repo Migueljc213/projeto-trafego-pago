@@ -54,6 +54,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
           tokenExpiresAt,
         },
       })
+
+      // Avança onboarding para step 2 (Facebook conectado) se ainda não avançou
+      await prisma.user.updateMany({
+        where: { id: session.user.id, onboardingStep: { lt: 2 } },
+        data: { onboardingStep: 2 },
+      })
     } catch (error) {
       console.error('[Dashboard] Falha ao sincronizar token Meta:', error)
     }
