@@ -24,7 +24,7 @@ export const authOptions: NextAuthOptions = {
       clientSecret: process.env.FACEBOOK_CLIENT_SECRET || 'placeholder',
       authorization: {
         params: {
-          scope: 'public_profile,ads_management,ads_read,business_management',
+          scope: 'public_profile,ads_management,ads_read,business_management,pages_show_list,pages_read_engagement',
         },
       },
     }),

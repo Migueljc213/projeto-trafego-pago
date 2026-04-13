@@ -500,22 +500,33 @@ export default function CampaignWizard({ pages }: Props) {
         {/* ── PASSO 3: Criativo ────────────────────────────────────────────── */}
         {step === 2 && (
           <div className="space-y-5">
-            {pages.length === 0 ? (
-              <div className="p-4 rounded-xl border border-yellow-500/30 bg-yellow-500/5 flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-semibold text-yellow-300">Nenhuma Página do Facebook encontrada</p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    Para criar criativos de anúncio é necessário ter uma Página do Facebook vinculada à sua conta Meta.
-                    Crie uma em facebook.com/pages/create.
-                  </p>
-                </div>
-              </div>
-            ) : (
+            {pages.length > 0 ? (
               <Field label="Página do Facebook" hint="O anúncio será veiculado em nome desta página">
                 <Select value={form.pageId} onChange={e => update('pageId', e.target.value)}>
                   {pages.map(p => <option key={p.id} value={p.id}>{p.name} ({p.id})</option>)}
                 </Select>
+              </Field>
+            ) : (
+              <Field
+                label="ID da Página do Facebook"
+                hint="Cole o ID numérico da sua Página. Encontre em: facebook.com/sua-pagina → Sobre → ID da Página"
+                error={step === 2 && !form.pageId.trim() ? 'Campo obrigatório para criar o criativo' : undefined}
+              >
+                <div className="space-y-2">
+                  <Input
+                    value={form.pageId}
+                    onChange={e => update('pageId', e.target.value.trim())}
+                    placeholder="Ex: 123456789012345"
+                  />
+                  <div className="flex items-start gap-2 p-3 rounded-lg border border-yellow-500/20 bg-yellow-500/5">
+                    <AlertTriangle className="w-4 h-4 text-yellow-400 flex-shrink-0 mt-0.5" />
+                    <p className="text-xs text-yellow-300">
+                      Não encontramos páginas automaticamente. Cole o ID da sua Página do Facebook acima ou reconecte sua conta Meta em{' '}
+                      <a href="/dashboard/configuracoes" className="underline hover:text-yellow-200">Configurações</a>{' '}
+                      para tentar buscar novamente.
+                    </p>
+                  </div>
+                </div>
               </Field>
             )}
 
@@ -645,7 +656,7 @@ export default function CampaignWizard({ pages }: Props) {
             onClick={() => setStep(s => s + 1)}
             disabled={
               (step === 0 && (!form.campaignName.trim() || !form.dailyBudgetBRL)) ||
-              (step === 2 && (!form.headline.trim() || !form.primaryText.trim() || !form.destinationUrl))
+              (step === 2 && (!form.headline.trim() || !form.primaryText.trim() || !form.destinationUrl || !form.pageId.trim()))
             }
             className="inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-neon-cyan/10 border border-neon-cyan/30 text-neon-cyan text-sm font-semibold hover:bg-neon-cyan/20 transition-all disabled:opacity-40"
           >
