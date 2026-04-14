@@ -498,22 +498,19 @@ export async function createCampaign(
   params: CreateCampaignParams,
   accessToken: string
 ): Promise<string> {
-  // A Meta Ads API aceita form-encoded neste endpoint (JSON causa 4834011 em algumas contas)
-  const body = new URLSearchParams({
+  const body = {
     name: params.name,
     objective: params.objective,
     status: params.status,
-    special_ad_categories: JSON.stringify(params.specialAdCategories ?? []),
-  })
+    special_ad_categories: params.specialAdCategories ?? [],
+    // Orçamento definido no AdSet (ABO), não na campanha (CBO)
+    is_adset_budget_sharing_enabled: false,
+  }
 
   const data = await metaFetch<{ id: string }>(
     `/${adAccountId}/campaigns`,
     accessToken,
-    {
-      method: 'POST',
-      body: body.toString(),
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    }
+    { method: 'POST', body: JSON.stringify(body) }
   )
   return data.id
 }
