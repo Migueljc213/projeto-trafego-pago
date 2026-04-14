@@ -8,7 +8,7 @@
  * Roda apenas no servidor — nunca exposto ao cliente.
  */
 
-import { chromium } from 'playwright'
+import * as cheerio from 'cheerio'
 import OpenAI from 'openai'
 import { z } from 'zod'
 
@@ -48,7 +48,7 @@ const AdCopyResponseSchema = z.object({
   })).length(3),
 })
 
-// ─── Playwright: Raspagem do Produto ─────────────────────────────────────────
+// ─── Raspagem do Produto via fetch + cheerio ──────────────────────────────────
 
 const USER_AGENTS = [
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
@@ -60,88 +60,80 @@ const USER_AGENTS = [
  * Tenta JSON-LD (schema.org) primeiro, depois meta tags e seletores HTML.
  */
 export async function scrapeProductData(url: string): Promise<ProductData> {
-  const browser = await chromium.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-gpu'],
+  const res = await fetch(url, {
+    headers: {
+      'User-Agent': USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+    },
+    signal: AbortSignal.timeout(20_000),
+    redirect: 'follow',
   })
 
-  const context = await browser.newContext({
-    userAgent: USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
-    viewport: { width: 1280, height: 800 },
-    locale: 'pt-BR',
-  })
+  const html = await res.text()
+  const $ = cheerio.load(html)
 
-  const page = await context.newPage()
+  const getMeta = (name: string) =>
+    $(`meta[property="${name}"], meta[name="${name}"]`).attr('content') ?? null
 
-  try {
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20_000 })
-    await page.waitForTimeout(1500) // Aguarda renderização de JS
-
-    const data = await page.evaluate(() => {
-      // ── Tenta JSON-LD primeiro (mais confiável) ──────────────────────────
-      const jsonLdScripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'))
-      for (const script of jsonLdScripts) {
-        try {
-          const json = JSON.parse(script.textContent ?? '')
-          const product = json['@type'] === 'Product' ? json
-            : json['@graph']?.find((g: Record<string, unknown>) => g['@type'] === 'Product')
-          if (product) {
-            return {
-              title: product.name ?? '',
-              description: product.description ?? '',
-              price: product.offers?.price
-                ? `${product.offers.priceCurrency ?? 'R$'} ${product.offers.price}`
-                : null,
-              benefits: [],
-              imageUrl: product.image?.[0] ?? product.image ?? null,
-            }
+  // ── Tenta JSON-LD primeiro (mais confiável) ──────────────────────────────
+  let jsonLdResult: { title: string; description: string; price: string | null; benefits: string[]; imageUrl: string | null } | null = null
+  $('script[type="application/ld+json"]').each((_, el) => {
+    if (jsonLdResult) return
+    try {
+      const json = JSON.parse($(el).html() ?? '')
+      const items = Array.isArray(json) ? json : [json]
+      for (const item of items) {
+        const product = item['@type'] === 'Product' ? item
+          : item['@graph']?.find((g: Record<string, unknown>) => g['@type'] === 'Product')
+        if (product) {
+          jsonLdResult = {
+            title: product.name ?? '',
+            description: product.description ?? '',
+            price: product.offers?.price
+              ? `${product.offers.priceCurrency ?? 'R$'} ${product.offers.price}`
+              : null,
+            benefits: [],
+            imageUrl: product.image?.[0] ?? product.image ?? null,
           }
-        } catch { /* continua */ }
+          return
+        }
       }
+    } catch { /* continua */ }
+  })
 
-      // ── Fallback: meta tags + HTML ───────────────────────────────────────
-      const getMeta = (name: string) =>
-        document.querySelector(`meta[property="${name}"], meta[name="${name}"]`)
-          ?.getAttribute('content') ?? null
-
-      const title =
-        getMeta('og:title') ??
-        document.querySelector('h1')?.textContent?.trim() ??
-        document.title
-
-      const description =
-        getMeta('og:description') ??
-        getMeta('description') ??
-        document.querySelector('meta[name="description"]')?.getAttribute('content') ??
-        Array.from(document.querySelectorAll('p'))
-          .map(p => p.textContent?.trim())
-          .filter(Boolean)
-          .slice(0, 3)
-          .join(' ')
-
-      const priceEl = document.querySelector(
-        '[itemprop="price"], .price, .product-price, .precio, .preco, [data-price], .woocommerce-Price-amount'
-      )
-      const price = getMeta('product:price:amount')
-        ?? getMeta('og:price:amount')
-        ?? priceEl?.textContent?.trim()
-        ?? null
-
-      // Tenta extrair benefícios de bullets/listas próximas ao CTA
-      const listItems = Array.from(document.querySelectorAll('ul li, .benefits li, .features li, .vantagens li'))
-        .slice(0, 6)
-        .map(li => li.textContent?.trim())
-        .filter((t): t is string => Boolean(t) && t.length > 10 && t.length < 150)
-
-      const imageUrl = getMeta('og:image') ?? null
-
-      return { title: title ?? '', description: description ?? '', price, benefits: listItems, imageUrl }
-    })
-
-    return { ...data, url }
-  } finally {
-    await browser.close()
+  if (jsonLdResult !== null) {
+    const r = jsonLdResult as { title: string; description: string; price: string | null; benefits: string[]; imageUrl: string | null }
+    return { title: r.title, description: r.description, price: r.price, benefits: r.benefits, imageUrl: r.imageUrl, url }
   }
+
+  // ── Fallback: meta tags + HTML ───────────────────────────────────────────
+  const h1Text = $('h1').first().text().trim()
+  const title =
+    getMeta('og:title') ??
+    (h1Text.length > 0 ? h1Text : null) ??
+    $('title').text().trim()
+
+  const description =
+    getMeta('og:description') ??
+    getMeta('description') ??
+    $('p').slice(0, 3).map((_, el) => $(el).text().trim()).get().join(' ')
+
+  const priceEl = $('[itemprop="price"], .price, .product-price, .preco, [data-price], .woocommerce-Price-amount').first()
+  const price =
+    getMeta('product:price:amount') ??
+    getMeta('og:price:amount') ??
+    (priceEl.length ? priceEl.text().trim() : null)
+
+  const benefits = $('ul li, .benefits li, .features li, .vantagens li')
+    .slice(0, 6)
+    .map((_, el) => $(el).text().trim())
+    .get()
+    .filter((t: string) => t.length > 10 && t.length < 150)
+
+  const imageUrl = getMeta('og:image')
+
+  return { title: title ?? '', description: description ?? '', price, benefits, imageUrl, url }
 }
 
 // ─── GPT-4o: Geração de Copy ──────────────────────────────────────────────────

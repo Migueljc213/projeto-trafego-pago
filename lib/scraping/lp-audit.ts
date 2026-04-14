@@ -2,10 +2,11 @@
  * Auditoria de Landing Page — analisa a LP do cliente buscando problemas
  * que causam perda de conversão após o clique no anúncio.
  *
- * Verifica: Meta Pixel/CAPI, LCP, CTAs quebrados, links inválidos, mobile UX.
+ * Verifica: Meta Pixel/CAPI, tempo de resposta, CTAs, links inválidos.
+ * Usa fetch + cheerio (sem Playwright) para compatibilidade com Vercel/serverless.
  */
 
-import type { Page } from 'playwright'
+import * as cheerio from 'cheerio'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -30,124 +31,128 @@ export interface LpIssue {
   severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
   title: string
   description: string
-  estimatedImpact: string     // Ex: "Perda estimada de 15% dos visitantes"
+  estimatedImpact: string
 }
 
 export interface TrafficContext {
-  ctr: number               // CTR do anúncio (%)
+  ctr: number
   bounceRateEstimate?: number
   mobileTrafficPercent?: number
 }
 
+// ─── Fetch com timeout e User-Agent mobile ────────────────────────────────────
+
+const MOBILE_UA = 'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36'
+
+async function fetchPage(url: string): Promise<{ html: string; loadTimeMs: number; status: number }> {
+  const start = Date.now()
+  const res = await fetch(url, {
+    headers: {
+      'User-Agent': MOBILE_UA,
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+    },
+    signal: AbortSignal.timeout(20_000),
+    redirect: 'follow',
+  })
+  const html = await res.text()
+  const loadTimeMs = Date.now() - start
+  return { html, loadTimeMs, status: res.status }
+}
+
 // ─── Auditoria de Pixel da Meta ───────────────────────────────────────────────
 
-async function auditMetaPixel(page: Page): Promise<LpCheck> {
-  const result = await page.evaluate(() => {
-    // Verifica fbq (Pixel padrão)
-    const hasFbq = typeof (window as unknown as Record<string, unknown>).fbq === 'function'
-
-    // Verifica scripts com domínio da Meta
-    const scripts = Array.from(document.querySelectorAll('script[src]'))
-    const hasPixelScript = scripts.some(
-      (s) =>
-        s.getAttribute('src')?.includes('connect.facebook.net') ||
-        s.getAttribute('src')?.includes('facebook.com/tr')
-    )
-
-    // Verifica noscript pixel (img tag)
-    const noscripts = Array.from(document.querySelectorAll('noscript'))
-    const hasNoscriptPixel = noscripts.some((n) =>
-      n.innerHTML.includes('facebook.com/tr')
-    )
-
-    // Verifica CAPI via meta tags (indicador de integração server-side)
-    const hasCapiMeta = !!document.querySelector('meta[name="facebook-domain-verification"]')
-
-    return { hasFbq, hasPixelScript, hasNoscriptPixel, hasCapiMeta }
+function auditMetaPixel($: cheerio.CheerioAPI): LpCheck {
+  // Verifica scripts com domínio da Meta
+  let hasPixelScript = false
+  $('script[src]').each((_, el) => {
+    const src = $(el).attr('src') ?? ''
+    if (src.includes('connect.facebook.net') || src.includes('facebook.com/tr')) {
+      hasPixelScript = true
+    }
   })
 
-  const pixelDetected = result.hasFbq || result.hasPixelScript || result.hasNoscriptPixel
+  // Verifica inline scripts com fbq
+  let hasFbqInline = false
+  $('script:not([src])').each((_, el) => {
+    const text = $(el).html() ?? ''
+    if (text.includes('fbq(') || text.includes('fbevents.js')) {
+      hasFbqInline = true
+    }
+  })
+
+  // Verifica noscript pixel (img tag)
+  let hasNoscriptPixel = false
+  $('noscript').each((_, el) => {
+    const html = $(el).html() ?? ''
+    if (html.includes('facebook.com/tr')) {
+      hasNoscriptPixel = true
+    }
+  })
+
+  // Verifica verificação de domínio (CAPI)
+  const hasCapiMeta = !!$('meta[name="facebook-domain-verification"]').length
+
+  const pixelDetected = hasPixelScript || hasFbqInline || hasNoscriptPixel
 
   return {
     name: 'Meta Pixel / CAPI',
     passed: pixelDetected,
     details: pixelDetected
-      ? `Pixel detectado${result.hasCapiMeta ? ' + verificação de domínio para CAPI' : ' (CAPI não confirmado via client-side)'}`
+      ? `Pixel detectado${hasCapiMeta ? ' + verificação de domínio para CAPI' : ' (CAPI não confirmado via client-side)'}`
       : 'Nenhum Pixel da Meta detectado na página. Conversões não estão sendo rastreadas.',
   }
 }
 
 // ─── Verificação de CTAs ──────────────────────────────────────────────────────
 
-async function auditCtaButtons(page: Page): Promise<{ check: LpCheck; issues: LpIssue[] }> {
-  const ctaData = await page.evaluate(() => {
-    const ctaSelectors = [
-      'button[type="submit"]',
-      'a[href*="checkout"]', 'a[href*="cart"]', 'a[href*="comprar"]', 'a[href*="buy"]',
-      '[class*="cta"]', '[class*="buy"]', '[class*="checkout"]', '[class*="comprar"]',
-      '[id*="cta"]', '[id*="buy"]', '[id*="checkout"]',
-    ]
+function auditCtaButtons($: cheerio.CheerioAPI): { check: LpCheck; issues: LpIssue[] } {
+  const ctaKeywords = ['comprar', 'buy', 'checkout', 'cart', 'compre', 'adquira', 'pedir', 'order', 'assinar', 'subscribe']
+  const issues: LpIssue[] = []
 
-    const results: Array<{
-      text: string
-      visible: boolean
-      clickable: boolean
-      href: string | null
-      dimensions: { w: number; h: number }
-    }> = []
+  // Busca botões e links de CTA
+  const ctaElements: string[] = []
 
-    for (const sel of ctaSelectors) {
-      const elements = document.querySelectorAll(sel)
-      elements.forEach((el) => {
-        const rect = el.getBoundingClientRect()
-        const style = window.getComputedStyle(el)
-        results.push({
-          text: el.textContent?.trim().slice(0, 80) ?? '',
-          visible: rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden',
-          clickable: !el.hasAttribute('disabled'),
-          href: el.getAttribute('href'),
-          dimensions: { w: Math.round(rect.width), h: Math.round(rect.height) },
-        })
-      })
-    }
-
-    return results.slice(0, 10) // Max 10 CTAs
+  $('button[type="submit"], button').each((_, el) => {
+    const text = $(el).text().trim().toLowerCase()
+    if (text.length > 0 && text.length < 60) ctaElements.push(text)
   })
 
-  const issues: LpIssue[] = []
-  const hiddenCtas = ctaData.filter((c) => !c.visible && c.text)
-  const disabledCtas = ctaData.filter((c) => !c.clickable && c.visible)
-  const tinyCtAs = ctaData.filter((c) => c.visible && (c.dimensions.w < 44 || c.dimensions.h < 44))
+  $('a[href]').each((_, el) => {
+    const href = $(el).attr('href') ?? ''
+    const text = $(el).text().trim().toLowerCase()
+    if (ctaKeywords.some(k => href.includes(k) || text.includes(k))) {
+      ctaElements.push(text || href)
+    }
+  })
 
-  if (hiddenCtas.length > 0) {
+  // Verifica CTAs com classes específicas
+  $('[class*="cta"],[class*="buy"],[class*="checkout"],[class*="comprar"],[id*="cta"],[id*="buy"]').each((_, el) => {
+    const text = $(el).text().trim()
+    if (text.length > 0 && text.length < 60) ctaElements.push(text)
+  })
+
+  const uniqueCtas = Array.from(new Set(ctaElements)).slice(0, 10)
+
+  if (uniqueCtas.length === 0) {
     issues.push({
       type: 'BROKEN_CTA',
-      severity: 'CRITICAL',
-      title: `${hiddenCtas.length} botão(ões) CTA oculto(s)`,
-      description: `Botões de compra encontrados mas invisíveis: "${hiddenCtas.map((c) => c.text).join('", "')}"`,
-      estimatedImpact: 'Perda estimada de 30–60% das conversões mobile/iOS',
-    })
-  }
-
-  if (tinyCtAs.length > 0) {
-    issues.push({
-      type: 'MOBILE_UX',
       severity: 'HIGH',
-      title: 'Botão CTA muito pequeno para toque mobile',
-      description: `${tinyCtAs.length} botão(ões) com dimensões abaixo de 44x44px (recomendação Apple HIG). Dificulta o clique em dispositivos móveis.`,
-      estimatedImpact: 'Redução de ~15% na taxa de clique em mobile',
+      title: 'Nenhum botão CTA encontrado',
+      description: 'Nenhum botão de compra/ação identificado na página. Isso pode indicar que a LP usa JavaScript para renderizar o CTA (verifique manualmente).',
+      estimatedImpact: 'Potencial perda de 20–40% das conversões se o CTA não estiver visível',
     })
   }
 
-  const passed = ctaData.length > 0 && hiddenCtas.length === 0 && disabledCtas.length === 0
+  const passed = uniqueCtas.length > 0 && issues.length === 0
 
   return {
     check: {
       name: 'Botões CTA',
       passed,
       details: passed
-        ? `${ctaData.filter((c) => c.visible).length} botão(ões) CTA visíveis e funcionais`
-        : `Problemas detectados: ${issues.map((i) => i.title).join('; ')}`,
+        ? `${uniqueCtas.length} botão(ões) CTA identificado(s): "${uniqueCtas.slice(0, 3).join('", "')}"${uniqueCtas.length > 3 ? '...' : ''}`
+        : issues.map(i => i.title).join('; '),
     },
     issues,
   }
@@ -155,20 +160,25 @@ async function auditCtaButtons(page: Page): Promise<{ check: LpCheck; issues: Lp
 
 // ─── Verificação de Links Quebrados ───────────────────────────────────────────
 
-async function auditLinks(page: Page): Promise<{ check: LpCheck; issues: LpIssue[] }> {
-  const links = await page.evaluate(() => {
-    return Array.from(document.querySelectorAll('a[href]'))
-      .map((a) => a.getAttribute('href') ?? '')
-      .filter((href) => href.startsWith('http'))
-      .slice(0, 20) // Limita para não sobrecarregar
+async function auditLinks($: cheerio.CheerioAPI): Promise<{ check: LpCheck; issues: LpIssue[] }> {
+  const links: string[] = []
+
+  $('a[href]').each((_, el) => {
+    const href = $(el).attr('href') ?? ''
+    if (href.startsWith('http')) links.push(href)
   })
 
+  const uniqueLinks = Array.from(new Set(links)).slice(0, 15)
   const brokenLinks: string[] = []
 
   await Promise.all(
-    links.map(async (href) => {
+    uniqueLinks.map(async (href) => {
       try {
-        const res = await fetch(href, { method: 'HEAD', signal: AbortSignal.timeout(5000) })
+        const res = await fetch(href, {
+          method: 'HEAD',
+          signal: AbortSignal.timeout(5000),
+          headers: { 'User-Agent': MOBILE_UA },
+        })
         if (res.status >= 400) brokenLinks.push(href)
       } catch { /* ignora erros de rede */ }
     })
@@ -190,31 +200,18 @@ async function auditLinks(page: Page): Promise<{ check: LpCheck; issues: LpIssue
       name: 'Links da Página',
       passed: brokenLinks.length === 0,
       details: brokenLinks.length === 0
-        ? `${links.length} links verificados, todos funcionais`
+        ? `${uniqueLinks.length} links verificados, todos funcionais`
         : `${brokenLinks.length} links quebrados encontrados`,
     },
     issues,
   }
 }
 
-// ─── Verificação de Performance (LCP) ────────────────────────────────────────
+// ─── Verificação de Performance ───────────────────────────────────────────────
 
-async function measurePerformance(
-  page: Page,
-  loadTimeMs: number
-): Promise<{ check: LpCheck; issues: LpIssue[] }> {
-  // Coleta métricas via Performance API
-  const metrics = await page.evaluate(() => {
-    const perf = window.performance
-    const nav = perf.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined
-    return {
-      domContentLoaded: nav ? Math.round(nav.domContentLoadedEventEnd) : null,
-      firstContentfulPaint: null as number | null,
-    }
-  })
-
-  const issues: LpIssue[] = []
+function auditPerformance(loadTimeMs: number): { check: LpCheck; issues: LpIssue[] } {
   const lcpSeconds = loadTimeMs / 1000
+  const issues: LpIssue[] = []
 
   if (lcpSeconds > 4) {
     issues.push({
@@ -229,18 +226,37 @@ async function measurePerformance(
       type: 'SLOW_PAGE',
       severity: 'HIGH',
       title: `Tempo de carregamento acima do ideal: ${lcpSeconds.toFixed(1)}s`,
-      description: `LCP de ${lcpSeconds.toFixed(1)}s está acima da recomendação do Google (2.5s). Pode impactar a conversão em redes móveis.`,
+      description: `Tempo de resposta de ${lcpSeconds.toFixed(1)}s está acima da recomendação do Google (2.5s). Pode impactar a conversão em redes móveis.`,
       estimatedImpact: 'Perda estimada de 10–25% dos visitantes mobile',
     })
   }
 
   return {
     check: {
-      name: 'Performance (LCP)',
+      name: 'Performance',
       passed: lcpSeconds <= 2.5,
-      details: `Tempo de carregamento: ${lcpSeconds.toFixed(2)}s ${lcpSeconds <= 2.5 ? '✓ (dentro do ideal)' : '⚠ (acima de 2.5s)'}`,
+      details: `Tempo de resposta: ${lcpSeconds.toFixed(2)}s ${lcpSeconds <= 2.5 ? '✓ (dentro do ideal)' : '⚠ (acima de 2.5s)'}`,
     },
     issues,
+  }
+}
+
+// ─── Verificação de Meta Tags básicas ─────────────────────────────────────────
+
+function auditMetaTags($: cheerio.CheerioAPI): LpCheck {
+  const title = $('title').text().trim()
+  const description = $('meta[name="description"]').attr('content') ?? ''
+  const ogTitle = $('meta[property="og:title"]').attr('content') ?? ''
+
+  const hasMeta = title.length > 0 && description.length > 0
+  const hasOg = ogTitle.length > 0
+
+  return {
+    name: 'Meta Tags',
+    passed: hasMeta,
+    details: hasMeta
+      ? `Title: "${title.slice(0, 40)}${title.length > 40 ? '...' : ''}"${hasOg ? ' + Open Graph presente' : ''}`
+      : 'Title ou description ausentes — prejudica SEO e compartilhamentos',
   }
 }
 
@@ -254,16 +270,14 @@ function generateRootCauseInsight(
   const parts: string[] = []
   const lcpSeconds = (loadTimeMs / 1000).toFixed(1)
 
-  // Correlaciona CTR alto + LP lenta
   if (traffic.ctr > 2.0 && loadTimeMs > 4000) {
     parts.push(
       `Seu anúncio tem CTR alto (${traffic.ctr.toFixed(2)}%), o que significa que o criativo atrai cliques. ` +
-      `Porém, a Landing Page demora ${lcpSeconds}s para carregar — você está perdendo estimadamente ` +
+      `Porém, a Landing Page demora ${lcpSeconds}s para responder — você está perdendo estimadamente ` +
       `${Math.min(80, Math.round((loadTimeMs / 1000 - 2.5) * 20))}% dos visitantes por lentidão técnica.`
     )
   }
 
-  // CTA oculto
   const criticalCta = issues.find((i) => i.type === 'BROKEN_CTA' && i.severity === 'CRITICAL')
   if (criticalCta) {
     const mobilePct = traffic.mobileTrafficPercent ?? 60
@@ -273,7 +287,6 @@ function generateRootCauseInsight(
     )
   }
 
-  // Pixel ausente
   const pixelIssue = issues.find((i) => i.type === 'PIXEL_FAILURE')
   if (pixelIssue) {
     parts.push(
@@ -285,7 +298,7 @@ function generateRootCauseInsight(
   if (parts.length === 0) {
     const issueCount = issues.filter((i) => i.severity !== 'LOW').length
     if (issueCount === 0) {
-      return `A Landing Page está bem configurada. Os ${lcpSeconds}s de carregamento e os elementos de conversão estão dentro dos padrões recomendados.`
+      return `A Landing Page está bem configurada. O tempo de resposta de ${lcpSeconds}s e os elementos de conversão estão dentro dos padrões recomendados.`
     }
     return `Foram detectados ${issueCount} problema(s) que podem estar impactando a conversão: ${issues.map((i) => i.title).join('; ')}.`
   }
@@ -295,64 +308,40 @@ function generateRootCauseInsight(
 
 // ─── Auditor principal ────────────────────────────────────────────────────────
 
-/**
- * Executa auditoria completa de uma Landing Page.
- */
 export async function auditLandingPage(
   url: string,
   traffic: TrafficContext = { ctr: 1.5 }
 ): Promise<LpAuditResult> {
-  const { chromium } = await import('playwright')
-  const browser = await chromium.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-  })
+  // Faz o fetch da página
+  const { html, loadTimeMs, status } = await fetchPage(url)
 
-  const context = await browser.newContext({
-    userAgent:
-      'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36',
-    viewport: { width: 390, height: 844 }, // iPhone 14 Pro
-    locale: 'pt-BR',
-    timezoneId: 'America/Sao_Paulo',
-  })
+  if (status >= 400) {
+    throw new Error(`A página retornou status HTTP ${status}. Verifique se a URL está correta e acessível.`)
+  }
 
-  const page = await context.newPage()
+  const $ = cheerio.load(html)
+
   const allIssues: LpIssue[] = []
   const allChecks: LpCheck[] = []
-  let loadTimeMs = 0
 
-  try {
-    const startTime = Date.now()
-    await page.goto(url, { waitUntil: 'networkidle', timeout: 30_000 })
-    loadTimeMs = Date.now() - startTime
+  // Executa verificações
+  const pixelCheck = auditMetaPixel($)
+  const ctaResult = auditCtaButtons($)
+  const perfResult = auditPerformance(loadTimeMs)
+  const metaCheck = auditMetaTags($)
+  const linksResult = await auditLinks($)
 
-    // Aguarda renderização de SPAs
-    await page.waitForTimeout(1000)
+  allChecks.push(pixelCheck, ctaResult.check, perfResult.check, metaCheck, linksResult.check)
+  allIssues.push(...ctaResult.issues, ...perfResult.issues, ...linksResult.issues)
 
-    // Executa todas as verificações
-    const [pixelCheck, ctaResult, perfResult, linksResult] = await Promise.all([
-      auditMetaPixel(page),
-      auditCtaButtons(page),
-      measurePerformance(page, loadTimeMs),
-      auditLinks(page),
-    ])
-
-    allChecks.push(pixelCheck, ctaResult.check, perfResult.check, linksResult.check)
-    allIssues.push(...ctaResult.issues, ...perfResult.issues, ...linksResult.issues)
-
-    // Adiciona issue de pixel se necessário
-    if (!pixelCheck.passed) {
-      allIssues.push({
-        type: 'PIXEL_FAILURE',
-        severity: 'CRITICAL',
-        title: 'Meta Pixel não detectado',
-        description: pixelCheck.details,
-        estimatedImpact: 'ROAS subestimado + algoritmo otimizando sem dados reais de conversão',
-      })
-    }
-  } finally {
-    await context.close()
-    await browser.close()
+  if (!pixelCheck.passed) {
+    allIssues.push({
+      type: 'PIXEL_FAILURE',
+      severity: 'CRITICAL',
+      title: 'Meta Pixel não detectado',
+      description: pixelCheck.details,
+      estimatedImpact: 'ROAS subestimado + algoritmo otimizando sem dados reais de conversão',
+    })
   }
 
   // Calcula score

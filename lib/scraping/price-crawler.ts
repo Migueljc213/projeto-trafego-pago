@@ -1,20 +1,16 @@
 /**
- * Price Intelligence Crawler — extrai preços de concorrentes via Playwright.
- * Respeita robots.txt e usa User-Agents reais para evitar bloqueios.
+ * Price Intelligence Crawler — extrai preços de concorrentes via fetch + cheerio.
+ * Sem dependências de browser — compatível com Vercel/serverless.
  */
 
-import type { Browser, Page } from 'playwright'
+import * as cheerio from 'cheerio'
 
-// ─── User Agents reais (desktop + mobile) ─────────────────────────────────────
+// ─── User Agents reais ────────────────────────────────────────────────────────
 
 const USER_AGENTS = [
-  // Chrome Desktop
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-  // Firefox Desktop
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0',
-  // Safari Mac
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_4_1) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Safari/605.1.15',
 ]
 
 function randomUserAgent(): string {
@@ -56,7 +52,7 @@ async function isAllowedByRobots(url: string): Promise<boolean> {
       headers: { 'User-Agent': randomUserAgent() },
       signal: AbortSignal.timeout(5000),
     })
-    if (!res.ok) return true // Se não conseguir ler, assume permitido
+    if (!res.ok) return true
 
     const text = await res.text()
     const lines = text.split('\n')
@@ -77,111 +73,91 @@ async function isAllowedByRobots(url: string): Promise<boolean> {
     }
     return true
   } catch {
-    return true // Em caso de erro, assume permitido
+    return true
   }
 }
 
 // ─── Extratores de preço ──────────────────────────────────────────────────────
 
-/**
- * Tenta extrair preço via JSON-LD (schema.org/Product).
- * Método mais confiável para e-commerces modernos.
- */
-async function extractFromJsonLd(page: Page): Promise<number | null> {
-  return page.evaluate(() => {
-    const scripts = Array.from(document.querySelectorAll('script[type="application/ld+json"]'))
-    for (const script of scripts) {
-      try {
-        const data = JSON.parse(script.textContent ?? '{}')
-        const items = Array.isArray(data) ? data : [data]
-        for (const item of items) {
-          // schema.org/Product
-          if (item['@type'] === 'Product') {
-            const offer = item.offers ?? item.offer
-            if (offer) {
-              const price = Array.isArray(offer)
-                ? offer[0]?.price
-                : offer.price
-              if (price) return parseFloat(String(price).replace(/[^\d.,]/g, '').replace(',', '.'))
+function extractFromJsonLd($: cheerio.CheerioAPI): number | null {
+  let price: number | null = null
+
+  $('script[type="application/ld+json"]').each((_, el) => {
+    if (price !== null) return
+    try {
+      const data = JSON.parse($(el).html() ?? '{}')
+      const items = Array.isArray(data) ? data : [data]
+      for (const item of items) {
+        if (item['@type'] === 'Product') {
+          const offer = item.offers ?? item.offer
+          if (offer) {
+            const raw = Array.isArray(offer) ? offer[0]?.price : offer.price
+            if (raw) {
+              const num = parseFloat(String(raw).replace(/[^\d.,]/g, '').replace(',', '.'))
+              if (!isNaN(num) && num > 0) { price = num; return }
             }
           }
         }
-      } catch { /* ignora JSON inválido */ }
-    }
-    return null
-  })
-}
-
-/**
- * Tenta extrair preço via meta tags OpenGraph (og:price:amount).
- */
-async function extractFromOpenGraph(page: Page): Promise<number | null> {
-  return page.evaluate(() => {
-    const selectors = [
-      'meta[property="product:price:amount"]',
-      'meta[property="og:price:amount"]',
-      'meta[name="price"]',
-    ]
-    for (const sel of selectors) {
-      const el = document.querySelector(sel)
-      const content = el?.getAttribute('content')
-      if (content) {
-        const num = parseFloat(content.replace(/[^\d.,]/g, '').replace(',', '.'))
-        if (!isNaN(num)) return num
       }
-    }
-    return null
+    } catch { /* ignora JSON inválido */ }
   })
+
+  return price
 }
 
-/**
- * Tenta extrair preço via seletores CSS comuns de e-commerces.
- * Cobre Shopify, WooCommerce, VTEX, Magento e lojas customizadas.
- */
-async function extractFromCssSelectors(page: Page): Promise<number | null> {
-  return page.evaluate(() => {
-    const selectors = [
-      // Shopify
-      '.price__current', '.price-item--regular', '[data-product-price]',
-      // WooCommerce
-      '.woocommerce-Price-amount', '.price ins .amount', '.summary .price .amount',
-      // VTEX
-      '.vtex-product-price', '[class*="sellingPrice"]', '[class*="selling-price"]',
-      // Genéricos de e-commerce
-      '[itemprop="price"]', '[class*="price"][class*="current"]',
-      '[class*="product-price"]', '[id*="product-price"]',
-      '[class*="sale-price"]', '[class*="preco"]',
-      // Mercado Livre / Americanas style
-      '.andes-money-amount__fraction', '.selling-price',
-    ]
-
-    for (const sel of selectors) {
-      const el = document.querySelector(sel)
-      if (!el) continue
-      const text = el.getAttribute('content') ?? el.textContent ?? ''
-      // Remove R$, $, espaços, pontos de milhar e normaliza vírgula decimal
-      const cleaned = text
-        .replace(/R\$|USD|\$|€/g, '')
-        .replace(/\s/g, '')
-        .replace(/\.(?=\d{3})/g, '')  // Remove ponto de milhar
-        .replace(',', '.')
-        .trim()
-      const num = parseFloat(cleaned)
-      if (!isNaN(num) && num > 0 && num < 1_000_000) return num
+function extractFromOpenGraph($: cheerio.CheerioAPI): number | null {
+  const selectors = [
+    'meta[property="product:price:amount"]',
+    'meta[property="og:price:amount"]',
+    'meta[name="price"]',
+  ]
+  for (const sel of selectors) {
+    const content = $(sel).attr('content')
+    if (content) {
+      const num = parseFloat(content.replace(/[^\d.,]/g, '').replace(',', '.'))
+      if (!isNaN(num) && num > 0) return num
     }
-    return null
-  })
+  }
+  return null
+}
+
+function extractFromCssSelectors($: cheerio.CheerioAPI): number | null {
+  const selectors = [
+    // Shopify
+    '.price__current', '.price-item--regular', '[data-product-price]',
+    // WooCommerce
+    '.woocommerce-Price-amount', '.price ins .amount', '.summary .price .amount',
+    // VTEX
+    '.vtex-product-price', '[class*="sellingPrice"]', '[class*="selling-price"]',
+    // Genéricos
+    '[itemprop="price"]', '[class*="price"][class*="current"]',
+    '[class*="product-price"]', '[id*="product-price"]',
+    '[class*="sale-price"]', '[class*="preco"]',
+    // Mercado Livre / Americanas
+    '.andes-money-amount__fraction', '.selling-price',
+  ]
+
+  for (const sel of selectors) {
+    const el = $(sel).first()
+    if (!el.length) continue
+    const text = el.attr('content') ?? el.text() ?? ''
+    const cleaned = text
+      .replace(/R\$|USD|\$|€/g, '')
+      .replace(/\s/g, '')
+      .replace(/\.(?=\d{3})/g, '')
+      .replace(',', '.')
+      .trim()
+    const num = parseFloat(cleaned)
+    if (!isNaN(num) && num > 0 && num < 1_000_000) return num
+  }
+  return null
 }
 
 // ─── Crawler principal ────────────────────────────────────────────────────────
 
-/**
- * Extrai o preço de um produto em uma URL de concorrente.
- */
 export async function crawlCompetitorPrice(
   url: string,
   competitorName: string,
-  browser: Browser
 ): Promise<CompetitorPriceResult> {
   const result: CompetitorPriceResult = {
     url,
@@ -192,50 +168,40 @@ export async function crawlCompetitorPrice(
     checkedAt: new Date(),
   }
 
-  // Verifica robots.txt
   const allowed = await isAllowedByRobots(url)
   if (!allowed) {
     result.error = 'Bloqueado por robots.txt'
     return result
   }
 
-  const context = await browser.newContext({
-    userAgent: randomUserAgent(),
-    locale: 'pt-BR',
-    timezoneId: 'America/Sao_Paulo',
-    viewport: { width: 1366, height: 768 },
-    extraHTTPHeaders: {
-      'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-    },
-  })
-
-  const page = await context.newPage()
-
   try {
-    // Bloqueia recursos desnecessários para acelerar
-    await page.route('**/*.{png,jpg,jpeg,gif,webp,svg,woff,woff2,ttf,mp4,mp3}', (route) =>
-      route.abort()
-    )
-
-    await page.goto(url, {
-      waitUntil: 'domcontentloaded',
-      timeout: 20_000,
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': randomUserAgent(),
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+      },
+      signal: AbortSignal.timeout(20_000),
+      redirect: 'follow',
     })
 
-    // Aguarda um pouco para SPAs renderizarem
-    await page.waitForTimeout(1500)
+    if (!res.ok) {
+      result.error = `HTTP ${res.status}`
+      return result
+    }
 
-    // Tenta cada método em ordem de confiabilidade
-    let price = await extractFromJsonLd(page)
+    const html = await res.text()
+    const $ = cheerio.load(html)
+
+    let price = extractFromJsonLd($)
     if (price) {
       result.extractionMethod = 'json-ld'
     } else {
-      price = await extractFromOpenGraph(page)
+      price = extractFromOpenGraph($)
       if (price) {
         result.extractionMethod = 'opengraph'
       } else {
-        price = await extractFromCssSelectors(page)
+        price = extractFromCssSelectors($)
         if (price) result.extractionMethod = 'css-selector'
       }
     }
@@ -243,8 +209,6 @@ export async function crawlCompetitorPrice(
     result.price = price
   } catch (err) {
     result.error = err instanceof Error ? err.message : 'Erro desconhecido'
-  } finally {
-    await context.close()
   }
 
   return result
@@ -252,10 +216,6 @@ export async function crawlCompetitorPrice(
 
 // ─── Comparação e alerta de preço ─────────────────────────────────────────────
 
-/**
- * Compara o preço do cliente com os concorrentes e gera alerta.
- * Regra: Se preço_cliente > min(concorrentes) * 1.10 → HIGH_PRICE_RISK
- */
 export function comparePrices(
   myPrice: number,
   myProductName: string,
@@ -301,31 +261,14 @@ export function comparePrices(
 
 // ─── Orquestrador ─────────────────────────────────────────────────────────────
 
-/**
- * Executa o crawler para todos os concorrentes de uma conta de anúncio.
- * Cria uma instância de browser compartilhada para eficiência.
- */
 export async function runPriceIntelligence(
   myPrice: number,
   myProductName: string,
   competitors: Array<{ name: string; url: string }>
 ): Promise<PriceComparisonResult> {
-  // Import dinâmico para não quebrar o build em ambientes sem Playwright
-  const { chromium } = await import('playwright')
+  const results = await Promise.all(
+    competitors.map((c) => crawlCompetitorPrice(c.url, c.name))
+  )
 
-  const browser = await chromium.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-  })
-
-  try {
-    // Executa crawlers em paralelo (max 3 simultâneos para não sobrecarregar)
-    const results = await Promise.all(
-      competitors.map((c) => crawlCompetitorPrice(c.url, c.name, browser))
-    )
-
-    return comparePrices(myPrice, myProductName, results)
-  } finally {
-    await browser.close()
-  }
+  return comparePrices(myPrice, myProductName, results)
 }
