@@ -44,6 +44,7 @@ export interface CreateAdSetParams {
   optimizationGoal: OptimizationGoal
   billingEvent?: 'IMPRESSIONS' | 'LINK_CLICKS'
   bidStrategy?: 'LOWEST_COST_WITHOUT_CAP' | 'COST_CAP'
+  status?: 'ACTIVE' | 'PAUSED'   // padrão PAUSED
   targeting: {
     ageMin?: number               // padrão 18
     ageMax?: number               // padrão 65
@@ -121,6 +122,18 @@ interface MetaAdAccount {
   currency: string
   timezone_name: string
   account_status: number
+}
+
+// Status codes da conta de anúncio da Meta
+const AD_ACCOUNT_STATUS: Record<number, string> = {
+  1: 'ACTIVE',
+  2: 'DISABLED',
+  3: 'UNSETTLED',
+  7: 'PENDING_RISK_REVIEW',
+  8: 'PENDING_SETTLEMENT',
+  9: 'IN_GRACE_PERIOD',
+  100: 'PENDING_CLOSURE',
+  101: 'CLOSED',
 }
 
 interface MetaCampaign {
@@ -215,6 +228,43 @@ async function metaFetch<T>(
 // ──────────────────────────────────────────
 // Exported API functions
 // ──────────────────────────────────────────
+
+/**
+ * Verifica se o token tem acesso ao ad account e se a conta está apta para criar campanhas.
+ * Lança MetaApiError com mensagem descritiva se algo estiver errado.
+ */
+export async function assertAdAccountReady(
+  adAccountId: string,
+  accessToken: string
+): Promise<void> {
+  const data = await metaFetch<{
+    id: string
+    name: string
+    account_status: number
+    disable_reason?: number
+    capabilities?: string[]
+  }>(
+    `/${adAccountId}?fields=id,name,account_status,disable_reason,capabilities`,
+    accessToken
+  )
+
+  const statusCode = data.account_status
+  const statusName = AD_ACCOUNT_STATUS[statusCode] ?? `UNKNOWN(${statusCode})`
+
+  if (statusCode !== 1) {
+    const reasons: Record<number, string> = {
+      2: 'A conta de anúncio está desativada.',
+      3: 'A conta está com pagamento pendente (UNSETTLED). Verifique o método de pagamento no Meta Ads Manager.',
+      7: 'A conta está em revisão de risco pela Meta (PENDING_RISK_REVIEW). Aguarde a aprovação.',
+      8: 'A conta está aguardando liquidação de pagamento (PENDING_SETTLEMENT).',
+      9: 'A conta está em período de carência (IN_GRACE_PERIOD). Regularize o pagamento.',
+      100: 'A conta está em processo de encerramento (PENDING_CLOSURE).',
+      101: 'A conta de anúncio está encerrada (CLOSED).',
+    }
+    const msg = reasons[statusCode] ?? `A conta de anúncio está em estado "${statusName}" e não pode criar campanhas.`
+    throw new MetaApiError(100, `[AdAccount ${adAccountId}] ${msg}`)
+  }
+}
 
 /**
  * Busca as contas de anúncio vinculadas ao usuário na Business Manager.
@@ -360,6 +410,66 @@ export async function exchangeForLongLivedToken(
 }
 
 // ──────────────────────────────────────────
+// Error translation
+// ──────────────────────────────────────────
+
+export type CampaignCreationStep = 'campanha' | 'conjunto de anúncios' | 'criativo' | 'anúncio'
+
+/**
+ * Converte códigos de erro da Meta API em mensagens amigáveis em português.
+ * O parâmetro `step` permite contextualizar erros ambíguos (ex: 4834011 tem causas
+ * diferentes dependendo de onde ocorre). Retorna null quando não há tradução conhecida.
+ */
+export function translateMetaError(
+  code: number,
+  subcode?: number,
+  step?: CampaignCreationStep
+): string | null {
+  if (subcode) {
+    // 4834011 — causas diferentes por etapa
+    if (subcode === 4834011) {
+      if (step === 'campanha' || step === 'conjunto de anúncios') {
+        return (
+          'Parâmetro inválido na criação da campanha (código Meta: 4834011). ' +
+          'Possíveis causas: (1) A conta de anúncio pode estar com restrições ou em revisão — acesse o Meta Ads Manager para verificar. ' +
+          '(2) Verifique se a conta tem permissão para o objetivo selecionado. ' +
+          '(3) Se o anúncio envolve crédito, emprego, imóveis ou política, pode ser necessário declarar uma Categoria Especial no Meta Ads Manager.'
+        )
+      }
+      // criativo ou anúncio — problema de URL
+      return (
+        'A URL de destino é inválida ou inacessível pela Meta. ' +
+        'Verifique se o endereço começa com https://, está acessível publicamente sem login e não é uma página de desenvolvimento/staging.'
+      )
+    }
+
+    const bySubcode: Record<number, string> = {
+      4837043: 'O domínio da URL de destino não está verificado nesta conta Meta. Adicione e verifique o domínio no Meta Business Manager → Configurações → Domínios.',
+      1815745: 'O evento de cobrança (billing_event) é incompatível com o objetivo de otimização escolhido.',
+      2446094: 'O objetivo de otimização não é compatível com o objetivo da campanha. Altere um dos dois e tente novamente.',
+      1885217: 'Configuração de segmentação de público inválida. Verifique os interesses selecionados.',
+      1487394: 'Esta campanha requer declaração de Categoria Especial de Anúncio (crédito, emprego, habitação ou política). Edite no Meta Ads Manager.',
+      2446090: 'Orçamento insuficiente para o objetivo selecionado. O mínimo diário pode ser maior que o valor informado.',
+      1391705: 'A conta de anúncio não tem um método de pagamento válido cadastrado no Meta.',
+    }
+    if (bySubcode[subcode]) return bySubcode[subcode]
+  }
+
+  const byCode: Record<number, string> = {
+    100: 'Parâmetro inválido enviado à Meta. Verifique os dados e tente novamente.',
+    190: 'Token de acesso inválido ou expirado. Reconecte sua conta Meta em Configurações.',
+    200: 'Permissão negada. Verifique se sua conta tem permissão de gerenciamento de anúncios (ads_management).',
+    294: 'Gerenciamento de anúncios não está habilitado para este app Meta. Entre em contato com o suporte.',
+    368: 'Conta temporariamente bloqueada pela Meta por violação de políticas. Verifique o Meta Ads Manager.',
+    803: 'Objeto não encontrado. Verifique se o ID da Página ou da conta de anúncio estão corretos.',
+    2635: 'A conta de anúncio está desativada ou com restrições. Acesse o Meta Ads Manager para verificar.',
+    2041: 'Sua conta de anúncio atingiu o limite de campanhas ativas permitidas pela Meta.',
+    1487137: 'Limite de criativos atingido para este conjunto de anúncios.',
+  }
+  return byCode[code] ?? null
+}
+
+// ──────────────────────────────────────────
 // Budget update
 // ──────────────────────────────────────────
 
@@ -388,17 +498,22 @@ export async function createCampaign(
   params: CreateCampaignParams,
   accessToken: string
 ): Promise<string> {
-  const body = {
+  // A Meta Ads API aceita form-encoded neste endpoint (JSON causa 4834011 em algumas contas)
+  const body = new URLSearchParams({
     name: params.name,
     objective: params.objective,
     status: params.status,
-    special_ad_categories: params.specialAdCategories ?? [],
-  }
+    special_ad_categories: JSON.stringify(params.specialAdCategories ?? []),
+  })
 
   const data = await metaFetch<{ id: string }>(
     `/${adAccountId}/campaigns`,
     accessToken,
-    { method: 'POST', body: JSON.stringify(body) }
+    {
+      method: 'POST',
+      body: body.toString(),
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    }
   )
   return data.id
 }
@@ -442,7 +557,7 @@ export async function createAdSet(
     billing_event: derivedBillingEvent,
     bid_strategy: params.bidStrategy ?? 'LOWEST_COST_WITHOUT_CAP',
     targeting,
-    status: 'PAUSED', // sempre começa pausado; ativado depois junto com o anúncio
+    status: params.status ?? 'PAUSED',
   }
 
   if (params.startTime) {

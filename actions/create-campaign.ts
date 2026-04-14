@@ -11,7 +11,11 @@ import {
   createAdCreative,
   createAd,
   uploadAdImage,
+  assertAdAccountReady,
   MetaRateLimitError,
+  MetaApiError,
+  translateMetaError,
+  type CampaignCreationStep,
   type CampaignObjective,
   type OptimizationGoal,
   type CallToActionType,
@@ -88,8 +92,22 @@ export async function createCampaignAction(
   if (!input.pageId) return { success: false, error: 'Selecione uma Página do Facebook' }
   if (!input.headline?.trim()) return { success: false, error: 'Headline é obrigatória' }
   if (!input.primaryText?.trim()) return { success: false, error: 'Texto principal é obrigatório' }
-  if (!input.destinationUrl?.startsWith('http')) return { success: false, error: 'URL de destino inválida' }
+  if (!input.destinationUrl?.startsWith('https://')) return { success: false, error: 'URL de destino deve começar com https:// (exigido pela Meta)' }
   if (input.dailyBudgetBRL < 5) return { success: false, error: 'Orçamento mínimo: R$5,00/dia' }
+  if (input.imageUrl) {
+    const isImageUrl = /\.(jpe?g|png|gif|webp|bmp)(\?.*)?$/i.test(input.imageUrl)
+    if (!isImageUrl) {
+      return { success: false, error: 'A URL da imagem deve apontar diretamente para um arquivo de imagem (.jpg, .png, .webp, etc.). Não use links de páginas web.' }
+    }
+  }
+
+  // Objetivos de otimização que requerem configuração extra não disponível
+  if (input.optimizationGoal === 'LEAD_GENERATION') {
+    return { success: false, error: 'O objetivo "Geração de Leads" requer um Formulário de Lead vinculado, que ainda não é suportado nesta versão. Use "Cliques no Link" ou crie a campanha diretamente no Meta Ads Manager.' }
+  }
+  if (input.optimizationGoal === 'CONVERSIONS') {
+    return { success: false, error: 'O objetivo "Conversões" requer um Pixel Meta configurado na conta. Acesse Configurações → Pixel para conectar seu pixel antes de usar este objetivo.' }
+  }
 
   // Busca conta Meta do usuário
   const bm = await prisma.businessManager.findFirst({
@@ -115,13 +133,16 @@ export async function createCampaignAction(
     female: [2] as (1 | 2)[],
   }
 
-  let step = 'campanha'
+  let step: CampaignCreationStep = 'campanha'
   let metaCampaignId = ''
   let metaAdSetId = ''
   let metaCreativeId = ''
   let metaAdId = ''
 
   try {
+    // ── 0. Verificar conta antes de qualquer chamada de criação ────────────
+    await assertAdAccountReady(actAccountId, accessToken)
+
     // ── 1. Criar Campanha ──────────────────────────────────────────────────
     step = 'campanha'
     metaCampaignId = await createCampaign(
@@ -144,6 +165,7 @@ export async function createCampaignAction(
         campaignId: metaCampaignId,
         dailyBudgetCents: budgetCents,
         optimizationGoal: input.optimizationGoal ?? 'LINK_CLICKS',
+        status: campaignStatus,
         targeting: {
           ageMin: input.ageMin ?? 18,
           ageMax: input.ageMax ?? 65,
@@ -233,6 +255,17 @@ export async function createCampaignAction(
   } catch (err) {
     if (err instanceof MetaRateLimitError) {
       return { success: false, error: `Rate limit da Meta. Aguarde ${err.retryAfter}s e tente novamente.` }
+    }
+    if (err instanceof MetaApiError) {
+      const friendly = translateMetaError(err.code, err.subcode, step)
+      const traceInfo = err.fbtrace ? ` (trace: ${err.fbtrace})` : ''
+      console.error(`[createCampaignAction] Falha na etapa "${step}" — code=${err.code} subcode=${err.subcode}${err.fbtrace ? ` trace=${err.fbtrace}` : ''}`)
+      return {
+        success: false,
+        error: friendly
+          ? `Erro na etapa "${step}": ${friendly}${traceInfo}`
+          : `Erro ao criar ${step} na Meta: ${err.message}`,
+      }
     }
     const msg = err instanceof Error ? err.message : String(err)
     console.error(`[createCampaignAction] Falha na etapa "${step}":`, err)

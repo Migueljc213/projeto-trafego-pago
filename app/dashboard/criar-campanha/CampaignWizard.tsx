@@ -20,18 +20,20 @@ const OBJECTIVES: { value: CampaignObjective; label: string; desc: string; icon:
   { value: 'OUTCOME_ENGAGEMENT', label: 'Engajamento', desc: 'Mais curtidas, comentários e compartilhamentos', icon: '❤️' },
 ]
 
-const OPTIMIZATION_GOALS: Record<CampaignObjective, { value: OptimizationGoal; label: string }[]> = {
+const OPTIMIZATION_GOALS: Record<CampaignObjective, { value: OptimizationGoal; label: string; warning?: string }[]> = {
   OUTCOME_TRAFFIC: [
     { value: 'LINK_CLICKS', label: 'Cliques no Link' },
     { value: 'LANDING_PAGE_VIEWS', label: 'Visualizações de Landing Page' },
   ],
   OUTCOME_SALES: [
-    { value: 'CONVERSIONS', label: 'Conversões' },
     { value: 'LINK_CLICKS', label: 'Cliques no Link' },
+    { value: 'LANDING_PAGE_VIEWS', label: 'Visualizações de Landing Page' },
+    { value: 'CONVERSIONS', label: 'Conversões ⚠️', warning: 'Requer Pixel Meta configurado. Acesse Configurações → Pixel antes de usar.' },
   ],
   OUTCOME_LEADS: [
-    { value: 'LEAD_GENERATION', label: 'Geração de Leads' },
-    { value: 'CONVERSIONS', label: 'Conversões' },
+    { value: 'LINK_CLICKS', label: 'Cliques no Link' },
+    { value: 'LANDING_PAGE_VIEWS', label: 'Visualizações de Landing Page' },
+    { value: 'CONVERSIONS', label: 'Conversões ⚠️', warning: 'Requer Pixel Meta configurado. Acesse Configurações → Pixel antes de usar.' },
   ],
   OUTCOME_AWARENESS: [
     { value: 'REACH', label: 'Alcance' },
@@ -102,8 +104,8 @@ function StepIndicator({ current }: { current: number }) {
 
 // ─── Inputs reutilizáveis ─────────────────────────────────────────────────────
 
-function Field({ label, hint, error, children }: {
-  label: string; hint?: string; error?: string; children: React.ReactNode
+function Field({ label, hint, error, warning, children }: {
+  label: string; hint?: string; error?: string; warning?: string; children: React.ReactNode
 }) {
   return (
     <div className="space-y-1.5">
@@ -111,6 +113,7 @@ function Field({ label, hint, error, children }: {
       {hint && <p className="text-xs text-gray-500">{hint}</p>}
       {children}
       {error && <p className="text-xs text-red-400">{error}</p>}
+      {!error && warning && <p className="text-xs text-yellow-400">{warning}</p>}
     </div>
   )
 }
@@ -461,7 +464,10 @@ export default function CampaignWizard({ pages }: Props) {
               </div>
             </Field>
 
-            <Field label="Otimização de Entrega">
+            <Field
+              label="Otimização de Entrega"
+              warning={optimizationOptions.find(o => o.value === form.optimizationGoal)?.warning}
+            >
               <Select
                 value={form.optimizationGoal}
                 onChange={e => update('optimizationGoal', e.target.value as OptimizationGoal)}
@@ -549,7 +555,15 @@ export default function CampaignWizard({ pages }: Props) {
               />
             </Field>
 
-            <Field label="URL de Destino" hint="Página para onde o usuário será direcionado ao clicar">
+            <Field
+              label="URL de Destino"
+              hint="Página para onde o usuário será direcionado ao clicar"
+              error={
+                form.destinationUrl && !form.destinationUrl.startsWith('https://')
+                  ? 'A URL deve começar com https:// (exigido pela Meta)'
+                  : undefined
+              }
+            >
               <Input
                 type="url"
                 value={form.destinationUrl}
@@ -567,12 +581,20 @@ export default function CampaignWizard({ pages }: Props) {
                   {CTA_OPTIONS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                 </Select>
               </Field>
-              <Field label="URL da Imagem" hint="Opcional — link direto para imagem (JPEG/PNG)">
+              <Field
+                label="URL da Imagem"
+                hint="Opcional — link direto para imagem (.jpg, .png, .webp)"
+                error={
+                  form.imageUrl && !/\.(jpe?g|png|gif|webp|bmp)(\?.*)?$/i.test(form.imageUrl)
+                    ? 'Use o link direto de uma imagem (.jpg, .png, .webp), não uma URL de página web'
+                    : undefined
+                }
+              >
                 <Input
                   type="url"
                   value={form.imageUrl}
                   onChange={e => update('imageUrl', e.target.value)}
-                  placeholder="https://..."
+                  placeholder="https://cdn.exemplo.com/imagem.jpg"
                 />
               </Field>
             </div>
@@ -656,7 +678,7 @@ export default function CampaignWizard({ pages }: Props) {
             onClick={() => setStep(s => s + 1)}
             disabled={
               (step === 0 && (!form.campaignName.trim() || !form.dailyBudgetBRL)) ||
-              (step === 2 && (!form.headline.trim() || !form.primaryText.trim() || !form.destinationUrl || !form.pageId.trim()))
+              (step === 2 && (!form.headline.trim() || !form.primaryText.trim() || !form.destinationUrl || !form.destinationUrl.startsWith('https://') || !form.pageId.trim()))
             }
             className="inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-neon-cyan/10 border border-neon-cyan/30 text-neon-cyan text-sm font-semibold hover:bg-neon-cyan/20 transition-all disabled:opacity-40"
           >
