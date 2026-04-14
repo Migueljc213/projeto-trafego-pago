@@ -557,6 +557,8 @@ export async function createAdSet(
     // Obrigatório na API v17+ para objetivos de tráfego/vendas/leads
     destination_type: params.destinationType ?? 'WEBSITE',
     targeting,
+    // Obrigatório declarar explicitamente na API v17+ — 0 = targeting manual (sem Advantage Audience IA)
+    targeting_automation: { advantage_audience: 0 },
     status: params.status ?? 'PAUSED',
   }
 
