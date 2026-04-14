@@ -45,6 +45,7 @@ export interface CreateAdSetParams {
   billingEvent?: 'IMPRESSIONS' | 'LINK_CLICKS'
   bidStrategy?: 'LOWEST_COST_WITHOUT_CAP' | 'COST_CAP'
   status?: 'ACTIVE' | 'PAUSED'   // padrão PAUSED
+  destinationType?: 'WEBSITE' | 'APP' | 'MESSENGER_INBOX' | 'INSTAGRAM_PROFILE' | 'FACEBOOK'
   targeting: {
     ageMin?: number               // padrão 18
     ageMax?: number               // padrão 65
@@ -553,6 +554,8 @@ export async function createAdSet(
     optimization_goal: params.optimizationGoal,
     billing_event: derivedBillingEvent,
     bid_strategy: params.bidStrategy ?? 'LOWEST_COST_WITHOUT_CAP',
+    // Obrigatório na API v17+ para objetivos de tráfego/vendas/leads
+    destination_type: params.destinationType ?? 'WEBSITE',
     targeting,
     status: params.status ?? 'PAUSED',
   }

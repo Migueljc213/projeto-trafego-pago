@@ -263,7 +263,7 @@ export async function createCampaignAction(
       return {
         success: false,
         error: friendly
-          ? `Erro na etapa "${step}": ${friendly}${traceInfo}`
+          ? `Erro na etapa "${step}": ${friendly} | Detalhe Meta: ${err.message}`
           : `Erro ao criar ${step} na Meta: ${err.message}`,
       }
     }
