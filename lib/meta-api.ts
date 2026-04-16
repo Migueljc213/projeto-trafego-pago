@@ -688,28 +688,50 @@ export async function createAd(
 /**
  * Faz upload de uma imagem para a biblioteca de mídia da conta de anúncio.
  * Retorna o hash da imagem para usar em createAdCreative.
+ *
+ * A Meta exige form-urlencoded (não JSON) para o campo `bytes`.
+ * metaFetch não é usado aqui pois ele força Content-Type: application/json.
  */
 export async function uploadAdImage(
   adAccountId: string,
   imageUrl: string,
   accessToken: string
 ): Promise<string> {
-  // Baixa a imagem e converte para base64
-  const imgRes = await fetch(imageUrl, { signal: AbortSignal.timeout(15_000) })
-  if (!imgRes.ok) throw new MetaApiError(0, `Não foi possível baixar a imagem: ${imgRes.status}`)
+  // 1. Baixa a imagem no nosso servidor (evita restrições de CDN na Meta)
+  const imgRes = await fetch(imageUrl, {
+    signal: AbortSignal.timeout(15_000),
+    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FunnelGuardBot/1.0)' },
+  })
+  if (!imgRes.ok) throw new MetaApiError(0, `Não foi possível baixar a imagem: HTTP ${imgRes.status}`)
 
   const buffer = await imgRes.arrayBuffer()
   const base64 = Buffer.from(buffer).toString('base64')
-  const bytes = JSON.stringify({ bytes: base64 })
 
-  const data = await metaFetch<{ images: Record<string, { hash: string }> }>(
-    `/${adAccountId}/adimages`,
-    accessToken,
-    { method: 'POST', body: bytes }
-  )
+  // 2. Envia para Meta como application/x-www-form-urlencoded
+  // A API de adimages espera `bytes` como campo de formulário, não JSON
+  const body = new URLSearchParams()
+  body.set('bytes', base64)
+  body.set('access_token', accessToken)
+
+  const apiUrl = `${META_GRAPH_URL}/${adAccountId}/adimages`
+  const response = await fetch(apiUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body.toString(),
+    signal: AbortSignal.timeout(30_000),
+  })
+
+  const data = await response.json() as {
+    images?: Record<string, { hash: string }>
+    error?: { code: number; message: string; error_subcode?: number; fbtrace_id?: string; error_data?: unknown }
+  }
+
+  if (data.error) {
+    throw new MetaApiError(data.error.code, data.error.message, data.error.error_subcode, data.error.fbtrace_id)
+  }
 
   const hash = Object.values(data.images ?? {})[0]?.hash
-  if (!hash) throw new MetaApiError(0, 'Meta não retornou hash da imagem')
+  if (!hash) throw new MetaApiError(0, 'Meta não retornou hash da imagem após upload')
   return hash
 }
 

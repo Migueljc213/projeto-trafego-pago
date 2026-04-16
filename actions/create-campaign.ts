@@ -180,15 +180,19 @@ export async function createCampaignAction(
 
     // ── 3. Upload de imagem ────────────────────────────────────────────────
     // imageUrl já foi validado como obrigatório acima.
-    // Tenta fazer upload (melhor qualidade); se falhar, usa a URL direta como picture.
-    let imageHash: string | undefined
-    let pictureFallback: string | undefined = input.imageUrl
+    // Fazemos o upload no nosso servidor (base64 → Meta adimages) para evitar
+    // que a Meta tente baixar a URL diretamente (muitos CDNs são bloqueados).
+    let imageHash: string
     try {
       imageHash = await uploadAdImage(actAccountId, input.imageUrl!, accessToken)
-      pictureFallback = undefined // upload bem-sucedido; não precisamos da URL direta
-      console.log('[createCampaign] Upload de imagem bem-sucedido; usando imageHash')
+      console.log('[createCampaign] Upload de imagem bem-sucedido; imageHash obtido')
     } catch (uploadErr) {
-      console.warn('[createCampaign] Falha ao fazer upload de imagem; usando URL direta como picture. Erro:', uploadErr instanceof Error ? uploadErr.message : String(uploadErr))
+      const uploadMsg = uploadErr instanceof Error ? uploadErr.message : String(uploadErr)
+      console.error('[createCampaign] Falha ao fazer upload de imagem:', uploadMsg)
+      return {
+        success: false,
+        error: `Erro ao fazer upload da imagem: ${uploadMsg}. Use uma URL de imagem pública (.jpg, .png, .webp) acessível pela internet.`,
+      }
     }
 
     // ── 4. Criar Criativo ─────────────────────────────────────────────────
@@ -204,7 +208,6 @@ export async function createCampaignAction(
         description: input.description,
         callToAction: input.callToAction ?? 'LEARN_MORE',
         imageHash,
-        picture: pictureFallback,
       },
       accessToken
     )
