@@ -72,7 +72,7 @@ export async function getMyPagesAction(): Promise<ActionResult<MetaFacebookPage[
 
   try {
     const token = decrypt(bm.accessTokenEnc)
-    const pages = await getMyPages(token)
+    const pages = await getMyPages(token, bm.metaBmId)
     return { success: true, data: pages }
   } catch (err) {
     return { success: false, error: `Erro ao buscar páginas: ${err instanceof Error ? err.message : String(err)}` }

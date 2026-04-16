@@ -446,7 +446,7 @@ export function translateMetaError(
 
     const bySubcode: Record<number, string> = {
       4837043: 'O domínio da URL de destino não está verificado nesta conta Meta. Adicione e verifique o domínio no Meta Business Manager → Configurações → Domínios.',
-      3858258: 'Estrutura do criativo inválida. Verifique se a URL de destino é pública (https://) e se a Página do Facebook está corretamente vinculada à conta de anúncio.',
+      3858258: 'A Página do Facebook selecionada não está vinculada ao Business Manager desta conta de anúncio. Acesse Meta Business Manager → Páginas e adicione/vincule a página antes de criar o anúncio.',
       1815745: 'O evento de cobrança (billing_event) é incompatível com o objetivo de otimização escolhido.',
       2446094: 'O objetivo de otimização não é compatível com o objetivo da campanha. Altere um dos dois e tente novamente.',
       1885217: 'Configuração de segmentação de público inválida. Verifique os interesses selecionados.',
@@ -481,10 +481,37 @@ export function translateMetaError(
 // ──────────────────────────────────────────
 
 /**
- * Busca as Páginas do Facebook associadas ao token do usuário.
- * Necessário para criar criativos — o page_id é obrigatório.
+ * Busca as Páginas do Facebook vinculadas ao Business Manager.
+ * Usa /{bm_id}/owned_pages que retorna apenas páginas vinculadas ao BM —
+ * ao contrário de /me/accounts que retorna todas as páginas do usuário,
+ * incluindo pessoais não vinculadas ao BM (causam erro 3858258 no criativo).
+ * Faz fallback para /me/accounts se o BM não tiver páginas próprias.
  */
-export async function getMyPages(accessToken: string): Promise<MetaFacebookPage[]> {
+export async function getMyPages(
+  accessToken: string,
+  bmId?: string
+): Promise<MetaFacebookPage[]> {
+  // Tenta páginas do BM primeiro (corretas para criar criativos)
+  if (bmId) {
+    try {
+      const bmData = await metaFetch<{ data: MetaFacebookPage[] }>(
+        `/${bmId}/owned_pages?fields=id,name,category`,
+        accessToken
+      )
+      if (bmData.data?.length) return bmData.data
+
+      // Fallback: páginas de clientes vinculadas ao BM
+      const clientData = await metaFetch<{ data: MetaFacebookPage[] }>(
+        `/${bmId}/client_pages?fields=id,name,category`,
+        accessToken
+      )
+      if (clientData.data?.length) return clientData.data
+    } catch {
+      // Se o BM não tiver permissão para listar páginas, cai no fallback
+    }
+  }
+
+  // Fallback: todas as páginas do usuário (pode incluir páginas não vinculadas ao BM)
   const data = await metaFetch<{ data: MetaFacebookPage[] }>(
     `/me/accounts?fields=id,name,category`,
     accessToken
@@ -585,9 +612,9 @@ export async function createAdCreative(
     link: params.link,
     name: params.headline,
     message: params.message,
-    // value.link duplicado causa erro 3858258 em API v17+ — apenas type é suficiente
     call_to_action: {
       type: params.callToAction ?? 'LEARN_MORE',
+      value: { link: params.link },
     },
   }
 
@@ -604,14 +631,6 @@ export async function createAdCreative(
     object_story_spec: {
       page_id: params.pageId,
       link_data: linkData,
-    },
-    // API v17+: declarar explicitamente se usa Advantage+ Creative ou não
-    degrees_of_freedom_spec: {
-      creative_features_spec: {
-        standard_enhancements: {
-          enroll_status: 'OPT_OUT',
-        },
-      },
     },
   }
 
