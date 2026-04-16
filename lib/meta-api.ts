@@ -449,6 +449,7 @@ export function translateMetaError(
       1815745: 'O evento de cobrança (billing_event) é incompatível com o objetivo de otimização escolhido.',
       2446094: 'O objetivo de otimização não é compatível com o objetivo da campanha. Altere um dos dois e tente novamente.',
       1885217: 'Configuração de segmentação de público inválida. Verifique os interesses selecionados.',
+      1885272: 'Configuração de automação de público incompatível com esta conta. Tente novamente sem filtros de interesse ou crie a campanha diretamente no Meta Ads Manager.',
       1487394: 'Esta campanha requer declaração de Categoria Especial de Anúncio (crédito, emprego, habitação ou política). Edite no Meta Ads Manager.',
       2446090: 'Orçamento insuficiente para o objetivo selecionado. O mínimo diário pode ser maior que o valor informado.',
       1391705: 'A conta de anúncio não tem um método de pagamento válido cadastrado no Meta.',
@@ -557,8 +558,6 @@ export async function createAdSet(
     // Obrigatório na API v17+ para objetivos de tráfego/vendas/leads
     destination_type: params.destinationType ?? 'WEBSITE',
     targeting,
-    // Obrigatório declarar explicitamente na API v17+ — 0 = targeting manual (sem Advantage Audience IA)
-    targeting_automation: { advantage_audience: 0 },
     status: params.status ?? 'PAUSED',
   }
 
