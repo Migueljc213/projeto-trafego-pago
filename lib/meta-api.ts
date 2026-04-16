@@ -65,6 +65,7 @@ export interface CreateAdCreativeParams {
   description?: string
   callToAction?: CallToActionType
   imageHash?: string              // Hash da imagem previamente carregada via uploadAdImage
+  picture?: string                // URL direta de imagem (fallback quando imageHash não disponível)
 }
 
 export interface CreateAdParams {
@@ -601,13 +602,22 @@ export async function createAdSet(
 
 /**
  * Cria um Criativo de Anúncio com copy e link.
- * Suporta link ads com imagem existente (via imageHash) ou sem imagem.
+ * Requer imageHash (imagem carregada) ou picture (URL direta acessível pela Meta).
+ * Sem imagem, a Meta tenta raspar o OG image da URL de destino — o que falha se
+ * a imagem OG não estiver publicamente acessível, gerando erro subcode 3858258.
  */
 export async function createAdCreative(
   adAccountId: string,
   params: CreateAdCreativeParams,
   accessToken: string
 ): Promise<string> {
+  if (!params.imageHash && !params.picture) {
+    throw new MetaApiError(
+      100,
+      'Imagem obrigatória: forneça uma imagem para o criativo. Sem imagem, a Meta não consegue criar o anúncio.',
+    )
+  }
+
   const linkData: Record<string, unknown> = {
     link: params.link,
     name: params.headline,
@@ -624,6 +634,9 @@ export async function createAdCreative(
 
   if (params.imageHash) {
     linkData.image_hash = params.imageHash
+  } else if (params.picture) {
+    // URL direta da imagem — Meta fará download desta URL específica
+    linkData.picture = params.picture
   }
 
   const body: Record<string, unknown> = {

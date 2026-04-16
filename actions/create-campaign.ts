@@ -94,11 +94,12 @@ export async function createCampaignAction(
   if (!input.primaryText?.trim()) return { success: false, error: 'Texto principal é obrigatório' }
   if (!input.destinationUrl?.startsWith('https://')) return { success: false, error: 'URL de destino deve começar com https:// (exigido pela Meta)' }
   if (input.dailyBudgetBRL < 5) return { success: false, error: 'Orçamento mínimo: R$5,00/dia' }
-  if (input.imageUrl) {
-    const isImageUrl = /\.(jpe?g|png|gif|webp|bmp)(\?.*)?$/i.test(input.imageUrl)
-    if (!isImageUrl) {
-      return { success: false, error: 'A URL da imagem deve apontar diretamente para um arquivo de imagem (.jpg, .png, .webp, etc.). Não use links de páginas web.' }
-    }
+  if (!input.imageUrl) {
+    return { success: false, error: 'Imagem obrigatória: a Meta exige uma imagem para criar o anúncio. Informe a URL de uma imagem (.jpg, .png, .webp, etc.).' }
+  }
+  const isImageUrl = /\.(jpe?g|png|gif|webp|bmp)(\?.*)?$/i.test(input.imageUrl)
+  if (!isImageUrl) {
+    return { success: false, error: 'A URL da imagem deve apontar diretamente para um arquivo de imagem (.jpg, .png, .webp, etc.). Não use links de páginas web.' }
   }
 
   // Objetivos de otimização que requerem configuração extra não disponível
@@ -177,15 +178,16 @@ export async function createCampaignAction(
       accessToken
     )
 
-    // ── 3. Upload de imagem (opcional) ────────────────────────────────────
+    // ── 3. Upload de imagem ────────────────────────────────────────────────
+    // imageUrl já foi validado como obrigatório acima.
+    // Tenta fazer upload (melhor qualidade); se falhar, usa a URL direta como picture.
     let imageHash: string | undefined
-    if (input.imageUrl) {
-      try {
-        imageHash = await uploadAdImage(actAccountId, input.imageUrl, accessToken)
-      } catch {
-        // Não falha a criação por erro de imagem — continua sem ela
-        console.warn('[createCampaign] Falha ao fazer upload de imagem; continuando sem ela')
-      }
+    let pictureFallback: string | undefined = input.imageUrl
+    try {
+      imageHash = await uploadAdImage(actAccountId, input.imageUrl!, accessToken)
+      pictureFallback = undefined // upload bem-sucedido; não precisamos da URL direta
+    } catch {
+      console.warn('[createCampaign] Falha ao fazer upload de imagem; usando URL direta como picture')
     }
 
     // ── 4. Criar Criativo ─────────────────────────────────────────────────
@@ -201,6 +203,7 @@ export async function createCampaignAction(
         description: input.description,
         callToAction: input.callToAction ?? 'LEARN_MORE',
         imageHash,
+        picture: pictureFallback,
       },
       accessToken
     )
