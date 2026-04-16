@@ -698,11 +698,19 @@ export async function uploadAdImage(
   accessToken: string
 ): Promise<string> {
   // 1. Baixa a imagem no nosso servidor (evita restrições de CDN na Meta)
+  // Headers de browser real para evitar bloqueios de hotlink (Flaticon, Freepik, etc.)
   const imgRes = await fetch(imageUrl, {
     signal: AbortSignal.timeout(15_000),
-    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FunnelGuardBot/1.0)' },
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+      'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+      'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8',
+      'Referer': new URL(imageUrl).origin + '/',
+      'Sec-Fetch-Dest': 'image',
+      'Sec-Fetch-Mode': 'no-cors',
+    },
   })
-  if (!imgRes.ok) throw new MetaApiError(0, `Não foi possível baixar a imagem: HTTP ${imgRes.status}`)
+  if (!imgRes.ok) throw new MetaApiError(0, `Não foi possível baixar a imagem: HTTP ${imgRes.status} — verifique se a URL é pública e acessível`)
 
   const buffer = await imgRes.arrayBuffer()
   const base64 = Buffer.from(buffer).toString('base64')
