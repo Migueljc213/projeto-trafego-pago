@@ -186,8 +186,9 @@ export async function createCampaignAction(
     try {
       imageHash = await uploadAdImage(actAccountId, input.imageUrl!, accessToken)
       pictureFallback = undefined // upload bem-sucedido; não precisamos da URL direta
-    } catch {
-      console.warn('[createCampaign] Falha ao fazer upload de imagem; usando URL direta como picture')
+      console.log('[createCampaign] Upload de imagem bem-sucedido; usando imageHash')
+    } catch (uploadErr) {
+      console.warn('[createCampaign] Falha ao fazer upload de imagem; usando URL direta como picture. Erro:', uploadErr instanceof Error ? uploadErr.message : String(uploadErr))
     }
 
     // ── 4. Criar Criativo ─────────────────────────────────────────────────
@@ -261,13 +262,13 @@ export async function createCampaignAction(
     }
     if (err instanceof MetaApiError) {
       const friendly = translateMetaError(err.code, err.subcode, step)
-      const traceInfo = err.fbtrace ? ` (trace: ${err.fbtrace})` : ''
-      console.error(`[createCampaignAction] Falha na etapa "${step}" — code=${err.code} subcode=${err.subcode}${err.fbtrace ? ` trace=${err.fbtrace}` : ''}`)
+      const errorDataStr = err.errorData ? ` | error_data: ${JSON.stringify(err.errorData)}` : ''
+      console.error(`[createCampaignAction] Falha na etapa "${step}" — code=${err.code} subcode=${err.subcode}${err.fbtrace ? ` trace=${err.fbtrace}` : ''}${errorDataStr}`)
       return {
         success: false,
         error: friendly
-          ? `Erro na etapa "${step}": ${friendly} | Detalhe Meta: ${err.message}`
-          : `Erro ao criar ${step} na Meta: ${err.message}`,
+          ? `Erro na etapa "${step}": ${friendly} | Detalhe Meta: ${err.message}${errorDataStr}`
+          : `Erro ao criar ${step} na Meta: ${err.message}${errorDataStr}`,
       }
     }
     const msg = err instanceof Error ? err.message : String(err)

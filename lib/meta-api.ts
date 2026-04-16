@@ -100,8 +100,9 @@ export class MetaApiError extends Error {
   code: number
   subcode?: number
   fbtrace?: string
+  errorData?: unknown
 
-  constructor(code: number, message: string, subcode?: number, fbtrace?: string) {
+  constructor(code: number, message: string, subcode?: number, fbtrace?: string, errorData?: unknown) {
     const extras = [
       subcode ? `subcode=${subcode}` : '',
       fbtrace ? `trace=${fbtrace}` : '',
@@ -111,6 +112,7 @@ export class MetaApiError extends Error {
     this.code = code
     this.subcode = subcode
     this.fbtrace = fbtrace
+    this.errorData = errorData
   }
 }
 
@@ -180,6 +182,7 @@ interface MetaErrorResponse {
     code: number
     error_subcode?: number
     fbtrace_id?: string
+    error_data?: unknown
   }
 }
 
@@ -214,14 +217,18 @@ async function metaFetch<T>(
 
   // Handle Meta API errors in response body
   if (data.error) {
-    const { code, message, error_subcode, fbtrace_id } = data.error
+    const { code, message, error_subcode, fbtrace_id, error_data } = data.error
 
     // Rate limit error codes
     if ([17, 32, 80004].includes(code)) {
       throw new MetaRateLimitError(60)
     }
 
-    throw new MetaApiError(code, message, error_subcode, fbtrace_id)
+    if (error_data) {
+      console.error(`[metaFetch] Meta error_data para ${path}:`, JSON.stringify(error_data))
+    }
+
+    throw new MetaApiError(code, message, error_subcode, fbtrace_id, error_data)
   }
 
   return data
@@ -447,7 +454,7 @@ export function translateMetaError(
 
     const bySubcode: Record<number, string> = {
       4837043: 'O domínio da URL de destino não está verificado nesta conta Meta. Adicione e verifique o domínio no Meta Business Manager → Configurações → Domínios.',
-      3858258: 'A Página do Facebook selecionada não está vinculada ao Business Manager desta conta de anúncio. Acesse Meta Business Manager → Páginas e adicione/vincule a página antes de criar o anúncio.',
+      3858258: 'Criativo inválido: a Meta rejeitou o anúncio. Causas comuns: imagem inacessível, Página não vinculada ao BM desta conta, ou formato incorreto do criativo. Verifique os detalhes abaixo.',
       1815745: 'O evento de cobrança (billing_event) é incompatível com o objetivo de otimização escolhido.',
       2446094: 'O objetivo de otimização não é compatível com o objetivo da campanha. Altere um dos dois e tente novamente.',
       1885217: 'Configuração de segmentação de público inválida. Verifique os interesses selecionados.',
