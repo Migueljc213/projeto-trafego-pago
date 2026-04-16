@@ -42,7 +42,7 @@ export interface CreateAdSetParams {
   campaignId: string
   dailyBudgetCents: number        // ex: 5000 = R$50,00
   optimizationGoal: OptimizationGoal
-  billingEvent?: 'IMPRESSIONS' | 'LINK_CLICKS'
+  billingEvent?: 'IMPRESSIONS'
   bidStrategy?: 'LOWEST_COST_WITHOUT_CAP' | 'COST_CAP'
   status?: 'ACTIVE' | 'PAUSED'   // padrão PAUSED
   destinationType?: 'WEBSITE' | 'APP' | 'MESSENGER_INBOX' | 'INSTAGRAM_PROFILE' | 'FACEBOOK'
@@ -542,11 +542,9 @@ export async function createAdSet(
     targeting.interests = params.targeting.interests
   }
 
-  // billing_event must be compatible with optimization_goal:
-  // LINK_CLICKS optimization → bill per LINK_CLICKS
-  // everything else → bill per IMPRESSIONS
-  const derivedBillingEvent: 'IMPRESSIONS' | 'LINK_CLICKS' =
-    params.billingEvent ?? (params.optimizationGoal === 'LINK_CLICKS' ? 'LINK_CLICKS' : 'IMPRESSIONS')
+  // Meta deprecou billing_event=LINK_CLICKS — sempre usar IMPRESSIONS
+  // independente do optimization_goal (inclusive para LINK_CLICKS)
+  const derivedBillingEvent = 'IMPRESSIONS' as const
 
   const body: Record<string, unknown> = {
     name: params.name,
