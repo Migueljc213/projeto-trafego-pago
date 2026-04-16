@@ -446,6 +446,7 @@ export function translateMetaError(
 
     const bySubcode: Record<number, string> = {
       4837043: 'O domínio da URL de destino não está verificado nesta conta Meta. Adicione e verifique o domínio no Meta Business Manager → Configurações → Domínios.',
+      3858258: 'Estrutura do criativo inválida. Verifique se a URL de destino é pública (https://) e se a Página do Facebook está corretamente vinculada à conta de anúncio.',
       1815745: 'O evento de cobrança (billing_event) é incompatível com o objetivo de otimização escolhido.',
       2446094: 'O objetivo de otimização não é compatível com o objetivo da campanha. Altere um dos dois e tente novamente.',
       1885217: 'Configuração de segmentação de público inválida. Verifique os interesses selecionados.',
@@ -582,11 +583,11 @@ export async function createAdCreative(
 ): Promise<string> {
   const linkData: Record<string, unknown> = {
     link: params.link,
-    name: params.headline,         // headline (title below image)
-    message: params.message,       // primary text (above image)
+    name: params.headline,
+    message: params.message,
+    // value.link duplicado causa erro 3858258 em API v17+ — apenas type é suficiente
     call_to_action: {
       type: params.callToAction ?? 'LEARN_MORE',
-      value: { link: params.link },
     },
   }
 
@@ -603,6 +604,14 @@ export async function createAdCreative(
     object_story_spec: {
       page_id: params.pageId,
       link_data: linkData,
+    },
+    // API v17+: declarar explicitamente se usa Advantage+ Creative ou não
+    degrees_of_freedom_spec: {
+      creative_features_spec: {
+        standard_enhancements: {
+          enroll_status: 'OPT_OUT',
+        },
+      },
     },
   }
 
