@@ -5,6 +5,7 @@ import { Zap, Pause, Play, Clock, TrendingUp, TrendingDown, Loader2, RefreshCw, 
 import Link from 'next/link'
 import type { CampaignRow } from '@/lib/dashboard-data'
 import { toggleAutoPilotAction, updateCampaignBudgetAction, toggleCampaignStatusAction } from '@/actions/campaigns'
+import { useToast } from '@/lib/toast'
 
 function StatusBadge({ status }: { status: string }) {
   if (status === 'ACTIVE') {
@@ -30,6 +31,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function CampaignCard({ campaign }: { campaign: CampaignRow }) {
+  const { toast } = useToast()
   const [autoPilot, setAutoPilot] = useState(campaign.aiAutoPilot)
   const [status, setStatus] = useState(campaign.status)
   const [isPending, startTransition] = useTransition()
@@ -52,6 +54,13 @@ function CampaignCard({ campaign }: { campaign: CampaignRow }) {
       if (!result.success) {
         setStatus(status) // rollback
         setError(result.error ?? 'Erro ao atualizar status')
+        toast({ type: 'error', title: 'Erro ao atualizar status', description: result.error })
+      } else {
+        toast({
+          type: newStatus === 'PAUSED' ? 'warning' : 'success',
+          title: newStatus === 'PAUSED' ? 'Campanha pausada' : 'Campanha ativada',
+          description: campaign.name,
+        })
       }
     })
   }
@@ -67,8 +76,10 @@ function CampaignCard({ campaign }: { campaign: CampaignRow }) {
       const result = await updateCampaignBudgetAction({ campaignId: campaign.id, dailyBudgetBRL: val })
       if (result.success) {
         setEditingBudget(false)
+        toast({ type: 'success', title: 'Orçamento atualizado', description: `${campaign.name} → R$ ${val.toFixed(0)}/dia` })
       } else {
         setError(result.error ?? 'Erro ao atualizar orçamento')
+        toast({ type: 'error', title: 'Erro ao atualizar orçamento', description: result.error })
       }
     })
   }
@@ -86,6 +97,13 @@ function CampaignCard({ campaign }: { campaign: CampaignRow }) {
       if (!result.success) {
         setAutoPilot(!newValue) // rollback
         setError(result.error ?? 'Erro ao atualizar Auto-Pilot')
+        toast({ type: 'error', title: 'Erro no Auto-Pilot', description: result.error })
+      } else {
+        toast({
+          type: 'info',
+          title: newValue ? 'Auto-Pilot ativado' : 'Auto-Pilot desativado',
+          description: campaign.name,
+        })
       }
     })
   }

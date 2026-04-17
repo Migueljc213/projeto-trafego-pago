@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import StatCards from '@/components/dashboard/StatCards'
 import RevenueChart from '@/components/dashboard/RevenueChart'
+import RoasChart from '@/components/dashboard/RoasChart'
 import FunnelVisualizer from '@/components/dashboard/FunnelVisualizer'
 import AIInsightsFeed from '@/components/dashboard/AIInsightsFeed'
 import CampaignList from '@/components/dashboard/CampaignList'
@@ -14,6 +15,7 @@ import { SkeletonStatCard, SkeletonChartCard, SkeletonFeedItem } from '@/compone
 import {
   getDashboardStats,
   getRevenueChartData,
+  getRoasByCampaign,
   getAIInsightsFeed,
   getCampaignRows,
   getCompetitorRows,
@@ -37,10 +39,11 @@ export default async function DashboardPage({
 
   const opts = { adAccountId, days }
 
-  const [stats, chartData, feedInsights, campaigns, competitors, latestInsight, savings, accounts] =
+  const [stats, chartData, roasData, feedInsights, campaigns, competitors, latestInsight, savings, accounts] =
     await Promise.all([
       getDashboardStats(opts),
       getRevenueChartData(opts),
+      getRoasByCampaign(opts),
       getAIInsightsFeed({ adAccountId }),
       getCampaignRows(opts),
       getCompetitorRows({ adAccountId }),
@@ -103,6 +106,7 @@ export default async function DashboardPage({
           <Suspense fallback={<SkeletonChartCard />}>
             <RevenueChart data={chartData} />
           </Suspense>
+          <RoasChart data={roasData} />
           <FunnelVisualizer stages={[]} />
         </div>
         <div className="xl:col-span-1">

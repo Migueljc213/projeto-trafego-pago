@@ -2,7 +2,9 @@ import CampanhasClient from './CampanhasClient'
 import AIInsightsFeed from '@/components/dashboard/AIInsightsFeed'
 import AdAccountSwitcher from '@/components/dashboard/AdAccountSwitcher'
 import DateRangePicker from '@/components/dashboard/DateRangePicker'
-import { getCampaignRows, getAIInsightsFeed, getUserAdAccounts } from '@/lib/dashboard-data'
+import RoasChart from '@/components/dashboard/RoasChart'
+import CreativeRanking from '@/components/dashboard/CreativeRanking'
+import { getCampaignRows, getAIInsightsFeed, getUserAdAccounts, getRoasByCampaign, getCreativeRanking } from '@/lib/dashboard-data'
 
 export const metadata = { title: 'Campanhas IA | FunnelGuard AI' }
 
@@ -18,10 +20,12 @@ export default async function CampanhasPage({
     ? Number(searchParams.days)
     : 30
 
-  const [campaigns, feedInsights, accounts] = await Promise.all([
+  const [campaigns, feedInsights, accounts, roasData, rankingRows] = await Promise.all([
     getCampaignRows({ adAccountId, days }),
     getAIInsightsFeed({ adAccountId }),
     getUserAdAccounts(),
+    getRoasByCampaign({ adAccountId, days }),
+    getCreativeRanking({ adAccountId, days }),
   ])
 
   const effectiveAccountId = adAccountId ?? accounts[0]?.id ?? ''
@@ -74,9 +78,12 @@ export default async function CampanhasPage({
         ))}
       </div>
 
+      <RoasChart data={roasData} />
+
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-2">
+        <div className="xl:col-span-2 space-y-6">
           <CampanhasClient campaigns={campaigns} />
+          <CreativeRanking rows={rankingRows} />
         </div>
         <div className="xl:col-span-1">
           <AIInsightsFeed insights={feedInsights} />
