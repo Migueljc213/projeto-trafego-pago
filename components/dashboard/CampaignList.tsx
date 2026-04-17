@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Zap, Pause, Clock, TrendingUp, TrendingDown, Loader2, RefreshCw, Plus, Pencil, Check, X } from 'lucide-react'
+import { Zap, Pause, Play, Clock, TrendingUp, TrendingDown, Loader2, RefreshCw, Plus, Pencil, Check, X } from 'lucide-react'
 import Link from 'next/link'
 import type { CampaignRow } from '@/lib/dashboard-data'
-import { toggleAutoPilotAction, updateCampaignBudgetAction } from '@/actions/campaigns'
+import { toggleAutoPilotAction, updateCampaignBudgetAction, toggleCampaignStatusAction } from '@/actions/campaigns'
 
 function StatusBadge({ status }: { status: string }) {
   if (status === 'ACTIVE') {
@@ -31,12 +31,30 @@ function StatusBadge({ status }: { status: string }) {
 
 function CampaignCard({ campaign }: { campaign: CampaignRow }) {
   const [autoPilot, setAutoPilot] = useState(campaign.aiAutoPilot)
+  const [status, setStatus] = useState(campaign.status)
   const [isPending, startTransition] = useTransition()
+  const [statusPending, startStatusTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [editingBudget, setEditingBudget] = useState(false)
   const [budgetInput, setBudgetInput] = useState(String(campaign.dailyBudget ?? ''))
   const [budgetPending, startBudgetTransition] = useTransition()
   const isGood = campaign.roas >= 3.0
+
+  function handleToggleStatus() {
+    const newStatus = status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE'
+    setStatus(newStatus) // optimistic
+    setError(null)
+    startStatusTransition(async () => {
+      const result = await toggleCampaignStatusAction({
+        campaignId: campaign.id,
+        newStatus,
+      })
+      if (!result.success) {
+        setStatus(status) // rollback
+        setError(result.error ?? 'Erro ao atualizar status')
+      }
+    })
+  }
 
   function handleSaveBudget() {
     const val = parseFloat(budgetInput)
@@ -75,13 +93,13 @@ function CampaignCard({ campaign }: { campaign: CampaignRow }) {
   return (
     <div className={`glass-card rounded-xl p-4 border transition-all duration-300 ${
       autoPilot ? 'border-neon-cyan/30 bg-neon-cyan/3'
-      : campaign.status === 'PAUSED' ? 'border-gray-700/50 opacity-70'
+      : status === 'PAUSED' ? 'border-gray-700/50 opacity-70'
       : 'border-gray-800 hover:border-gray-700'
     }`}>
       <div className="flex flex-wrap items-start gap-3">
         <div className={`w-1 self-stretch rounded-full flex-shrink-0 ${
-          campaign.status === 'ACTIVE' ? (isGood ? 'bg-green-400' : 'bg-orange-400')
-          : campaign.status === 'PAUSED' ? 'bg-gray-600' : 'bg-yellow-400'
+          status === 'ACTIVE' ? (isGood ? 'bg-green-400' : 'bg-orange-400')
+          : status === 'PAUSED' ? 'bg-gray-600' : 'bg-yellow-400'
         }`} />
 
         <div className="flex-1 min-w-0">
@@ -94,7 +112,7 @@ function CampaignCard({ campaign }: { campaign: CampaignRow }) {
             )}
           </div>
           <div className="flex flex-wrap items-center gap-2 mb-2">
-            <StatusBadge status={campaign.status} />
+            <StatusBadge status={status} />
             {campaign.lastAiAction && (
               <span className="text-xs text-gray-500 font-mono truncate max-w-[200px]">
                 última ação: {campaign.lastAiAction}
@@ -161,6 +179,27 @@ function CampaignCard({ campaign }: { campaign: CampaignRow }) {
           <div>
             <p className="text-xs text-gray-500 mb-0.5">Conversões</p>
             <p className="text-sm font-semibold font-mono text-gray-200">{campaign.conversions}</p>
+          </div>
+          <div className="flex flex-col items-end gap-1">
+            <p className="text-xs text-gray-500">Status</p>
+            <button
+              onClick={handleToggleStatus}
+              disabled={statusPending || status === 'DELETED' || status === 'ARCHIVED'}
+              title={status === 'ACTIVE' ? 'Pausar campanha' : 'Ativar campanha'}
+              className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-all disabled:opacity-50 ${
+                status === 'ACTIVE'
+                  ? 'bg-gray-700 hover:bg-red-500/20 hover:text-red-400 text-gray-300 border border-gray-600'
+                  : 'bg-green-500/10 hover:bg-green-500/20 text-green-400 border border-green-500/30'
+              }`}
+            >
+              {statusPending ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : status === 'ACTIVE' ? (
+                <><Pause className="w-3 h-3" /> Pausar</>
+              ) : (
+                <><Play className="w-3 h-3" /> Ativar</>
+              )}
+            </button>
           </div>
           <div className="flex flex-col items-end gap-1">
             <p className="text-xs text-gray-500">Auto-Pilot</p>

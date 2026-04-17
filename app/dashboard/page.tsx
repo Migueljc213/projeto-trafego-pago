@@ -7,6 +7,8 @@ import CampaignList from '@/components/dashboard/CampaignList'
 import PriceTable from '@/components/dashboard/PriceTable'
 import DiagnosticCenter from '@/components/dashboard/DiagnosticCenter'
 import ROISavingsCard from '@/components/dashboard/ROISavingsCard'
+import AdAccountSwitcher from '@/components/dashboard/AdAccountSwitcher'
+import DateRangePicker from '@/components/dashboard/DateRangePicker'
 import type { DiagnosticData } from '@/components/dashboard/DiagnosticCenter'
 import { SkeletonStatCard, SkeletonChartCard, SkeletonFeedItem } from '@/components/dashboard/SkeletonCards'
 import {
@@ -17,19 +19,37 @@ import {
   getCompetitorRows,
   getLatestStrategicInsight,
   getMoneySavedByAI,
+  getUserAdAccounts,
 } from '@/lib/dashboard-data'
 
-export default async function DashboardPage() {
-  // Busca dados em paralelo no servidor
-  const [stats, chartData, feedInsights, campaigns, competitors, latestInsight, savings] = await Promise.all([
-    getDashboardStats(),
-    getRevenueChartData(),
-    getAIInsightsFeed(),
-    getCampaignRows(),
-    getCompetitorRows(),
-    getLatestStrategicInsight(),
-    getMoneySavedByAI(),
-  ])
+const VALID_DAYS = [7, 30, 90] as const
+type Days = typeof VALID_DAYS[number]
+
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: { account?: string; days?: string }
+}) {
+  const adAccountId = searchParams.account
+  const days = (VALID_DAYS as readonly number[]).includes(Number(searchParams.days))
+    ? (Number(searchParams.days) as Days)
+    : 30
+
+  const opts = { adAccountId, days }
+
+  const [stats, chartData, feedInsights, campaigns, competitors, latestInsight, savings, accounts] =
+    await Promise.all([
+      getDashboardStats(opts),
+      getRevenueChartData(opts),
+      getAIInsightsFeed({ adAccountId }),
+      getCampaignRows(opts),
+      getCompetitorRows({ adAccountId }),
+      getLatestStrategicInsight({ adAccountId }),
+      getMoneySavedByAI(opts),
+      getUserAdAccounts(),
+    ])
+
+  const effectiveAccountId = adAccountId ?? accounts[0]?.id ?? ''
 
   const diagnosticData: DiagnosticData | null = latestInsight
     ? {
@@ -44,8 +64,11 @@ export default async function DashboardPage() {
       }
     : null
 
-  const now = new Date()
-  const monthLabel = now.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+  const DAYS_LABEL: Record<number, string> = {
+    7: 'Últimos 7 dias',
+    30: 'Últimos 30 dias',
+    90: 'Últimos 90 dias',
+  }
 
   return (
     <div className="space-y-6">
@@ -53,13 +76,15 @@ export default async function DashboardPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-white capitalize">Visão Geral</h1>
-          <p className="text-sm text-gray-500 mt-0.5 capitalize">
-            {monthLabel} &bull; Todas as campanhas
-          </p>
+          <p className="text-sm text-gray-500 mt-0.5">{DAYS_LABEL[days]} &bull; Todas as campanhas</p>
         </div>
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg glass-card border border-neon-cyan/20">
-          <span className="w-2 h-2 rounded-full bg-neon-cyan animate-pulse block"></span>
-          <span className="text-xs font-medium text-neon-cyan">IA monitorando em tempo real</span>
+        <div className="flex items-center gap-3 flex-wrap">
+          <AdAccountSwitcher accounts={accounts} currentId={effectiveAccountId} />
+          <DateRangePicker currentDays={days} />
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg glass-card border border-neon-cyan/20">
+            <span className="w-2 h-2 rounded-full bg-neon-cyan animate-pulse block" />
+            <span className="text-xs font-medium text-neon-cyan">IA monitorando em tempo real</span>
+          </div>
         </div>
       </div>
 
@@ -81,13 +106,13 @@ export default async function DashboardPage() {
           <FunnelVisualizer stages={[]} />
         </div>
         <div className="xl:col-span-1">
-          <Suspense fallback={<div className="space-y-2">{Array.from({length:4}).map((_,i)=><SkeletonFeedItem key={i}/>)}</div>}>
+          <Suspense fallback={<div className="space-y-2">{Array.from({ length: 4 }).map((_, i) => <SkeletonFeedItem key={i} />)}</div>}>
             <AIInsightsFeed insights={feedInsights} />
           </Suspense>
         </div>
       </div>
 
-      {/* ROI Counter — Dinheiro Salvo pela IA */}
+      {/* ROI Counter */}
       <ROISavingsCard savings={savings} />
 
       {/* Bottom: Campanhas + Preços */}
@@ -96,7 +121,7 @@ export default async function DashboardPage() {
         <PriceTable competitors={competitors} />
       </div>
 
-      {/* Diagnóstico de Causa Raiz */}
+      {/* Diagnóstico */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <DiagnosticCenter data={diagnosticData} />
         <div className="glass-card rounded-xl border border-gray-800 p-5 flex flex-col justify-center items-center gap-3 text-center min-h-[200px]">
