@@ -46,6 +46,11 @@ export interface CreateAdSetParams {
   bidStrategy?: 'LOWEST_COST_WITHOUT_CAP' | 'COST_CAP'
   status?: 'ACTIVE' | 'PAUSED'   // padrão PAUSED
   destinationType?: 'WEBSITE' | 'APP' | 'MESSENGER_INBOX' | 'INSTAGRAM_PROFILE' | 'FACEBOOK'
+  /** Obrigatório quando optimizationGoal === 'CONVERSIONS' */
+  promotedObject?: {
+    pixelId: string
+    customEventType?: 'PURCHASE' | 'LEAD' | 'COMPLETE_REGISTRATION' | 'ADD_TO_CART' | 'VIEW_CONTENT'
+  }
   targeting: {
     ageMin?: number               // padrão 18
     ageMax?: number               // padrão 65
@@ -54,6 +59,24 @@ export interface CreateAdSetParams {
     interests?: Array<{ id: string; name: string }>
   }
   startTime?: string              // ISO 8601; omitir para iniciar imediatamente
+}
+
+export interface MetaPixel {
+  id: string
+  name: string
+  lastFiredTime?: string
+}
+
+export interface AudienceBreakdownRow {
+  age?: string
+  gender?: string
+  publisherPlatform?: string
+  impressionDevice?: string
+  impressions: number
+  clicks: number
+  spend: number
+  ctr: number
+  cpm: number
 }
 
 export interface CreateAdCreativeParams {
@@ -599,6 +622,14 @@ export async function createAdSet(
     body.start_time = params.startTime
   }
 
+  // promoted_object: obrigatório para CONVERSIONS (Pixel) e LEAD_GENERATION (Lead Form)
+  if (params.promotedObject) {
+    body.promoted_object = {
+      pixel_id: params.promotedObject.pixelId,
+      custom_event_type: params.promotedObject.customEventType ?? 'PURCHASE',
+    }
+  }
+
   const data = await metaFetch<{ id: string }>(
     `/${adAccountId}/adsets`,
     accessToken,
@@ -743,6 +774,101 @@ export async function uploadAdImage(
   return hash
 }
 
+// ──────────────────────────────────────────
+// Pixel
+// ──────────────────────────────────────────
+
+/**
+ * Lista os Pixels Meta vinculados a uma conta de anúncio.
+ * Retorna id, name e last_fired_time (útil para validar se o pixel está ativo).
+ */
+export async function getAdAccountPixels(
+  adAccountId: string,
+  accessToken: string
+): Promise<MetaPixel[]> {
+  const data = await metaFetch<{ data: Array<{ id: string; name: string; last_fired_time?: string }> }>(
+    `/${adAccountId}/adspixels?fields=id,name,last_fired_time`,
+    accessToken
+  )
+  return (data.data ?? []).map((p) => ({
+    id: p.id,
+    name: p.name,
+    lastFiredTime: p.last_fired_time,
+  }))
+}
+
+// ──────────────────────────────────────────
+// Audience Insights (breakdown demográfico)
+// ──────────────────────────────────────────
+
+/**
+ * Retorna breakdown de impressões/cliques/gasto por faixa etária + gênero.
+ * Usa o endpoint /insights da campanha com breakdowns=age,gender.
+ */
+export async function getAudienceBreakdown(
+  campaignId: string,
+  accessToken: string,
+  dateRange?: InsightDateRange
+): Promise<AudienceBreakdownRow[]> {
+  const timeParam = dateRange
+    ? `time_range=${encodeURIComponent(JSON.stringify({ since: dateRange.since, until: dateRange.until }))}`
+    : 'date_preset=last_30d'
+
+  const fields = 'impressions,clicks,spend,ctr,cpm'
+  const data = await metaFetch<{
+    data: Array<{
+      age?: string; gender?: string
+      impressions: string; clicks: string; spend: string; ctr: string; cpm: string
+    }>
+  }>(
+    `/${campaignId}/insights?fields=${fields}&breakdowns=age,gender&${timeParam}&limit=100`,
+    accessToken
+  )
+  return (data.data ?? []).map((r) => ({
+    age: r.age,
+    gender: r.gender,
+    impressions: parseInt(r.impressions ?? '0'),
+    clicks: parseInt(r.clicks ?? '0'),
+    spend: parseFloat(r.spend ?? '0'),
+    ctr: parseFloat(r.ctr ?? '0'),
+    cpm: parseFloat(r.cpm ?? '0'),
+  }))
+}
+
+/**
+ * Retorna breakdown por plataforma (facebook, instagram, messenger, audience_network)
+ * e dispositivo (mobile, desktop).
+ */
+export async function getPlatformBreakdown(
+  campaignId: string,
+  accessToken: string,
+  dateRange?: InsightDateRange
+): Promise<AudienceBreakdownRow[]> {
+  const timeParam = dateRange
+    ? `time_range=${encodeURIComponent(JSON.stringify({ since: dateRange.since, until: dateRange.until }))}`
+    : 'date_preset=last_30d'
+
+  const fields = 'impressions,clicks,spend,ctr,cpm'
+  const data = await metaFetch<{
+    data: Array<{
+      publisher_platform?: string; impression_device?: string
+      impressions: string; clicks: string; spend: string; ctr: string; cpm: string
+    }>
+  }>(
+    `/${campaignId}/insights?fields=${fields}&breakdowns=publisher_platform,impression_device&${timeParam}&limit=100`,
+    accessToken
+  )
+  return (data.data ?? []).map((r) => ({
+    publisherPlatform: r.publisher_platform,
+    impressionDevice: r.impression_device,
+    impressions: parseInt(r.impressions ?? '0'),
+    clicks: parseInt(r.clicks ?? '0'),
+    spend: parseFloat(r.spend ?? '0'),
+    ctr: parseFloat(r.ctr ?? '0'),
+    cpm: parseFloat(r.cpm ?? '0'),
+  }))
+}
+
 /**
  * Atualiza o orçamento diário de uma campanha na Meta API.
  * @param campaignId - Meta campaign ID
@@ -762,4 +888,113 @@ export async function updateCampaignBudget(
     }
   )
   return result.success === true
+}
+
+// ──────────────────────────────────────────
+// Meta Ad Library
+// ──────────────────────────────────────────
+
+export interface AdLibraryAd {
+  id: string
+  pageName: string
+  pageId: string
+  body: string | null
+  title: string | null
+  description: string | null
+  snapshotUrl: string | null
+  deliveryStartTime: string | null
+  deliveryStopTime: string | null
+  platforms: string[]
+  impressionsLower: number | null
+  impressionsUpper: number | null
+  spendLower: number | null
+  spendUpper: number | null
+  currency: string | null
+}
+
+/**
+ * Busca anúncios ativos na Meta Ad Library por termos de busca ou Page IDs.
+ * Usa o access token do usuário para autenticação.
+ */
+export async function getAdLibraryAds(params: {
+  accessToken: string
+  searchTerms?: string
+  searchPageIds?: string[]
+  countries?: string[]
+  limit?: number
+}): Promise<AdLibraryAd[]> {
+  const {
+    accessToken,
+    searchTerms,
+    searchPageIds,
+    countries = ['BR'],
+    limit = 20,
+  } = params
+
+  const qs = new URLSearchParams({
+    fields: [
+      'id',
+      'page_name',
+      'page_id',
+      'ad_creative_bodies',
+      'ad_creative_link_titles',
+      'ad_creative_link_descriptions',
+      'ad_snapshot_url',
+      'ad_delivery_start_time',
+      'ad_delivery_stop_time',
+      'publisher_platforms',
+      'impressions',
+      'spend',
+      'currency',
+    ].join(','),
+    ad_reached_countries: JSON.stringify(countries),
+    ad_type: 'ALL',
+    ad_active_status: 'ACTIVE',
+    limit: String(limit),
+    access_token: accessToken,
+  })
+
+  if (searchTerms) qs.set('search_terms', searchTerms)
+  if (searchPageIds?.length) qs.set('search_page_ids', searchPageIds.join(','))
+
+  const url = `${META_GRAPH_URL}/ads_archive?${qs.toString()}`
+  const res = await fetch(url)
+  const json = await res.json() as {
+    data?: Array<{
+      id: string
+      page_name?: string
+      page_id?: string
+      ad_creative_bodies?: string[]
+      ad_creative_link_titles?: string[]
+      ad_creative_link_descriptions?: string[]
+      ad_snapshot_url?: string
+      ad_delivery_start_time?: string
+      ad_delivery_stop_time?: string
+      publisher_platforms?: string[]
+      impressions?: { lower_bound: string; upper_bound: string }
+      spend?: { lower_bound: string; upper_bound: string }
+      currency?: string
+    }>
+    error?: { message: string; code: number; error_subcode?: number }
+  }
+
+  if (json.error) throw new MetaApiError(json.error.code, json.error.message, json.error.error_subcode)
+
+  return (json.data ?? []).map(ad => ({
+    id: ad.id,
+    pageName: ad.page_name ?? '',
+    pageId: ad.page_id ?? '',
+    body: ad.ad_creative_bodies?.[0] ?? null,
+    title: ad.ad_creative_link_titles?.[0] ?? null,
+    description: ad.ad_creative_link_descriptions?.[0] ?? null,
+    snapshotUrl: ad.ad_snapshot_url ?? null,
+    deliveryStartTime: ad.ad_delivery_start_time ?? null,
+    deliveryStopTime: ad.ad_delivery_stop_time ?? null,
+    platforms: ad.publisher_platforms ?? [],
+    impressionsLower: ad.impressions?.lower_bound ? parseInt(ad.impressions.lower_bound) : null,
+    impressionsUpper: ad.impressions?.upper_bound ? parseInt(ad.impressions.upper_bound) : null,
+    spendLower: ad.spend?.lower_bound ? parseInt(ad.spend.lower_bound) : null,
+    spendUpper: ad.spend?.upper_bound ? parseInt(ad.spend.upper_bound) : null,
+    currency: ad.currency ?? null,
+  }))
 }

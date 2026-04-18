@@ -267,6 +267,10 @@ export interface CampaignRow {
   aiAutoPilot: boolean
   lastAiAction: string | null
   metaCampaignId: string
+  /** Gasto de hoje (via DailyInsight). null = dado ainda não disponível. */
+  todaySpend: number | null
+  /** Alerta de pacing baseado na proporção gasto-hoje vs orçamento esperado para o horário. */
+  pacingAlert: 'FAST' | 'SLOW' | null
 }
 
 export async function getCampaignRows(opts?: {
@@ -281,8 +285,13 @@ export async function getCampaignRows(opts?: {
     orderBy: { spend: 'desc' },
   })
 
+  // ── Monta a lista base (sem pacing) ────────────────────────────────────────
+  type BaseRow = Omit<CampaignRow, 'todaySpend' | 'pacingAlert'>
+
+  let baseRows: BaseRow[]
+
   if (!opts?.days) {
-    return campaigns.map((c) => ({
+    baseRows = campaigns.map((c) => ({
       id: c.id,
       name: c.name,
       status: c.status,
@@ -295,45 +304,85 @@ export async function getCampaignRows(opts?: {
       lastAiAction: c.lastAiAction,
       metaCampaignId: c.metaCampaignId,
     }))
-  }
+  } else {
+    // Com filtro de data: sobrepõe spend/roas/conversions com dados do período
+    const since = sinceDate(opts.days)
+    const insights = await prisma.dailyInsight.findMany({
+      where: {
+        campaign: { adAccountId: adAccount.id },
+        date: { gte: since },
+      },
+    })
 
-  // Com filtro de data: sobrepõe spend/roas/conversions com dados do período
-  const since = sinceDate(opts.days)
-  const insights = await prisma.dailyInsight.findMany({
-    where: {
-      campaign: { adAccountId: adAccount.id },
-      date: { gte: since },
-    },
-  })
+    const byCampaign = new Map<string, { spend: number; revenue: number; conversions: number }>()
+    for (const i of insights) {
+      const existing = byCampaign.get(i.campaignId) ?? { spend: 0, revenue: 0, conversions: 0 }
+      byCampaign.set(i.campaignId, {
+        spend: existing.spend + i.spend,
+        revenue: existing.revenue + i.revenue,
+        conversions: existing.conversions + i.conversions,
+      })
+    }
 
-  // Agrupa insights por campaignId
-  const byCampaign = new Map<string, { spend: number; revenue: number; conversions: number }>()
-  for (const i of insights) {
-    const existing = byCampaign.get(i.campaignId) ?? { spend: 0, revenue: 0, conversions: 0 }
-    byCampaign.set(i.campaignId, {
-      spend: existing.spend + i.spend,
-      revenue: existing.revenue + i.revenue,
-      conversions: existing.conversions + i.conversions,
+    baseRows = campaigns.map((c) => {
+      const period = byCampaign.get(c.id)
+      const spend = period?.spend ?? 0
+      const revenue = period?.revenue ?? 0
+      return {
+        id: c.id,
+        name: c.name,
+        status: c.status,
+        dailyBudget: c.dailyBudget ?? 0,
+        spend,
+        roas: spend > 0 ? revenue / spend : 0,
+        conversions: period?.conversions ?? 0,
+        frequency: c.frequency,
+        aiAutoPilot: c.aiAutoPilot,
+        lastAiAction: c.lastAiAction,
+        metaCampaignId: c.metaCampaignId,
+      }
     })
   }
 
-  return campaigns.map((c) => {
-    const period = byCampaign.get(c.id)
-    const spend = period?.spend ?? 0
-    const revenue = period?.revenue ?? 0
-    return {
-      id: c.id,
-      name: c.name,
-      status: c.status,
-      dailyBudget: c.dailyBudget ?? 0,
-      spend,
-      roas: spend > 0 ? revenue / spend : 0,
-      conversions: period?.conversions ?? 0,
-      frequency: c.frequency,
-      aiAutoPilot: c.aiAutoPilot,
-      lastAiAction: c.lastAiAction,
-      metaCampaignId: c.metaCampaignId,
+  if (baseRows.length === 0) return []
+
+  // ── Budget pacing: compara gasto-hoje vs orçamento esperado para o horário ─
+  const now = new Date()
+  const hoursElapsed = now.getHours() + now.getMinutes() / 60
+
+  if (hoursElapsed < 1) {
+    // Muito cedo no dia — sem dados suficientes para pacing
+    return baseRows.map((r) => ({ ...r, todaySpend: null, pacingAlert: null }))
+  }
+
+  const todayMidnight = new Date(now)
+  todayMidnight.setHours(0, 0, 0, 0)
+
+  const todayInsights = await prisma.dailyInsight.findMany({
+    where: {
+      campaignId: { in: baseRows.map((r) => r.id) },
+      date: { gte: todayMidnight },
+    },
+    select: { campaignId: true, spend: true },
+  })
+  const todaySpendMap = new Map(todayInsights.map((i) => [i.campaignId, i.spend]))
+
+  return baseRows.map((r) => {
+    const todaySpend = todaySpendMap.get(r.id) ?? null
+    let pacingAlert: 'FAST' | 'SLOW' | null = null
+
+    if (todaySpend !== null && r.status === 'ACTIVE' && r.dailyBudget > 0) {
+      const expectedSpend = r.dailyBudget * (hoursElapsed / 24)
+      if (expectedSpend > 0) {
+        const ratio = todaySpend / expectedSpend
+        // Gastando >50% acima do esperado para este horário
+        if (ratio > 1.5) pacingAlert = 'FAST'
+        // Gastando <40% do esperado após 8h do dia (entrega muito lenta)
+        else if (ratio < 0.4 && hoursElapsed >= 8) pacingAlert = 'SLOW'
+      }
     }
+
+    return { ...r, todaySpend, pacingAlert }
   })
 }
 

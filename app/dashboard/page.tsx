@@ -4,12 +4,12 @@ import RevenueChart from '@/components/dashboard/RevenueChart'
 import RoasChart from '@/components/dashboard/RoasChart'
 import FunnelVisualizer from '@/components/dashboard/FunnelVisualizer'
 import AIInsightsFeed from '@/components/dashboard/AIInsightsFeed'
-import CampaignList from '@/components/dashboard/CampaignList'
 import PriceTable from '@/components/dashboard/PriceTable'
 import DiagnosticCenter from '@/components/dashboard/DiagnosticCenter'
 import ROISavingsCard from '@/components/dashboard/ROISavingsCard'
 import AdAccountSwitcher from '@/components/dashboard/AdAccountSwitcher'
 import DateRangePicker from '@/components/dashboard/DateRangePicker'
+import CampanhasClient from '@/app/dashboard/campanhas/CampanhasClient'
 import type { DiagnosticData } from '@/components/dashboard/DiagnosticCenter'
 import { SkeletonStatCard, SkeletonChartCard, SkeletonFeedItem } from '@/components/dashboard/SkeletonCards'
 import {
@@ -121,7 +121,7 @@ export default async function DashboardPage({
 
       {/* Bottom: Campanhas + Preços */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <CampaignList campaigns={campaigns} />
+        <CampanhasClient campaigns={campaigns} />
         <PriceTable competitors={competitors} />
       </div>
 

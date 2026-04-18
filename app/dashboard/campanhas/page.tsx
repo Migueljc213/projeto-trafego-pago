@@ -4,6 +4,8 @@ import AdAccountSwitcher from '@/components/dashboard/AdAccountSwitcher'
 import DateRangePicker from '@/components/dashboard/DateRangePicker'
 import RoasChart from '@/components/dashboard/RoasChart'
 import CreativeRanking from '@/components/dashboard/CreativeRanking'
+import AudienceInsights from '@/components/dashboard/AudienceInsights'
+import CampaignChat from '@/components/dashboard/CampaignChat'
 import { getCampaignRows, getAIInsightsFeed, getUserAdAccounts, getRoasByCampaign, getCreativeRanking } from '@/lib/dashboard-data'
 
 export const metadata = { title: 'Campanhas IA | FunnelGuard AI' }
@@ -84,9 +86,18 @@ export default async function CampanhasPage({
         <div className="xl:col-span-2 space-y-6">
           <CampanhasClient campaigns={campaigns} />
           <CreativeRanking rows={rankingRows} />
+          {/* Audience Insights — mostra a campanha com mais gasto */}
+          {campaigns[0] && (
+            <AudienceInsights
+              campaignId={campaigns[0].id}
+              campaignName={campaigns[0].name}
+              days={days}
+            />
+          )}
         </div>
-        <div className="xl:col-span-1">
+        <div className="xl:col-span-1 space-y-6">
           <AIInsightsFeed insights={feedInsights} />
+          <CampaignChat campaigns={campaigns} />
         </div>
       </div>
     </div>

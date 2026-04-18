@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Zap, Pause, Play, Clock, TrendingUp, TrendingDown, Loader2, RefreshCw, Plus, Pencil, Check, X } from 'lucide-react'
+import { Zap, Pause, Play, Clock, TrendingUp, TrendingDown, Loader2, RefreshCw, Plus, Pencil, Check, X, Flame, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 import type { CampaignRow } from '@/lib/dashboard-data'
 import { toggleAutoPilotAction, updateCampaignBudgetAction, toggleCampaignStatusAction } from '@/actions/campaigns'
@@ -128,6 +128,22 @@ function CampaignCard({ campaign }: { campaign: CampaignRow }) {
                 <Zap className="w-3 h-3" /> IA gerenciando
               </span>
             )}
+            {campaign.pacingAlert === 'FAST' && (
+              <span
+                title={`Gasto hoje: R$${(campaign.todaySpend ?? 0).toFixed(0)} — acima do ritmo esperado para este horário. A campanha pode esgotar o orçamento antes do fim do dia.`}
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-orange-500/15 text-orange-400 border border-orange-500/25 cursor-help"
+              >
+                <Flame className="w-3 h-3" /> Gastando rápido
+              </span>
+            )}
+            {campaign.pacingAlert === 'SLOW' && (
+              <span
+                title={`Gasto hoje: R$${(campaign.todaySpend ?? 0).toFixed(0)} — abaixo do ritmo esperado. A Meta pode estar limitando a entrega.`}
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-blue-500/15 text-blue-400 border border-blue-500/25 cursor-help"
+              >
+                <AlertCircle className="w-3 h-3" /> Subentregando
+              </span>
+            )}
           </div>
           <div className="flex flex-wrap items-center gap-2 mb-2">
             <StatusBadge status={status} />
@@ -177,10 +193,15 @@ function CampaignCard({ campaign }: { campaign: CampaignRow }) {
             )}
           </div>
           <div>
-            <p className="text-xs text-gray-500 mb-0.5">Spend</p>
+            <p className="text-xs text-gray-500 mb-0.5">Spend total</p>
             <p className="text-sm font-semibold font-mono text-gray-200">
               R$ {campaign.spend.toFixed(0)}
             </p>
+            {campaign.todaySpend !== null && (
+              <p className="text-[10px] text-gray-600 font-mono mt-0.5">
+                hoje: R$ {campaign.todaySpend.toFixed(0)}
+              </p>
+            )}
           </div>
           <div>
             <p className="text-xs text-gray-500 mb-0.5">ROAS</p>

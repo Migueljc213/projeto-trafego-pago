@@ -102,15 +102,12 @@ export async function createCampaignAction(
     return { success: false, error: 'A URL da imagem deve apontar diretamente para um arquivo de imagem (.jpg, .png, .webp, etc.). Não use links de páginas web.' }
   }
 
-  // Objetivos de otimização que requerem configuração extra não disponível
+  // LEAD_GENERATION requer Lead Form (não implementado)
   if (input.optimizationGoal === 'LEAD_GENERATION') {
     return { success: false, error: 'O objetivo "Geração de Leads" requer um Formulário de Lead vinculado, que ainda não é suportado nesta versão. Use "Cliques no Link" ou crie a campanha diretamente no Meta Ads Manager.' }
   }
-  if (input.optimizationGoal === 'CONVERSIONS') {
-    return { success: false, error: 'O objetivo "Conversões" requer um Pixel Meta configurado na conta. Acesse Configurações → Pixel para conectar seu pixel antes de usar este objetivo.' }
-  }
 
-  // Busca conta Meta do usuário
+  // Busca conta Meta do usuário (com pixelId)
   const bm = await prisma.businessManager.findFirst({
     where: { userId: session.user.id },
     include: { adAccounts: { take: 1 } },
@@ -120,6 +117,11 @@ export async function createCampaignAction(
   if (!bm.adAccounts.length) return { success: false, error: 'Nenhuma conta de anúncio encontrada. Sincronize suas Ad Accounts primeiro.' }
 
   const adAccount = bm.adAccounts[0]
+
+  // CONVERSIONS requer Pixel — valida aqui onde já temos a conta carregada
+  if (input.optimizationGoal === 'CONVERSIONS' && !adAccount.pixelId) {
+    return { success: false, error: 'O objetivo "Conversões" requer um Pixel Meta vinculado. Acesse Configurações → Pixel Meta, busque e vincule seu pixel.' }
+  }
   const metaAccountId = adAccount.metaAccountId
   // Meta exige formato "act_XXXXX"
   const actAccountId = metaAccountId.startsWith('act_') ? metaAccountId : `act_${metaAccountId}`
@@ -167,6 +169,10 @@ export async function createCampaignAction(
         dailyBudgetCents: budgetCents,
         optimizationGoal: input.optimizationGoal ?? 'LINK_CLICKS',
         status: campaignStatus,
+        // Para CONVERSIONS, injeta o pixel vinculado à conta
+        promotedObject: input.optimizationGoal === 'CONVERSIONS' && adAccount.pixelId
+          ? { pixelId: adAccount.pixelId, customEventType: 'PURCHASE' }
+          : undefined,
         targeting: {
           ageMin: input.ageMin ?? 18,
           ageMax: input.ageMax ?? 65,
