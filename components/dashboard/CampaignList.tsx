@@ -6,6 +6,7 @@ import Link from 'next/link'
 import type { CampaignRow } from '@/lib/dashboard-data'
 import { toggleAutoPilotAction, updateCampaignBudgetAction, toggleCampaignStatusAction } from '@/actions/campaigns'
 import { useToast } from '@/lib/toast'
+import AdRewriter from '@/components/dashboard/AdRewriter'
 
 function StatusBadge({ status }: { status: string }) {
   if (status === 'ACTIVE') {
@@ -261,6 +262,18 @@ function CampaignCard({ campaign }: { campaign: CampaignRow }) {
           </div>
         </div>
       </div>
+
+      {/* Ad Rewriter — disponível para campanhas ativas */}
+      {campaign.status === 'ACTIVE' && (
+        <AdRewriter
+          campaignId={campaign.id}
+          campaignName={campaign.name}
+          roas={campaign.roas}
+          minRoas={campaign.aiMinRoas}
+          ctr={campaign.ctr}
+          frequency={campaign.frequency}
+        />
+      )}
     </div>
   )
 }

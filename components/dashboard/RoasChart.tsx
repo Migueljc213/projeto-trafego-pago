@@ -39,7 +39,7 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
 }
 
 export default function RoasChart({ data }: { data: RoasByCampaignData }) {
-  const { points, campaignNames } = data
+  const { points, campaignNames, predKeys = [] } = data
 
   if (points.length === 0) {
     return (
@@ -50,18 +50,32 @@ export default function RoasChart({ data }: { data: RoasByCampaignData }) {
     )
   }
 
-  const tickStep = Math.max(1, Math.floor(points.length / 6))
+  // Índice da primeira data prevista para a ReferenceLine vertical
+  const firstPredIdx = points.findIndex(p => p.predicted)
+  const firstPredDate = firstPredIdx >= 0 ? points[firstPredIdx].date as string : null
+  const tickStep = Math.max(1, Math.floor(points.length / 8))
 
   return (
     <div className="glass-card rounded-xl p-5 border border-gray-800">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
         <div>
           <h3 className="text-base font-semibold text-white">ROAS por Campanha</h3>
-          <p className="text-xs text-gray-500 mt-0.5">Top {campaignNames.length} campanhas por gasto</p>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Top {campaignNames.length} campanhas por gasto
+            {predKeys.length > 0 && <span className="ml-2 text-neon-purple/70">· previsão 7 dias</span>}
+          </p>
         </div>
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-green-500/10 border border-green-500/20">
-          <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
-          <span className="text-xs text-green-400 font-medium">Meta ROAS: 3x</span>
+        <div className="flex items-center gap-3">
+          {predKeys.length > 0 && (
+            <div className="flex items-center gap-1.5">
+              <span className="w-4 border-t border-dashed border-neon-purple/50 inline-block" />
+              <span className="text-[10px] text-neon-purple/70">Previsão</span>
+            </div>
+          )}
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-green-500/10 border border-green-500/20">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
+            <span className="text-xs text-green-400 font-medium">Meta ROAS: 3x</span>
+          </div>
         </div>
       </div>
 
@@ -87,13 +101,24 @@ export default function RoasChart({ data }: { data: RoasByCampaignData }) {
             strokeDasharray="4 4"
             label={{ value: 'Meta 3x', position: 'right', fontSize: 9, fill: 'rgba(34,197,94,0.6)' }}
           />
+          {firstPredDate && (
+            <ReferenceLine
+              x={firstPredDate}
+              stroke="rgba(139,92,246,0.3)"
+              strokeDasharray="2 3"
+              label={{ value: 'hoje', position: 'insideTopLeft', fontSize: 9, fill: 'rgba(139,92,246,0.5)' }}
+            />
+          )}
           <Tooltip content={<CustomTooltip />} />
           <Legend
             wrapperStyle={{ fontSize: '11px', paddingTop: '12px' }}
             formatter={(value: string) => {
-              const idx = campaignNames.indexOf(value)
+              const isPred = value.endsWith('_pred')
+              const baseName = isPred ? value.slice(0, -5) : value
+              const idx = campaignNames.indexOf(baseName)
               const color = PALETTE[idx % PALETTE.length]
-              const label = value.length > 18 ? value.slice(0, 16) + '…' : value
+              if (isPred) return null // não aparece na legenda
+              const label = baseName.length > 18 ? baseName.slice(0, 16) + '…' : baseName
               return <span style={{ color, fontSize: '11px' }}>{label}</span>
             }}
           />
@@ -109,6 +134,25 @@ export default function RoasChart({ data }: { data: RoasByCampaignData }) {
               connectNulls
             />
           ))}
+          {predKeys.map((key) => {
+            const baseName = key.slice(0, -5)
+            const i = campaignNames.indexOf(baseName)
+            return (
+              <Line
+                key={key}
+                type="monotone"
+                dataKey={key}
+                stroke={PALETTE[i % PALETTE.length]}
+                strokeWidth={1.5}
+                strokeDasharray="4 3"
+                strokeOpacity={0.5}
+                dot={false}
+                activeDot={false}
+                connectNulls
+                legendType="none"
+              />
+            )
+          })}
         </LineChart>
       </ResponsiveContainer>
     </div>

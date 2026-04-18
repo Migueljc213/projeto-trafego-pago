@@ -262,6 +262,8 @@ export interface CampaignRow {
   dailyBudget: number
   spend: number
   roas: number
+  aiMinRoas: number
+  ctr: number
   conversions: number
   frequency: number
   aiAutoPilot: boolean
@@ -298,6 +300,8 @@ export async function getCampaignRows(opts?: {
       dailyBudget: c.dailyBudget ?? 0,
       spend: c.spend,
       roas: c.roas,
+      aiMinRoas: c.aiMinRoas,
+      ctr: c.impressions > 0 ? (c.clicks / c.impressions) * 100 : 0,
       conversions: c.conversions,
       frequency: c.frequency,
       aiAutoPilot: c.aiAutoPilot,
@@ -335,6 +339,8 @@ export async function getCampaignRows(opts?: {
         dailyBudget: c.dailyBudget ?? 0,
         spend,
         roas: spend > 0 ? revenue / spend : 0,
+        aiMinRoas: c.aiMinRoas,
+        ctr: c.impressions > 0 ? (c.clicks / c.impressions) * 100 : 0,
         conversions: period?.conversions ?? 0,
         frequency: c.frequency,
         aiAutoPilot: c.aiAutoPilot,
@@ -511,12 +517,15 @@ export async function getMoneySavedByAI(opts?: {
 
 export interface RoasByDatePoint {
   date: string
-  [campaignName: string]: number | string
+  predicted?: true
+  [campaignName: string]: number | string | boolean | undefined
 }
 
 export interface RoasByCampaignData {
   points: RoasByDatePoint[]
   campaignNames: string[]
+  /** Chaves com sufixo `_pred` para as linhas de previsão tracejadas. */
+  predKeys: string[]
 }
 
 /**
@@ -529,7 +538,7 @@ export async function getRoasByCampaign(opts?: {
   topN?: number
 }): Promise<RoasByCampaignData> {
   const adAccount = await getUserAdAccount(opts?.adAccountId)
-  if (!adAccount) return { points: [], campaignNames: [] }
+  if (!adAccount) return { points: [], campaignNames: [], predKeys: [] }
 
   const since = sinceDate(opts?.days ?? 30)
   const topN = opts?.topN ?? 5
@@ -544,7 +553,7 @@ export async function getRoasByCampaign(opts?: {
     include: { campaign: { select: { name: true } } },
   })
 
-  if (insights.length === 0) return { points: [], campaignNames: [] }
+  if (insights.length === 0) return { points: [], campaignNames: [], predKeys: [] }
 
   // Rank campaigns by total spend → pick top N
   const spendByCampaign = new Map<string, { name: string; spend: number }>()
@@ -589,7 +598,64 @@ export async function getRoasByCampaign(opts?: {
     return point
   })
 
-  return { points, campaignNames: topCampaignNames }
+  // ── Predição de ROAS: regressão linear por campanha (próximos 7 dias) ─────────
+  const FORECAST_DAYS = 7
+  const WINDOW = Math.min(14, dates.length) // usa até 14 dias históricos
+
+  // Para cada campanha, calcula slope/intercept com últimos WINDOW pontos
+  const forecasts = new Map<string, { slope: number; intercept: number }>()
+  for (const campaignId of topCampaignIds) {
+    const name = spendByCampaign.get(campaignId)!.name
+    const recentDates = dates.slice(-WINDOW)
+    const xys = recentDates
+      .map((d, xi) => ({ x: xi, y: Number(points[dates.length - WINDOW + xi]?.[name] ?? 0) }))
+      .filter(p => p.y > 0)
+
+    if (xys.length < 3) continue // dados insuficientes
+
+    const n = xys.length
+    const sumX = xys.reduce((s, p) => s + p.x, 0)
+    const sumY = xys.reduce((s, p) => s + p.y, 0)
+    const sumXY = xys.reduce((s, p) => s + p.x * p.y, 0)
+    const sumXX = xys.reduce((s, p) => s + p.x * p.x, 0)
+    const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX)
+    const intercept = (sumY - slope * sumX) / n
+    forecasts.set(name, { slope, intercept })
+  }
+
+  // Gera datas futuras e pontos de previsão
+  const lastDateRef = new Date()
+  lastDateRef.setHours(0, 0, 0, 0)
+  const predKeys = topCampaignNames.filter(n => forecasts.has(n)).map(n => `${n}_pred`)
+
+  // Marca o último ponto histórico como sobreposição (início da linha tracejada)
+  if (points.length > 0 && predKeys.length > 0) {
+    const lastPoint = points[points.length - 1]
+    for (const name of topCampaignNames) {
+      if (forecasts.has(name)) {
+        const { slope, intercept } = forecasts.get(name)!
+        // No último ponto histórico o X é WINDOW - 1
+        lastPoint[`${name}_pred`] = parseFloat((slope * (WINDOW - 1) + intercept).toFixed(2))
+      }
+    }
+  }
+
+  for (let d = 1; d <= FORECAST_DAYS; d++) {
+    const futureDate = new Date(lastDateRef)
+    futureDate.setDate(futureDate.getDate() + d)
+    const dateLabel = futureDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+    const predPoint: RoasByDatePoint = { date: dateLabel, predicted: true }
+    for (const name of topCampaignNames) {
+      if (!forecasts.has(name)) continue
+      const { slope, intercept } = forecasts.get(name)!
+      const x = WINDOW - 1 + d
+      const predicted = Math.max(0, slope * x + intercept)
+      predPoint[`${name}_pred`] = parseFloat(predicted.toFixed(2))
+    }
+    points.push(predPoint)
+  }
+
+  return { points, campaignNames: topCampaignNames, predKeys }
 }
 
 // ─── Ranking de Criativos / Campanhas por Performance ─────────────────────────
