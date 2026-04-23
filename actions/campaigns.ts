@@ -128,7 +128,17 @@ export async function syncMetaCampaignsAction(): Promise<
 
     if (!bm) return { success: false, error: 'Nenhuma conta Meta conectada' }
 
-    const accessToken = decrypt(bm.accessTokenEnc)
+    if (!bm.accessTokenEnc) {
+      return { success: false, error: 'Token Meta não configurado — conecte sua conta nas Configurações' }
+    }
+
+    let accessToken: string
+    try {
+      accessToken = decrypt(bm.accessTokenEnc)
+    } catch {
+      return { success: false, error: 'Token Meta inválido — reconecte sua conta nas Configurações' }
+    }
+
     let synced = 0
     let updated = 0
 
@@ -279,15 +289,17 @@ export async function updateCampaignBudgetAction(input: {
     if (!campaign) return { success: false, error: 'Campanha não encontrada' }
 
     const bm = campaign.adAccount.businessManager
-    const accessToken = decrypt(bm.accessTokenEnc)
     const budgetCents = Math.round(input.dailyBudgetBRL * 100)
 
     // Atualiza na Meta API
     let syncedWithMeta = false
-    try {
-      syncedWithMeta = await updateCampaignBudget(campaign.metaCampaignId, budgetCents, accessToken)
-    } catch {
-      // Não falha se a Meta rejeitar — persiste localmente mesmo assim
+    if (bm.accessTokenEnc) {
+      try {
+        const accessToken = decrypt(bm.accessTokenEnc)
+        syncedWithMeta = await updateCampaignBudget(campaign.metaCampaignId, budgetCents, accessToken)
+      } catch {
+        // Não falha se a Meta rejeitar — persiste localmente mesmo assim
+      }
     }
 
     // Atualiza no banco
@@ -393,15 +405,17 @@ export async function toggleCampaignStatusAction(input: {
 
     if (!campaign) return { success: false, error: 'Campanha não encontrada' }
 
-    const accessToken = decrypt(campaign.adAccount.businessManager.accessTokenEnc)
-
-    try {
-      await updateCampaignStatus(campaign.metaCampaignId, input.newStatus, accessToken)
-    } catch (metaErr) {
-      if (metaErr instanceof MetaRateLimitError) {
-        return { success: false, error: `Rate limit da Meta. Tente em ${metaErr.retryAfter}s` }
+    const encryptedToken = campaign.adAccount.businessManager.accessTokenEnc
+    if (encryptedToken) {
+      try {
+        const accessToken = decrypt(encryptedToken)
+        await updateCampaignStatus(campaign.metaCampaignId, input.newStatus, accessToken)
+      } catch (metaErr) {
+        if (metaErr instanceof MetaRateLimitError) {
+          return { success: false, error: `Rate limit da Meta. Tente em ${metaErr.retryAfter}s` }
+        }
+        console.warn('[toggleCampaignStatus] Meta sync failed:', metaErr)
       }
-      console.warn('[toggleCampaignStatus] Meta sync failed:', metaErr)
     }
 
     const updated = await prisma.campaign.update({
