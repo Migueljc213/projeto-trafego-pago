@@ -40,7 +40,8 @@ export interface CreateCampaignParams {
 export interface CreateAdSetParams {
   name: string
   campaignId: string
-  dailyBudgetCents: number        // ex: 5000 = R$50,00
+  /** Orçamento no nível do AdSet (ABO). Omitir quando o orçamento está na campanha (CBO). */
+  dailyBudgetCents?: number       // ex: 5000 = R$50,00
   optimizationGoal: OptimizationGoal
   billingEvent?: 'IMPRESSIONS'
   bidStrategy?: 'LOWEST_COST_WITHOUT_CAP' | 'COST_CAP'
@@ -481,7 +482,7 @@ export function translateMetaError(
       1815745: 'O evento de cobrança (billing_event) é incompatível com o objetivo de otimização escolhido.',
       2446094: 'O objetivo de otimização não é compatível com o objetivo da campanha. Altere um dos dois e tente novamente.',
       1885217: 'Configuração de segmentação de público inválida. Verifique os interesses selecionados.',
-      1885272: 'Configuração de automação de público incompatível com esta conta. Tente novamente sem filtros de interesse ou crie a campanha diretamente no Meta Ads Manager.',
+      1885272: 'Esta conta exige orçamento no nível da Campanha (CBO/Advantage Campaign Budget). O sistema tentou o fallback automático — se o erro persistir, crie a campanha diretamente no Meta Ads Manager.',
       1487394: 'Esta campanha requer declaração de Categoria Especial de Anúncio (crédito, emprego, habitação ou política). Edite no Meta Ads Manager.',
       2446090: 'Orçamento insuficiente para o objetivo selecionado. O mínimo diário pode ser maior que o valor informado.',
       1391705: 'A conta de anúncio não tem um método de pagamento válido cadastrado no Meta.',
@@ -608,9 +609,9 @@ export async function createAdSet(
   const body: Record<string, unknown> = {
     name: params.name,
     campaign_id: params.campaignId,
-    daily_budget: params.dailyBudgetCents,
     optimization_goal: params.optimizationGoal,
     billing_event: derivedBillingEvent,
+    ...(params.dailyBudgetCents !== undefined && { daily_budget: params.dailyBudgetCents }),
     bid_strategy: params.bidStrategy ?? 'LOWEST_COST_WITHOUT_CAP',
     // Obrigatório na API v17+ para objetivos de tráfego/vendas/leads
     destination_type: params.destinationType ?? 'WEBSITE',

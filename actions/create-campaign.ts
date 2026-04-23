@@ -12,6 +12,7 @@ import {
   createAd,
   uploadAdImage,
   assertAdAccountReady,
+  updateCampaignBudget,
   MetaRateLimitError,
   MetaApiError,
   translateMetaError,
@@ -161,28 +162,42 @@ export async function createCampaignAction(
 
     // ── 2. Criar Conjunto de Anúncios ──────────────────────────────────────
     step = 'conjunto de anúncios'
-    metaAdSetId = await createAdSet(
-      actAccountId,
-      {
-        name: `${input.campaignName} — Conjunto 1`,
-        campaignId: metaCampaignId,
-        dailyBudgetCents: budgetCents,
-        optimizationGoal: input.optimizationGoal ?? 'LINK_CLICKS',
-        status: campaignStatus,
-        // Para CONVERSIONS, injeta o pixel vinculado à conta
-        promotedObject: input.optimizationGoal === 'CONVERSIONS' && adAccount.pixelId
-          ? { pixelId: adAccount.pixelId, customEventType: 'PURCHASE' }
-          : undefined,
-        targeting: {
-          ageMin: input.ageMin ?? 18,
-          ageMax: input.ageMax ?? 65,
-          genders: genderMap[input.genders ?? 'all'],
-          countries: input.countries ?? ['BR'],
-          interests: input.interests,
-        },
+
+    const adSetParams = {
+      name: `${input.campaignName} — Conjunto 1`,
+      campaignId: metaCampaignId,
+      optimizationGoal: input.optimizationGoal ?? 'LINK_CLICKS',
+      status: campaignStatus as 'ACTIVE' | 'PAUSED',
+      promotedObject: input.optimizationGoal === 'CONVERSIONS' && adAccount.pixelId
+        ? { pixelId: adAccount.pixelId, customEventType: 'PURCHASE' as const }
+        : undefined,
+      targeting: {
+        ageMin: input.ageMin ?? 18,
+        ageMax: input.ageMax ?? 65,
+        genders: genderMap[input.genders ?? 'all'],
+        countries: input.countries ?? ['BR'],
+        interests: input.interests?.length ? input.interests : undefined,
       },
-      accessToken
-    )
+    }
+
+    try {
+      // Tenta ABO (orçamento no AdSet) — padrão para a maioria das contas
+      metaAdSetId = await createAdSet(
+        actAccountId,
+        { ...adSetParams, dailyBudgetCents: budgetCents },
+        accessToken
+      )
+    } catch (adSetErr) {
+      // Subcode 1885272: conta exige CBO (orçamento na Campanha, não no AdSet)
+      // Solução: mover o orçamento para a campanha e recriar o AdSet sem budget
+      if (adSetErr instanceof MetaApiError && adSetErr.subcode === 1885272) {
+        console.warn('[createCampaign] ABO rejeitado (1885272) — tentando CBO: orçamento na campanha')
+        await updateCampaignBudget(metaCampaignId, budgetCents, accessToken)
+        metaAdSetId = await createAdSet(actAccountId, adSetParams, accessToken)
+      } else {
+        throw adSetErr
+      }
+    }
 
     // ── 3. Upload de imagem ────────────────────────────────────────────────
     // imageUrl já foi validado como obrigatório acima.
