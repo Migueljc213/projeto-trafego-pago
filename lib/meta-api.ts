@@ -881,7 +881,7 @@ export async function updateCampaignBudget(
   accessToken: string
 ): Promise<boolean> {
   const result = await metaFetch<{ success: boolean }>(
-    `${campaignId}`,
+    `/${campaignId}`,
     accessToken,
     {
       method: 'POST',
