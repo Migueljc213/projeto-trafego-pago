@@ -11,7 +11,7 @@ export default async function ConfiguracoesPage() {
   let bmData: {
     name: string
     tokenExpiresAt: string | null
-    adAccounts: Array<{ metaAccountId: string; name: string; currency: string; status: number }>
+    adAccounts: Array<{ id: string; metaAccountId: string; name: string; currency: string; status: number; pixelId: string | null; pixelName: string | null }>
   } | null = null
 
   if (session?.user?.id) {
@@ -25,10 +25,13 @@ export default async function ConfiguracoesPage() {
         name: bm.name,
         tokenExpiresAt: bm.tokenExpiresAt?.toISOString() ?? null,
         adAccounts: bm.adAccounts.map(a => ({
+          id: a.id,
           metaAccountId: a.metaAccountId,
           name: a.name,
           currency: a.currency,
           status: a.status,
+          pixelId: a.pixelId ?? null,
+          pixelName: a.pixelName ?? null,
         })),
       }
     }

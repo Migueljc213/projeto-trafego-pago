@@ -114,6 +114,8 @@ model AdAccount {
   currency          String   @default("BRL")
   timezone          String   @default("America/Sao_Paulo")
   status            Int
+  pixelId           String?  // Meta Pixel ID — necessário para objetivo CONVERSIONS
+  pixelName         String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 

@@ -7,6 +7,7 @@ import Sidebar from '@/components/dashboard/Sidebar'
 import OnboardingProgressBar from '@/components/dashboard/OnboardingProgressBar'
 import OnboardingWizard from '@/components/dashboard/OnboardingWizard'
 import { getOnboardingStatusAction } from '@/actions/onboarding'
+import { ToastProvider } from '@/lib/toast'
 
 export const metadata = {
   title: 'Dashboard | FunnelGuard AI',
@@ -82,25 +83,27 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const showWizard = !onboardingStatus.hasCompletedOnboarding
 
   return (
-    <div className="flex min-h-screen bg-dark-base">
-      <Sidebar />
-      <main className="flex-1 min-w-0 overflow-x-hidden">
-        <div className="p-4 sm:p-6 lg:p-8 pt-14 lg:pt-6">
-          {/* Barra de progresso compacta (aparece em todas as páginas enquanto setup incompleto) */}
-          <OnboardingProgressBar
-            step={onboardingStatus.step}
-            hasCompletedOnboarding={onboardingStatus.hasCompletedOnboarding}
-          />
-          {/* Wizard interativo (aparece apenas na página inicial) */}
-          {showWizard && onboardingStatus.step > 0 && (
-            <OnboardingWizard
-              status={onboardingStatus}
-              adAccounts={adAccountsForWizard}
+    <ToastProvider>
+      <div className="flex min-h-screen bg-dark-base">
+        <Sidebar />
+        <main className="flex-1 min-w-0 overflow-x-hidden">
+          <div className="p-4 sm:p-6 lg:p-8 pt-14 lg:pt-6">
+            {/* Barra de progresso compacta (aparece em todas as páginas enquanto setup incompleto) */}
+            <OnboardingProgressBar
+              step={onboardingStatus.step}
+              hasCompletedOnboarding={onboardingStatus.hasCompletedOnboarding}
             />
-          )}
-          {children}
-        </div>
-      </main>
-    </div>
+            {/* Wizard interativo (aparece apenas na página inicial) */}
+            {showWizard && onboardingStatus.step > 0 && (
+              <OnboardingWizard
+                status={onboardingStatus}
+                adAccounts={adAccountsForWizard}
+              />
+            )}
+            {children}
+          </div>
+        </main>
+      </div>
+    </ToastProvider>
   )
 }

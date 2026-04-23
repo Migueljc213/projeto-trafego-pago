@@ -28,12 +28,12 @@ const OPTIMIZATION_GOALS: Record<CampaignObjective, { value: OptimizationGoal; l
   OUTCOME_SALES: [
     { value: 'LINK_CLICKS', label: 'Cliques no Link' },
     { value: 'LANDING_PAGE_VIEWS', label: 'Visualizações de Landing Page' },
-    { value: 'CONVERSIONS', label: 'Conversões ⚠️', warning: 'Requer Pixel Meta configurado. Acesse Configurações → Pixel antes de usar.' },
+    { value: 'CONVERSIONS', label: 'Conversões', warning: 'Requer Pixel Meta vinculado em Configurações → Pixel Meta.' },
   ],
   OUTCOME_LEADS: [
     { value: 'LINK_CLICKS', label: 'Cliques no Link' },
     { value: 'LANDING_PAGE_VIEWS', label: 'Visualizações de Landing Page' },
-    { value: 'CONVERSIONS', label: 'Conversões ⚠️', warning: 'Requer Pixel Meta configurado. Acesse Configurações → Pixel antes de usar.' },
+    { value: 'CONVERSIONS', label: 'Conversões', warning: 'Requer Pixel Meta vinculado em Configurações → Pixel Meta.' },
   ],
   OUTCOME_AWARENESS: [
     { value: 'REACH', label: 'Alcance' },

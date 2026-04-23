@@ -11,31 +11,138 @@ import type { RevenueDataPoint } from '@/lib/types'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/** Retorna a primeira AdAccount do usuário logado, ou null. */
-async function getUserAdAccount() {
+/** Retorna a AdAccount pelo ID (verificando ownership) ou a primeira do usuário. */
+async function getUserAdAccount(adAccountId?: string) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) return null
+
+  if (adAccountId) {
+    return prisma.adAccount.findFirst({
+      where: {
+        id: adAccountId,
+        businessManager: { userId: session.user.id },
+      },
+    })
+  }
 
   return prisma.adAccount.findFirst({
     where: { businessManager: { userId: session.user.id } },
   })
 }
 
+/** Retorna a data de início dado o número de dias para trás. */
+function sinceDate(days: number): Date {
+  const d = new Date()
+  d.setDate(d.getDate() - days)
+  d.setHours(0, 0, 0, 0)
+  return d
+}
+
+// ─── Ad Account Switcher ──────────────────────────────────────────────────────
+
+export interface AdAccountInfo {
+  id: string
+  name: string
+  metaAccountId: string
+  currency: string
+}
+
+/** Lista todas as Ad Accounts do usuário logado (para o switcher). */
+export async function getUserAdAccounts(): Promise<AdAccountInfo[]> {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) return []
+
+  const accounts = await prisma.adAccount.findMany({
+    where: { businessManager: { userId: session.user.id } },
+    orderBy: { name: 'asc' },
+  })
+
+  return accounts.map((a) => ({
+    id: a.id,
+    name: a.name,
+    metaAccountId: a.metaAccountId,
+    currency: a.currency ?? 'BRL',
+  }))
+}
+
 // ─── Stats Cards ──────────────────────────────────────────────────────────────
+
+export interface StatChange {
+  value: number       // % de mudança (positivo = cresceu, negativo = caiu)
+  hasData: boolean    // false quando não há dados do período anterior
+}
 
 export interface DashboardStats {
   totalSpend: number
   avgRoas: number
   totalConversions: number
   lostRevenue: number
+  // Comparativo com período anterior (presente quando days é definido)
+  spendChange?: StatChange
+  roasChange?: StatChange
+  conversionsChange?: StatChange
 }
 
-export async function getDashboardStats(): Promise<DashboardStats> {
-  const adAccount = await getUserAdAccount()
+function pctChange(current: number, previous: number): StatChange {
+  if (previous === 0) return { value: 0, hasData: false }
+  return { value: Math.round(((current - previous) / previous) * 100), hasData: true }
+}
+
+function aggregateInsights(insights: { spend: number; revenue: number; conversions: number }[]) {
+  const totalSpend = insights.reduce((s, i) => s + i.spend, 0)
+  const totalRevenue = insights.reduce((s, i) => s + i.revenue, 0)
+  const totalConversions = insights.reduce((s, i) => s + i.conversions, 0)
+  return { totalSpend, totalRevenue, totalConversions, avgRoas: totalSpend > 0 ? totalRevenue / totalSpend : 0 }
+}
+
+/**
+ * Quando `days` é definido, agrega DailyInsight do período e calcula comparativo.
+ * Quando não definido, usa totais acumulados das campanhas.
+ */
+export async function getDashboardStats(opts?: {
+  adAccountId?: string
+  days?: number
+}): Promise<DashboardStats> {
+  const adAccount = await getUserAdAccount(opts?.adAccountId)
   if (!adAccount) {
     return { totalSpend: 0, avgRoas: 0, totalConversions: 0, lostRevenue: 0 }
   }
 
+  if (opts?.days) {
+    const currentStart = sinceDate(opts.days)
+    const prevStart = sinceDate(opts.days * 2)
+
+    // Busca período atual e anterior em paralelo
+    const [currentInsights, prevInsights] = await Promise.all([
+      prisma.dailyInsight.findMany({
+        where: { campaign: { adAccountId: adAccount.id }, date: { gte: currentStart } },
+      }),
+      prisma.dailyInsight.findMany({
+        where: { campaign: { adAccountId: adAccount.id }, date: { gte: prevStart, lt: currentStart } },
+      }),
+    ])
+
+    const current = aggregateInsights(currentInsights)
+    const prev = aggregateInsights(prevInsights)
+
+    const pausedCampaigns = await prisma.campaign.findMany({
+      where: { adAccountId: adAccount.id, status: 'PAUSED', roas: { gt: 0 } },
+      select: { dailyBudget: true, roas: true },
+    })
+    const lostRevenue = pausedCampaigns.reduce((s, c) => s + (c.dailyBudget ?? 0) * c.roas, 0)
+
+    return {
+      totalSpend: current.totalSpend,
+      avgRoas: current.avgRoas,
+      totalConversions: current.totalConversions,
+      lostRevenue,
+      spendChange: pctChange(current.totalSpend, prev.totalSpend),
+      roasChange: pctChange(current.avgRoas, prev.avgRoas),
+      conversionsChange: pctChange(current.totalConversions, prev.totalConversions),
+    }
+  }
+
+  // Sem filtro de data: usa totais acumulados
   const campaigns = await prisma.campaign.findMany({
     where: { adAccountId: adAccount.id },
   })
@@ -45,12 +152,11 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   const totalConversions = campaigns.reduce((s, c) => s + c.conversions, 0)
   const avgRoas = totalSpend > 0 ? totalRevenue / totalSpend : 0
 
-  // Receita perdida: campanhas pausadas com histórico de conversões
   const pausedWithHistory = campaigns.filter(
     (c) => c.status === 'PAUSED' && c.roas > 0
   )
   const lostRevenue = pausedWithHistory.reduce(
-    (s, c) => s + c.dailyBudget! * c.roas,
+    (s, c) => s + (c.dailyBudget ?? 0) * c.roas,
     0
   )
 
@@ -59,23 +165,23 @@ export async function getDashboardStats(): Promise<DashboardStats> {
 
 // ─── Revenue Chart ────────────────────────────────────────────────────────────
 
-export async function getRevenueChartData(): Promise<RevenueDataPoint[]> {
-  const adAccount = await getUserAdAccount()
+export async function getRevenueChartData(opts?: {
+  adAccountId?: string
+  days?: number
+}): Promise<RevenueDataPoint[]> {
+  const adAccount = await getUserAdAccount(opts?.adAccountId)
   if (!adAccount) return []
 
-  // Últimos 30 dias de DailyInsights, agrupados por data
-  const thirtyDaysAgo = new Date()
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+  const since = sinceDate(opts?.days ?? 30)
 
   const insights = await prisma.dailyInsight.findMany({
     where: {
       campaign: { adAccountId: adAccount.id },
-      date: { gte: thirtyDaysAgo },
+      date: { gte: since },
     },
     orderBy: { date: 'asc' },
   })
 
-  // Agrupa por data somando todas as campanhas
   const byDate = new Map<string, { investment: number; revenue: number }>()
   for (const row of insights) {
     const key = row.date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
@@ -104,8 +210,10 @@ export interface FeedInsight {
   value?: string
 }
 
-export async function getAIInsightsFeed(): Promise<FeedInsight[]> {
-  const adAccount = await getUserAdAccount()
+export async function getAIInsightsFeed(opts?: {
+  adAccountId?: string
+}): Promise<FeedInsight[]> {
+  const adAccount = await getUserAdAccount(opts?.adAccountId)
   if (!adAccount) return []
 
   const logs = await prisma.aiDecisionLog.findMany({
@@ -154,14 +262,24 @@ export interface CampaignRow {
   dailyBudget: number
   spend: number
   roas: number
+  aiMinRoas: number
+  ctr: number
   conversions: number
   frequency: number
   aiAutoPilot: boolean
   lastAiAction: string | null
+  metaCampaignId: string
+  /** Gasto de hoje (via DailyInsight). null = dado ainda não disponível. */
+  todaySpend: number | null
+  /** Alerta de pacing baseado na proporção gasto-hoje vs orçamento esperado para o horário. */
+  pacingAlert: 'FAST' | 'SLOW' | null
 }
 
-export async function getCampaignRows(): Promise<CampaignRow[]> {
-  const adAccount = await getUserAdAccount()
+export async function getCampaignRows(opts?: {
+  adAccountId?: string
+  days?: number
+}): Promise<CampaignRow[]> {
+  const adAccount = await getUserAdAccount(opts?.adAccountId)
   if (!adAccount) return []
 
   const campaigns = await prisma.campaign.findMany({
@@ -169,18 +287,109 @@ export async function getCampaignRows(): Promise<CampaignRow[]> {
     orderBy: { spend: 'desc' },
   })
 
-  return campaigns.map((c) => ({
-    id: c.id,
-    name: c.name,
-    status: c.status,
-    dailyBudget: c.dailyBudget ?? 0,
-    spend: c.spend,
-    roas: c.roas,
-    conversions: c.conversions,
-    frequency: c.frequency,
-    aiAutoPilot: c.aiAutoPilot,
-    lastAiAction: c.lastAiAction,
-  }))
+  // ── Monta a lista base (sem pacing) ────────────────────────────────────────
+  type BaseRow = Omit<CampaignRow, 'todaySpend' | 'pacingAlert'>
+
+  let baseRows: BaseRow[]
+
+  if (!opts?.days) {
+    baseRows = campaigns.map((c) => ({
+      id: c.id,
+      name: c.name,
+      status: c.status,
+      dailyBudget: c.dailyBudget ?? 0,
+      spend: c.spend,
+      roas: c.roas,
+      aiMinRoas: c.aiMinRoas,
+      ctr: c.impressions > 0 ? (c.clicks / c.impressions) * 100 : 0,
+      conversions: c.conversions,
+      frequency: c.frequency,
+      aiAutoPilot: c.aiAutoPilot,
+      lastAiAction: c.lastAiAction,
+      metaCampaignId: c.metaCampaignId,
+    }))
+  } else {
+    // Com filtro de data: sobrepõe spend/roas/conversions com dados do período
+    const since = sinceDate(opts.days)
+    const insights = await prisma.dailyInsight.findMany({
+      where: {
+        campaign: { adAccountId: adAccount.id },
+        date: { gte: since },
+      },
+    })
+
+    const byCampaign = new Map<string, { spend: number; revenue: number; conversions: number }>()
+    for (const i of insights) {
+      const existing = byCampaign.get(i.campaignId) ?? { spend: 0, revenue: 0, conversions: 0 }
+      byCampaign.set(i.campaignId, {
+        spend: existing.spend + i.spend,
+        revenue: existing.revenue + i.revenue,
+        conversions: existing.conversions + i.conversions,
+      })
+    }
+
+    baseRows = campaigns.map((c) => {
+      const period = byCampaign.get(c.id)
+      const spend = period?.spend ?? 0
+      const revenue = period?.revenue ?? 0
+      return {
+        id: c.id,
+        name: c.name,
+        status: c.status,
+        dailyBudget: c.dailyBudget ?? 0,
+        spend,
+        roas: spend > 0 ? revenue / spend : 0,
+        aiMinRoas: c.aiMinRoas,
+        ctr: c.impressions > 0 ? (c.clicks / c.impressions) * 100 : 0,
+        conversions: period?.conversions ?? 0,
+        frequency: c.frequency,
+        aiAutoPilot: c.aiAutoPilot,
+        lastAiAction: c.lastAiAction,
+        metaCampaignId: c.metaCampaignId,
+      }
+    })
+  }
+
+  if (baseRows.length === 0) return []
+
+  // ── Budget pacing: compara gasto-hoje vs orçamento esperado para o horário ─
+  const now = new Date()
+  const hoursElapsed = now.getHours() + now.getMinutes() / 60
+
+  if (hoursElapsed < 1) {
+    // Muito cedo no dia — sem dados suficientes para pacing
+    return baseRows.map((r) => ({ ...r, todaySpend: null, pacingAlert: null }))
+  }
+
+  const todayMidnight = new Date(now)
+  todayMidnight.setHours(0, 0, 0, 0)
+
+  const todayInsights = await prisma.dailyInsight.findMany({
+    where: {
+      campaignId: { in: baseRows.map((r) => r.id) },
+      date: { gte: todayMidnight },
+    },
+    select: { campaignId: true, spend: true },
+  })
+  const todaySpendMap = new Map(todayInsights.map((i) => [i.campaignId, i.spend]))
+
+  return baseRows.map((r) => {
+    const todaySpend = todaySpendMap.get(r.id) ?? null
+    let pacingAlert: 'FAST' | 'SLOW' | null = null
+
+    if (todaySpend !== null && r.status === 'ACTIVE' && r.dailyBudget > 0) {
+      const expectedSpend = r.dailyBudget * (hoursElapsed / 24)
+      if (expectedSpend > 0) {
+        const ratio = todaySpend / expectedSpend
+        // Gastando >50% acima do esperado para este horário
+        if (ratio > 1.5) pacingAlert = 'FAST'
+        // Gastando <40% do esperado após 8h do dia (entrega muito lenta)
+        else if (ratio < 0.4 && hoursElapsed >= 8) pacingAlert = 'SLOW'
+      }
+    }
+
+    return { ...r, todaySpend, pacingAlert }
+  })
 }
 
 // ─── Price Table ──────────────────────────────────────────────────────────────
@@ -193,8 +402,10 @@ export interface CompetitorRow {
   lastChecked: Date | null
 }
 
-export async function getCompetitorRows(): Promise<CompetitorRow[]> {
-  const adAccount = await getUserAdAccount()
+export async function getCompetitorRows(opts?: {
+  adAccountId?: string
+}): Promise<CompetitorRow[]> {
+  const adAccount = await getUserAdAccount(opts?.adAccountId)
   if (!adAccount) return []
 
   return prisma.competitor.findMany({
@@ -219,8 +430,10 @@ export interface LatestDiagnostic {
   createdAt: Date
 }
 
-export async function getLatestStrategicInsight(): Promise<LatestDiagnostic | null> {
-  const adAccount = await getUserAdAccount()
+export async function getLatestStrategicInsight(opts?: {
+  adAccountId?: string
+}): Promise<LatestDiagnostic | null> {
+  const adAccount = await getUserAdAccount(opts?.adAccountId)
   if (!adAccount) return null
 
   const insight = await prisma.strategicInsight.findFirst({
@@ -231,7 +444,6 @@ export async function getLatestStrategicInsight(): Promise<LatestDiagnostic | nu
 
   if (!insight) return null
 
-  // executiveSummary é armazenado em rawData.executiveSummary (campo JSON)
   const raw = insight.rawData as Record<string, unknown> | null
   const executiveSummary = typeof raw?.executiveSummary === 'string'
     ? raw.executiveSummary
@@ -255,28 +467,25 @@ export async function getLatestStrategicInsight(): Promise<LatestDiagnostic | nu
 // ─── ROI / Dinheiro Salvo pela IA ─────────────────────────────────────────────
 
 export interface AiSavings {
-  totalSaved: number       // R$ estimados economizados por pausas executadas (30 dias)
-  pauseCount: number       // Nº de campanhas pausadas
-  scaleCount: number       // Nº de campanhas escaladas
-  totalDecisions: number   // Total de decisões executadas
+  totalSaved: number
+  pauseCount: number
+  scaleCount: number
+  totalDecisions: number
 }
 
-/**
- * Calcula o dinheiro estimado que a IA economizou nos últimos 30 dias
- * ao pausar campanhas com ROAS abaixo do alvo.
- * Estimativa: cada pausa economizou 50% do dailyBudget diário × 1 dia.
- */
-export async function getMoneySavedByAI(): Promise<AiSavings> {
-  const adAccount = await getUserAdAccount()
+export async function getMoneySavedByAI(opts?: {
+  adAccountId?: string
+  days?: number
+}): Promise<AiSavings> {
+  const adAccount = await getUserAdAccount(opts?.adAccountId)
   if (!adAccount) return { totalSaved: 0, pauseCount: 0, scaleCount: 0, totalDecisions: 0 }
 
-  const thirtyDaysAgo = new Date()
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+  const since = sinceDate(opts?.days ?? 30)
 
   const logs = await prisma.aiDecisionLog.findMany({
     where: {
       executed: true,
-      createdAt: { gte: thirtyDaysAgo },
+      createdAt: { gte: since },
       campaign: { adAccountId: adAccount.id },
       type: { in: ['PAUSE', 'SCALE', 'REDUCE_BUDGET'] },
     },
@@ -292,23 +501,247 @@ export async function getMoneySavedByAI(): Promise<AiSavings> {
   for (const log of logs) {
     const budget = log.campaign.dailyBudget ?? 0
     if (log.type === 'PAUSE') {
-      // Estimativa conservadora: pausa economizou metade do orçamento diário
       totalSaved += budget * 0.5
       pauseCount++
     } else if (log.type === 'SCALE') {
       scaleCount++
     } else if (log.type === 'REDUCE_BUDGET') {
-      // Redução de orçamento economizou ~20% do orçamento diário
       totalSaved += budget * 0.2
     }
   }
 
-  return {
-    totalSaved,
-    pauseCount,
-    scaleCount,
-    totalDecisions: logs.length,
+  return { totalSaved, pauseCount, scaleCount, totalDecisions: logs.length }
+}
+
+// ─── ROAS por campanha ao longo do tempo ──────────────────────────────────────
+
+export interface RoasByDatePoint {
+  date: string
+  predicted?: true
+  [campaignName: string]: number | string | boolean | undefined
+}
+
+export interface RoasByCampaignData {
+  points: RoasByDatePoint[]
+  campaignNames: string[]
+  /** Chaves com sufixo `_pred` para as linhas de previsão tracejadas. */
+  predKeys: string[]
+}
+
+/**
+ * Retorna ROAS diário das top N campanhas por spend no período.
+ * Usado pelo gráfico de linhas ROAS por campanha.
+ */
+export async function getRoasByCampaign(opts?: {
+  adAccountId?: string
+  days?: number
+  topN?: number
+}): Promise<RoasByCampaignData> {
+  const adAccount = await getUserAdAccount(opts?.adAccountId)
+  if (!adAccount) return { points: [], campaignNames: [], predKeys: [] }
+
+  const since = sinceDate(opts?.days ?? 30)
+  const topN = opts?.topN ?? 5
+
+  // Get all daily insights for the period
+  const insights = await prisma.dailyInsight.findMany({
+    where: {
+      campaign: { adAccountId: adAccount.id },
+      date: { gte: since },
+    },
+    orderBy: { date: 'asc' },
+    include: { campaign: { select: { name: true } } },
+  })
+
+  if (insights.length === 0) return { points: [], campaignNames: [], predKeys: [] }
+
+  // Rank campaigns by total spend → pick top N
+  const spendByCampaign = new Map<string, { name: string; spend: number }>()
+  for (const i of insights) {
+    const existing = spendByCampaign.get(i.campaignId) ?? { name: i.campaign.name, spend: 0 }
+    spendByCampaign.set(i.campaignId, { name: existing.name, spend: existing.spend + i.spend })
   }
+  const topCampaignIds = Array.from(spendByCampaign.entries())
+    .sort((a, b) => b[1].spend - a[1].spend)
+    .slice(0, topN)
+    .map(([id]) => id)
+
+  const topCampaignNames = topCampaignIds.map((id) => spendByCampaign.get(id)!.name)
+
+  // Aggregate ROAS per date per campaign
+  // Key: "date|campaignId" → { spend, revenue }
+  const aggregate = new Map<string, { spend: number; revenue: number }>()
+  for (const i of insights) {
+    if (!topCampaignIds.includes(i.campaignId)) continue
+    const dateKey = i.date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+    const key = `${dateKey}|${i.campaignId}`
+    const existing = aggregate.get(key) ?? { spend: 0, revenue: 0 }
+    aggregate.set(key, {
+      spend: existing.spend + i.spend,
+      revenue: existing.revenue + i.revenue,
+    })
+  }
+
+  // Collect all unique dates in order
+  const dateSet = new Set<string>()
+  Array.from(aggregate.keys()).forEach((key) => dateSet.add(key.split('|')[0]))
+  const dates = Array.from(dateSet)
+
+  // Build output points
+  const points: RoasByDatePoint[] = dates.map((date) => {
+    const point: RoasByDatePoint = { date }
+    for (const campaignId of topCampaignIds) {
+      const name = spendByCampaign.get(campaignId)!.name
+      const agg = aggregate.get(`${date}|${campaignId}`)
+      point[name] = agg && agg.spend > 0 ? parseFloat((agg.revenue / agg.spend).toFixed(2)) : 0
+    }
+    return point
+  })
+
+  // ── Predição de ROAS: regressão linear por campanha (próximos 7 dias) ─────────
+  const FORECAST_DAYS = 7
+  const WINDOW = Math.min(14, dates.length) // usa até 14 dias históricos
+
+  // Para cada campanha, calcula slope/intercept com últimos WINDOW pontos
+  const forecasts = new Map<string, { slope: number; intercept: number }>()
+  for (const campaignId of topCampaignIds) {
+    const name = spendByCampaign.get(campaignId)!.name
+    const recentDates = dates.slice(-WINDOW)
+    const xys = recentDates
+      .map((d, xi) => ({ x: xi, y: Number(points[dates.length - WINDOW + xi]?.[name] ?? 0) }))
+      .filter(p => p.y > 0)
+
+    if (xys.length < 3) continue // dados insuficientes
+
+    const n = xys.length
+    const sumX = xys.reduce((s, p) => s + p.x, 0)
+    const sumY = xys.reduce((s, p) => s + p.y, 0)
+    const sumXY = xys.reduce((s, p) => s + p.x * p.y, 0)
+    const sumXX = xys.reduce((s, p) => s + p.x * p.x, 0)
+    const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX)
+    const intercept = (sumY - slope * sumX) / n
+    forecasts.set(name, { slope, intercept })
+  }
+
+  // Gera datas futuras e pontos de previsão
+  const lastDateRef = new Date()
+  lastDateRef.setHours(0, 0, 0, 0)
+  const predKeys = topCampaignNames.filter(n => forecasts.has(n)).map(n => `${n}_pred`)
+
+  // Marca o último ponto histórico como sobreposição (início da linha tracejada)
+  if (points.length > 0 && predKeys.length > 0) {
+    const lastPoint = points[points.length - 1]
+    for (const name of topCampaignNames) {
+      if (forecasts.has(name)) {
+        const { slope, intercept } = forecasts.get(name)!
+        // No último ponto histórico o X é WINDOW - 1
+        lastPoint[`${name}_pred`] = parseFloat((slope * (WINDOW - 1) + intercept).toFixed(2))
+      }
+    }
+  }
+
+  for (let d = 1; d <= FORECAST_DAYS; d++) {
+    const futureDate = new Date(lastDateRef)
+    futureDate.setDate(futureDate.getDate() + d)
+    const dateLabel = futureDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+    const predPoint: RoasByDatePoint = { date: dateLabel, predicted: true }
+    for (const name of topCampaignNames) {
+      if (!forecasts.has(name)) continue
+      const { slope, intercept } = forecasts.get(name)!
+      const x = WINDOW - 1 + d
+      const predicted = Math.max(0, slope * x + intercept)
+      predPoint[`${name}_pred`] = parseFloat(predicted.toFixed(2))
+    }
+    points.push(predPoint)
+  }
+
+  return { points, campaignNames: topCampaignNames, predKeys }
+}
+
+// ─── Ranking de Criativos / Campanhas por Performance ─────────────────────────
+
+export interface CreativeRankRow {
+  id: string
+  name: string
+  status: string
+  spend: number
+  roas: number
+  conversions: number
+  ctr: number       // clicks / impressions * 100
+  cpc: number       // spend / clicks
+  cpa: number       // spend / conversions
+  cpm: number
+  impressions: number
+  clicks: number
+  score: number     // composite 0-100
+}
+
+function computeScore(row: Omit<CreativeRankRow, 'score'>): number {
+  // Weighted composite: ROAS 40%, CTR 25%, CPA efficiency 25%, Frequency penalty 10%
+  // Normalised roughly: ROAS target 4x, CTR target 2%, CPA as low as possible
+  const roasScore = Math.min(row.roas / 4, 1) * 40
+  const ctrScore = Math.min(row.ctr / 2, 1) * 25
+  // CPA score: lower is better. Use inverse, cap at R$200 threshold
+  const cpaScore = row.cpa > 0 ? Math.min(200 / row.cpa, 1) * 25 : 0
+  const spendScore = Math.min(row.spend / 1000, 1) * 10
+  return Math.round(roasScore + ctrScore + cpaScore + spendScore)
+}
+
+export async function getCreativeRanking(opts?: {
+  adAccountId?: string
+  days?: number
+}): Promise<CreativeRankRow[]> {
+  const adAccount = await getUserAdAccount(opts?.adAccountId)
+  if (!adAccount) return []
+
+  let campaigns: Array<{
+    id: string; name: string; status: string; spend: number; roas: number
+    conversions: number; impressions: number; clicks: number; cpm: number; revenue: number
+  }>
+
+  if (opts?.days) {
+    const since = sinceDate(opts.days)
+    const allCampaigns = await prisma.campaign.findMany({
+      where: { adAccountId: adAccount.id },
+      select: { id: true, name: true, status: true, cpm: true },
+    })
+    const insights = await prisma.dailyInsight.findMany({
+      where: { campaign: { adAccountId: adAccount.id }, date: { gte: since } },
+    })
+    const byId = new Map<string, { spend: number; revenue: number; conversions: number; impressions: number; clicks: number }>()
+    for (const i of insights) {
+      const ex = byId.get(i.campaignId) ?? { spend: 0, revenue: 0, conversions: 0, impressions: 0, clicks: 0 }
+      byId.set(i.campaignId, {
+        spend: ex.spend + i.spend,
+        revenue: ex.revenue + i.revenue,
+        conversions: ex.conversions + i.conversions,
+        impressions: ex.impressions + i.impressions,
+        clicks: ex.clicks + i.clicks,
+      })
+    }
+    campaigns = allCampaigns.map((c) => {
+      const d = byId.get(c.id) ?? { spend: 0, revenue: 0, conversions: 0, impressions: 0, clicks: 0 }
+      return { ...c, ...d, roas: d.spend > 0 ? d.revenue / d.spend : 0 }
+    })
+  } else {
+    campaigns = await prisma.campaign.findMany({
+      where: { adAccountId: adAccount.id },
+      select: { id: true, name: true, status: true, spend: true, roas: true, conversions: true, impressions: true, clicks: true, cpm: true, revenue: true },
+    })
+  }
+
+  const rows: CreativeRankRow[] = campaigns
+    .filter((c) => c.spend > 0)
+    .map((c) => {
+      const ctr = c.impressions > 0 ? (c.clicks / c.impressions) * 100 : 0
+      const cpc = c.clicks > 0 ? c.spend / c.clicks : 0
+      const cpa = c.conversions > 0 ? c.spend / c.conversions : 0
+      const base = { id: c.id, name: c.name, status: c.status, spend: c.spend, roas: c.roas, conversions: c.conversions, ctr, cpc, cpa, cpm: c.cpm, impressions: c.impressions, clicks: c.clicks }
+      return { ...base, score: computeScore(base) }
+    })
+    .sort((a, b) => b.score - a.score)
+
+  return rows
 }
 
 export async function getAllStrategicInsights(limit = 10): Promise<LatestDiagnostic[]> {

@@ -370,3 +370,54 @@ export async function listCampaignsAction(
     return { success: false, error: 'Erro ao buscar campanhas' }
   }
 }
+
+/**
+ * Pausa ou ativa uma campanha manualmente pelo usuário.
+ * Sincroniza com a Meta API e atualiza o banco.
+ */
+export async function toggleCampaignStatusAction(input: {
+  campaignId: string
+  newStatus: 'ACTIVE' | 'PAUSED'
+}): Promise<ActionResult<{ campaignId: string; status: string }>> {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) return { success: false, error: 'Não autenticado' }
+
+  try {
+    const campaign = await prisma.campaign.findFirst({
+      where: {
+        id: input.campaignId,
+        adAccount: { businessManager: { userId: session.user.id } },
+      },
+      include: { adAccount: { include: { businessManager: true } } },
+    })
+
+    if (!campaign) return { success: false, error: 'Campanha não encontrada' }
+
+    const accessToken = decrypt(campaign.adAccount.businessManager.accessTokenEnc)
+
+    try {
+      await updateCampaignStatus(campaign.metaCampaignId, input.newStatus, accessToken)
+    } catch (metaErr) {
+      if (metaErr instanceof MetaRateLimitError) {
+        return { success: false, error: `Rate limit da Meta. Tente em ${metaErr.retryAfter}s` }
+      }
+      console.warn('[toggleCampaignStatus] Meta sync failed:', metaErr)
+    }
+
+    const updated = await prisma.campaign.update({
+      where: { id: campaign.id },
+      data: {
+        status: input.newStatus,
+        lastAiAction: input.newStatus === 'PAUSED'
+          ? 'Pausada manualmente pelo usuário'
+          : 'Ativada manualmente pelo usuário',
+        lastAiActionAt: new Date(),
+      },
+    })
+
+    return { success: true, data: { campaignId: updated.id, status: updated.status } }
+  } catch (err) {
+    console.error('[toggleCampaignStatus]', err)
+    return { success: false, error: 'Erro ao atualizar status da campanha' }
+  }
+}

@@ -1,36 +1,69 @@
 import CampanhasClient from './CampanhasClient'
 import AIInsightsFeed from '@/components/dashboard/AIInsightsFeed'
-import { getCampaignRows, getAIInsightsFeed } from '@/lib/dashboard-data'
+import AdAccountSwitcher from '@/components/dashboard/AdAccountSwitcher'
+import DateRangePicker from '@/components/dashboard/DateRangePicker'
+import RoasChart from '@/components/dashboard/RoasChart'
+import CreativeRanking from '@/components/dashboard/CreativeRanking'
+import AudienceInsights from '@/components/dashboard/AudienceInsights'
+import CampaignChat from '@/components/dashboard/CampaignChat'
+import { getCampaignRows, getAIInsightsFeed, getUserAdAccounts, getRoasByCampaign, getCreativeRanking } from '@/lib/dashboard-data'
 
 export const metadata = { title: 'Campanhas IA | FunnelGuard AI' }
 
-export default async function CampanhasPage() {
-  const [campaigns, feedInsights] = await Promise.all([
-    getCampaignRows(),
-    getAIInsightsFeed(),
+const VALID_DAYS = [7, 30, 90] as const
+
+export default async function CampanhasPage({
+  searchParams,
+}: {
+  searchParams: { account?: string; days?: string }
+}) {
+  const adAccountId = searchParams.account
+  const days = (VALID_DAYS as readonly number[]).includes(Number(searchParams.days))
+    ? Number(searchParams.days)
+    : 30
+
+  const [campaigns, feedInsights, accounts, roasData, rankingRows] = await Promise.all([
+    getCampaignRows({ adAccountId, days }),
+    getAIInsightsFeed({ adAccountId }),
+    getUserAdAccounts(),
+    getRoasByCampaign({ adAccountId, days }),
+    getCreativeRanking({ adAccountId, days }),
   ])
 
+  const effectiveAccountId = adAccountId ?? accounts[0]?.id ?? ''
   const activeCount = campaigns.filter(c => c.status === 'ACTIVE').length
   const autoPilotCount = campaigns.filter(c => c.aiAutoPilot).length
   const totalSpend = campaigns.reduce((s, c) => s + c.spend, 0)
   const totalConversions = campaigns.reduce((s, c) => s + c.conversions, 0)
-  const avgRoas = campaigns.length > 0
-    ? campaigns.reduce((s, c) => s + c.roas, 0) / campaigns.length
+  const avgRoas = campaigns.length > 0 && totalSpend > 0
+    ? campaigns.reduce((s, c) => s + c.roas * c.spend, 0) / totalSpend
     : 0
+
+  const DAYS_LABEL: Record<number, string> = {
+    7: 'Últimos 7 dias',
+    30: 'Últimos 30 dias',
+    90: 'Últimos 90 dias',
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-white">Campanhas IA</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Gerenciamento inteligente de campanhas Meta Ads</p>
+          <p className="text-sm text-gray-500 mt-0.5">
+            {DAYS_LABEL[days]} &bull; Gerenciamento inteligente de campanhas Meta Ads
+          </p>
         </div>
-        {autoPilotCount > 0 && (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-neon-cyan/10 border border-neon-cyan/20">
-            <span className="w-1.5 h-1.5 rounded-full bg-neon-cyan animate-pulse block" />
-            <span className="text-xs text-neon-cyan font-medium">{autoPilotCount} campanhas com AI Auto-Pilot</span>
-          </div>
-        )}
+        <div className="flex items-center gap-3 flex-wrap">
+          <AdAccountSwitcher accounts={accounts} currentId={effectiveAccountId} />
+          <DateRangePicker currentDays={days} />
+          {autoPilotCount > 0 && (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-neon-cyan/10 border border-neon-cyan/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-neon-cyan animate-pulse block" />
+              <span className="text-xs text-neon-cyan font-medium">{autoPilotCount} com AI Auto-Pilot</span>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -47,12 +80,24 @@ export default async function CampanhasPage() {
         ))}
       </div>
 
+      <RoasChart data={roasData} />
+
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-2">
+        <div className="xl:col-span-2 space-y-6">
           <CampanhasClient campaigns={campaigns} />
+          <CreativeRanking rows={rankingRows} />
+          {/* Audience Insights — mostra a campanha com mais gasto */}
+          {campaigns[0] && (
+            <AudienceInsights
+              campaignId={campaigns[0].id}
+              campaignName={campaigns[0].name}
+              days={days}
+            />
+          )}
         </div>
-        <div className="xl:col-span-1">
+        <div className="xl:col-span-1 space-y-6">
           <AIInsightsFeed insights={feedInsights} />
+          <CampaignChat campaigns={campaigns} />
         </div>
       </div>
     </div>

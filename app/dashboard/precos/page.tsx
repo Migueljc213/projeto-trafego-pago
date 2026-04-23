@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import PriceIntelligenceForm from '@/components/dashboard/PriceIntelligenceForm'
+import AdLibrarySearch from '@/components/dashboard/AdLibrarySearch'
 import { getCompetitorRows, getAIInsightsFeed } from '@/lib/dashboard-data'
 import AIInsightsFeed from '@/components/dashboard/AIInsightsFeed'
 
@@ -114,6 +115,8 @@ export default async function PrecosPage() {
           <AIInsightsFeed insights={feedInsights} />
         </div>
       </div>
+
+      <AdLibrarySearch />
     </div>
   )
 }

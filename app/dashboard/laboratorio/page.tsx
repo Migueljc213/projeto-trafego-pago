@@ -1,4 +1,5 @@
 import CreativeLab from '@/components/dashboard/CreativeLab'
+import AudienceSuggestions from '@/components/dashboard/AudienceSuggestions'
 import { Sparkles, Lightbulb } from 'lucide-react'
 
 export const metadata = {
@@ -60,6 +61,9 @@ export default function LaboratorioPage() {
 
       {/* Main component */}
       <CreativeLab />
+
+      {/* Audience Suggestions */}
+      <AudienceSuggestions />
 
       {/* Bottom tip */}
       <div className="flex items-start gap-3 p-4 rounded-xl bg-neon-cyan/5 border border-neon-cyan/15">
