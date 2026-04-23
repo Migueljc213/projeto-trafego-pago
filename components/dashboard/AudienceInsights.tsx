@@ -77,15 +77,20 @@ export default function AudienceInsights({ campaignId, campaignName, days = 30 }
     try {
       const res = await fetch(`/api/meta/audience-insights?campaignId=${campaignId}&days=${days}`)
       const data = await res.json()
-      if (data.error) {
-        setError(data.error)
+      if (!res.ok || data.error) {
+        const msg: string = data.error ?? ''
+        if (res.status === 401 || res.status === 403 || /token|auth|oauth|permission/i.test(msg)) {
+          setError('Token Meta inválido — conecte sua conta nas Configurações')
+        } else {
+          setError(msg || 'Erro ao buscar insights de audiência')
+        }
       } else {
         setDemographics(data.demographics ?? [])
         setPlatforms(data.platforms ?? [])
         setLoaded(true)
       }
     } catch {
-      setError('Erro de rede ao buscar insights')
+      setError('Erro de conexão ao buscar insights — tente novamente')
     } finally {
       setLoading(false)
     }
