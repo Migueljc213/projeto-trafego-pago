@@ -3,8 +3,12 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import OpenAI from 'openai'
 import { NextResponse } from 'next/server'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+
+const MAX_MESSAGE_LENGTH = 1000
+const MAX_HISTORY_ITEMS = 8
 
 /**
  * POST /api/campaign-chat
@@ -17,6 +21,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
   }
 
+  // 10 mensagens por minuto por usuário
+  const rateLimitKey = `chat:${session.user.id}`
+  if (!checkRateLimit(rateLimitKey, 10, 60_000)) {
+    return NextResponse.json({ error: 'Muitas requisições. Aguarde um momento.' }, { status: 429 })
+  }
+
   const body = await request.json() as {
     message: string
     history?: { role: 'user' | 'assistant'; content: string }[]
@@ -24,6 +34,9 @@ export async function POST(request: Request) {
 
   if (!body.message?.trim()) {
     return NextResponse.json({ error: 'Mensagem vazia' }, { status: 400 })
+  }
+  if (body.message.length > MAX_MESSAGE_LENGTH) {
+    return NextResponse.json({ error: `Mensagem muito longa (máx ${MAX_MESSAGE_LENGTH} caracteres)` }, { status: 400 })
   }
 
   // Busca dados das campanhas e insights recentes do usuário
@@ -105,7 +118,7 @@ ${campaignSummary || 'Nenhuma campanha encontrada.'}`
 
   const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
     { role: 'system', content: systemPrompt },
-    ...(body.history ?? []).slice(-8).map(m => ({
+    ...(body.history ?? []).slice(-MAX_HISTORY_ITEMS).map(m => ({
       role: m.role as 'user' | 'assistant',
       content: m.content,
     })),

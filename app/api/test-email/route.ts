@@ -1,7 +1,15 @@
 import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { sendAutoPilotAlert } from '@/lib/email'
 
 export async function GET() {
+  const session = await getServerSession(authOptions)
+  const adminEmail = process.env.ADMIN_EMAIL
+  if (!session?.user?.email || !adminEmail || session.user.email !== adminEmail) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
   try {
     await sendAutoPilotAlert({
       to: 'delivered@resend.dev',

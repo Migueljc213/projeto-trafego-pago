@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { decrypt } from '@/lib/encryption'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 /**
  * GET /api/meta/interests?q=empreendedorismo
@@ -16,8 +17,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
   }
 
+  // 30 buscas por minuto por usuário (typeahead pode ser frequente)
+  if (!checkRateLimit(`interests:${session.user.id}`, 30, 60_000)) {
+    return NextResponse.json({ error: 'Muitas requisições.' }, { status: 429 })
+  }
+
   const q = req.nextUrl.searchParams.get('q')?.trim()
-  if (!q || q.length < 2) {
+  if (!q || q.length < 2 || q.length > 100) {
     return NextResponse.json({ data: [] })
   }
 
