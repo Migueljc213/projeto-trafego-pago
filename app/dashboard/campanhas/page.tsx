@@ -6,7 +6,10 @@ import RoasChart from '@/components/dashboard/RoasChart'
 import CreativeRanking from '@/components/dashboard/CreativeRanking'
 import AudienceInsights from '@/components/dashboard/AudienceInsights'
 import CampaignChat from '@/components/dashboard/CampaignChat'
+import RoasForecast from '@/components/dashboard/RoasForecast'
+import GoogleAdsCampaignList from '@/components/dashboard/GoogleAdsCampaignList'
 import { getCampaignRows, getAIInsightsFeed, getUserAdAccounts, getRoasByCampaign, getCreativeRanking } from '@/lib/dashboard-data'
+import { getGoogleAdsCampaigns } from '@/actions/sync-google-ads'
 
 export const metadata = { title: 'Campanhas IA | FunnelGuard AI' }
 
@@ -22,12 +25,13 @@ export default async function CampanhasPage({
     ? Number(searchParams.days)
     : 30
 
-  const [campaigns, feedInsights, accounts, roasData, rankingRows] = await Promise.all([
+  const [campaigns, feedInsights, accounts, roasData, rankingRows, googleAdsData] = await Promise.all([
     getCampaignRows({ adAccountId, days }),
     getAIInsightsFeed({ adAccountId }),
     getUserAdAccounts(),
     getRoasByCampaign({ adAccountId, days }),
     getCreativeRanking({ adAccountId, days }),
+    getGoogleAdsCampaigns(),
   ])
 
   const effectiveAccountId = adAccountId ?? accounts[0]?.id ?? ''
@@ -85,6 +89,10 @@ export default async function CampanhasPage({
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div className="xl:col-span-2 space-y-6">
           <CampanhasClient campaigns={campaigns} />
+          {/* Google Ads — só exibe se o usuário conectou a conta */}
+          {googleAdsData.campaigns.length > 0 && (
+            <GoogleAdsCampaignList campaigns={googleAdsData.campaigns} />
+          )}
           <CreativeRanking rows={rankingRows} />
           {/* Audience Insights — mostra a campanha com mais gasto */}
           {campaigns[0] && (
@@ -92,6 +100,13 @@ export default async function CampanhasPage({
               campaignId={campaigns[0].id}
               campaignName={campaigns[0].name}
               days={days}
+            />
+          )}
+          {/* Previsão de ROAS — campanha com mais spend */}
+          {campaigns[0] && (
+            <RoasForecast
+              campaignId={campaigns[0].id}
+              campaignName={campaigns[0].name}
             />
           )}
         </div>

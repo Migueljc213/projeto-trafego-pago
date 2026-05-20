@@ -24,10 +24,11 @@ model User {
   onboardingStep         Int     @default(0)
   targetRoas             Float?
 
-  accounts         Account[]
-  sessions         Session[]
-  businessManagers BusinessManager[]
-  subscription     Subscription?
+  accounts              Account[]
+  sessions              Session[]
+  businessManagers      BusinessManager[]
+  subscription          Subscription?
+  googleAdsConnection   GoogleAdsConnection?
 }
 
 model Subscription {
@@ -275,6 +276,64 @@ model FunnelAudit {
   adAccount AdAccount @relation(fields: [adAccountId], references: [id], onDelete: Cascade)
 
   @@index([adAccountId])
+}
+
+// ──────────────────────────────────────────
+// Google Ads
+// ──────────────────────────────────────────
+
+model GoogleAdsConnection {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  encryptedRefreshToken String   @db.Text
+  connectedAt           DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  googleAdsAccounts GoogleAdsAccount[]
+}
+
+model GoogleAdsAccount {
+  id           String   @id @default(cuid())
+  connectionId String
+  customerId   String
+  name         String
+  currencyCode String   @default("BRL")
+  timeZone     String   @default("America/Sao_Paulo")
+  isManager    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  connection GoogleAdsConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  campaigns  GoogleAdsCampaign[]
+
+  @@unique([connectionId, customerId])
+  @@index([connectionId])
+}
+
+model GoogleAdsCampaign {
+  id               String   @id @default(cuid())
+  accountId        String
+  googleCampaignId String
+  name             String
+  status           String
+  channelType      String
+  dailyBudget      Float    @default(0)
+  spend            Float    @default(0)
+  impressions      Int      @default(0)
+  clicks           Int      @default(0)
+  conversions      Float    @default(0)
+  conversionValue  Float    @default(0)
+  roas             Float    @default(0)
+  ctr              Float    @default(0)
+  metricsUpdatedAt DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  account GoogleAdsAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@unique([accountId, googleCampaignId])
+  @@index([accountId])
 }
 
 // ──────────────────────────────────────────
