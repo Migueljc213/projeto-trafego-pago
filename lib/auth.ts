@@ -36,13 +36,15 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Senha', type: 'password' },
       },
       async authorize(credentials) {
+        const demoEmail = process.env.DEMO_EMAIL
+        const demoPassword = process.env.DEMO_PASSWORD
         if (
-          credentials?.email === 'demo@funnelguard.ai' &&
-          credentials?.password === 'demo123'
+          demoEmail &&
+          demoPassword &&
+          credentials?.email === demoEmail &&
+          credentials?.password === demoPassword
         ) {
-          const user = await prisma.user.findUnique({
-            where: { email: 'demo@funnelguard.ai' },
-          })
+          const user = await prisma.user.findUnique({ where: { email: demoEmail } })
           if (user) return { id: user.id, name: user.name, email: user.email, image: user.image }
         }
         return null

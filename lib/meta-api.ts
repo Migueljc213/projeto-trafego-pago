@@ -611,8 +611,11 @@ export async function createAdSet(
     campaign_id: params.campaignId,
     optimization_goal: params.optimizationGoal,
     billing_event: derivedBillingEvent,
-    ...(params.dailyBudgetCents !== undefined && { daily_budget: params.dailyBudgetCents }),
-    bid_strategy: params.bidStrategy ?? 'LOWEST_COST_WITHOUT_CAP',
+    // ABO: budget + bid_strategy no AdSet; CBO: ambos ficam na campanha
+    ...(params.dailyBudgetCents !== undefined && {
+      daily_budget: params.dailyBudgetCents,
+      bid_strategy: params.bidStrategy ?? 'LOWEST_COST_WITHOUT_CAP',
+    }),
     // Obrigatório na API v17+ para objetivos de tráfego/vendas/leads
     destination_type: params.destinationType ?? 'WEBSITE',
     targeting,

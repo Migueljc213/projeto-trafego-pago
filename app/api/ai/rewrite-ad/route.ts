@@ -3,6 +3,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import OpenAI from 'openai'
 import { NextResponse } from 'next/server'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
@@ -24,6 +25,11 @@ export async function POST(request: Request) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+  }
+
+  // 5 rewrites por minuto por usuário
+  if (!checkRateLimit(`rewrite-ad:${session.user.id}`, 5, 60_000)) {
+    return NextResponse.json({ error: 'Muitas requisições. Aguarde um momento.' }, { status: 429 })
   }
 
   const body = await request.json() as { campaignId: string }

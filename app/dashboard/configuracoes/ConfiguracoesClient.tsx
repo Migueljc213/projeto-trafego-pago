@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useEffect } from 'react'
 import { signIn } from 'next-auth/react'
-import { RefreshCw, Link2, AlertTriangle, CheckCircle, XCircle, Clock, Loader2, ChevronRight, Zap, Trash2 } from 'lucide-react'
+import { RefreshCw, Link2, AlertTriangle, CheckCircle, XCircle, Clock, Loader2, ChevronRight, Zap, Trash2, BarChart2 } from 'lucide-react'
 import { listAdAccountsAction } from '@/actions/ad-accounts'
 import { syncMetaCampaignsAction } from '@/actions/campaigns'
 import { savePixelAction, removePixelAction } from '@/actions/pixel'
@@ -30,6 +30,7 @@ interface MetaPixelOption {
 
 interface Props {
   bm: BmData | null
+  googleAdsConnected: boolean
 }
 
 function TokenStatusBadge({ expiresAt }: { expiresAt: string | null }) {
@@ -66,7 +67,7 @@ function TokenStatusBadge({ expiresAt }: { expiresAt: string | null }) {
   )
 }
 
-export default function ConfiguracoesClient({ bm }: Props) {
+export default function ConfiguracoesClient({ bm, googleAdsConnected }: Props) {
   const router = useRouter()
   const [syncingAccounts, startSyncAccounts] = useTransition()
   const [syncingCampaigns, startSyncCampaigns] = useTransition()
@@ -236,6 +237,61 @@ export default function ConfiguracoesClient({ bm }: Props) {
               <Link2 className="w-4 h-4" />
               Conectar conta Meta
             </button>
+          </div>
+        )}
+      </div>
+
+      {/* Google Ads Connection */}
+      <div className="glass-card rounded-xl p-5 border border-gray-800">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-8 h-8 rounded-lg bg-green-500/15 border border-green-500/25 flex items-center justify-center">
+            <BarChart2 className="w-4 h-4 text-green-400" />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-white">Google Ads</h3>
+            <p className="text-xs text-gray-500">Conecte para ver campanhas Search, Display, Shopping e YouTube</p>
+          </div>
+        </div>
+
+        {googleAdsConnected ? (
+          <div className="space-y-3">
+            <div className="p-3 rounded-lg bg-green-500/8 border border-green-500/20 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-green-400" />
+                <p className="text-sm font-medium text-green-400">Conta conectada</p>
+              </div>
+              <span className="text-xs text-gray-500">Token salvo</span>
+            </div>
+            <a
+              href="/api/auth/google-ads"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-700 text-xs text-gray-400 hover:text-white hover:border-gray-500 transition-all"
+            >
+              <Link2 className="w-3.5 h-3.5" />
+              Reconectar Google Ads
+            </a>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="p-3 rounded-lg bg-blue-500/8 border border-blue-500/20">
+              <p className="text-xs text-gray-400 leading-relaxed">
+                Conecte sua conta Google Ads para visualizar campanhas Search, Display, Shopping e YouTube em conjunto com suas campanhas Meta Ads.
+                Requer Developer Token aprovado na Google Ads API.
+              </p>
+            </div>
+            <a
+              href="/api/auth/google-ads"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-semibold transition-all"
+            >
+              <BarChart2 className="w-4 h-4" />
+              Conectar Google Ads
+            </a>
+            <a
+              href="/docs/integracao-google-ads.md"
+              className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-neon-cyan transition-colors"
+            >
+              <ChevronRight className="w-3 h-3" />
+              Ver guia de configuração →
+            </a>
           </div>
         )}
       </div>

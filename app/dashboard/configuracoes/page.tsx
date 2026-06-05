@@ -14,11 +14,16 @@ export default async function ConfiguracoesPage() {
     adAccounts: Array<{ id: string; metaAccountId: string; name: string; currency: string; status: number; pixelId: string | null; pixelName: string | null }>
   } | null = null
 
+  let googleAdsConnected = false
+
   if (session?.user?.id) {
-    const bm = await prisma.businessManager.findFirst({
-      where: { userId: session.user.id },
-      include: { adAccounts: true },
-    })
+    const [bm, googleAds] = await Promise.all([
+      prisma.businessManager.findFirst({
+        where: { userId: session.user.id },
+        include: { adAccounts: true },
+      }),
+      prisma.googleAdsConnection.findUnique({ where: { userId: session.user.id } }),
+    ])
 
     if (bm) {
       bmData = {
@@ -35,6 +40,8 @@ export default async function ConfiguracoesPage() {
         })),
       }
     }
+
+    googleAdsConnected = !!googleAds
   }
 
   return (
@@ -71,7 +78,7 @@ export default async function ConfiguracoesPage() {
         </div>
       </div>
 
-      <ConfiguracoesClient bm={bmData} />
+      <ConfiguracoesClient bm={bmData} googleAdsConnected={googleAdsConnected} />
     </div>
   )
 }

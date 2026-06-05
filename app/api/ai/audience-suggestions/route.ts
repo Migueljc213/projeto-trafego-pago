@@ -3,6 +3,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import OpenAI from 'openai'
 import { NextResponse } from 'next/server'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
@@ -21,7 +22,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
   }
 
+  // 5 gerações por minuto por usuário
+  if (!checkRateLimit(`audience-suggestions:${session.user.id}`, 5, 60_000)) {
+    return NextResponse.json({ error: 'Muitas requisições. Aguarde um momento.' }, { status: 429 })
+  }
+
   const body = await request.json() as { productDescription?: string }
+
+  if (body.productDescription && body.productDescription.length > 500) {
+    return NextResponse.json({ error: 'Descrição muito longa (máx 500 caracteres)' }, { status: 400 })
+  }
 
   const adAccount = await prisma.adAccount.findFirst({
     where: { businessManager: { userId: session.user.id } },
