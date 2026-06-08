@@ -337,6 +337,26 @@ model GoogleAdsCampaign {
 }
 
 // ──────────────────────────────────────────
+// Waitlist
+// ──────────────────────────────────────────
+
+model WaitlistEntry {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  website     String
+  utmSource   String?
+  utmMedium   String?
+  utmCampaign String?
+  utmContent  String?
+  utmTerm     String?
+  referrer    String?
+  createdAt   DateTime @default(now())
+
+  @@index([utmSource])
+  @@index([createdAt])
+}
+
+// ──────────────────────────────────────────
 // Enums
 // ──────────────────────────────────────────
 
@@ -373,4 +393,5 @@ enum DecisionType {
   REDUCE_BUDGET
   MONITOR
   NO_ACTION
+  DUPLICATE
 }

@@ -90,6 +90,7 @@ export interface CreateAdCreativeParams {
   callToAction?: CallToActionType
   imageHash?: string              // Hash da imagem previamente carregada via uploadAdImage
   picture?: string                // URL direta de imagem (fallback quando imageHash não disponível)
+  videoId?: string                // ID do vídeo previamente carregado via uploadAdVideo
 }
 
 export interface CreateAdParams {
@@ -644,49 +645,54 @@ export async function createAdSet(
 
 /**
  * Cria um Criativo de Anúncio com copy e link.
- * Requer imageHash (imagem carregada) ou picture (URL direta acessível pela Meta).
- * Sem imagem, a Meta tenta raspar o OG image da URL de destino — o que falha se
- * a imagem OG não estiver publicamente acessível, gerando erro subcode 3858258.
+ * Suporta imagem (imageHash/picture) ou vídeo (videoId).
  */
 export async function createAdCreative(
   adAccountId: string,
   params: CreateAdCreativeParams,
   accessToken: string
 ): Promise<string> {
-  if (!params.imageHash && !params.picture) {
+  if (!params.imageHash && !params.picture && !params.videoId) {
     throw new MetaApiError(
       100,
-      'Imagem obrigatória: forneça uma imagem para o criativo. Sem imagem, a Meta não consegue criar o anúncio.',
+      'Mídia obrigatória: forneça uma imagem ou vídeo para o criativo.',
     )
   }
 
-  const linkData: Record<string, unknown> = {
-    link: params.link,
-    name: params.headline,
-    message: params.message,
-    call_to_action: {
-      type: params.callToAction ?? 'LEARN_MORE',
-      value: { link: params.link },
-    },
+  const callToAction = {
+    type: params.callToAction ?? 'LEARN_MORE',
+    value: { link: params.link },
   }
 
-  if (params.description) {
-    linkData.description = params.description
-  }
+  let storySpec: Record<string, unknown>
 
-  if (params.imageHash) {
-    linkData.image_hash = params.imageHash
-  } else if (params.picture) {
-    // URL direta da imagem — Meta fará download desta URL específica
-    linkData.picture = params.picture
+  if (params.videoId) {
+    const videoData: Record<string, unknown> = {
+      video_id: params.videoId,
+      title: params.headline,
+      message: params.message,
+      call_to_action: callToAction,
+    }
+    if (params.description) videoData.description = params.description
+
+    storySpec = { page_id: params.pageId, video_data: videoData }
+  } else {
+    const linkData: Record<string, unknown> = {
+      link: params.link,
+      name: params.headline,
+      message: params.message,
+      call_to_action: callToAction,
+    }
+    if (params.description) linkData.description = params.description
+    if (params.imageHash) linkData.image_hash = params.imageHash
+    else if (params.picture) linkData.picture = params.picture
+
+    storySpec = { page_id: params.pageId, link_data: linkData }
   }
 
   const body: Record<string, unknown> = {
     name: params.name,
-    object_story_spec: {
-      page_id: params.pageId,
-      link_data: linkData,
-    },
+    object_story_spec: storySpec,
   }
 
   const data = await metaFetch<{ id: string }>(
@@ -694,6 +700,41 @@ export async function createAdCreative(
     accessToken,
     { method: 'POST', body: JSON.stringify(body) }
   )
+  return data.id
+}
+
+/**
+ * Faz upload de um vídeo para a biblioteca de mídia via URL pública.
+ * A Meta baixa o vídeo diretamente da URL — o processamento é assíncrono
+ * mas o ID é retornado imediatamente e já pode ser usado na criação do criativo.
+ */
+export async function uploadAdVideo(
+  adAccountId: string,
+  videoUrl: string,
+  accessToken: string
+): Promise<string> {
+  const body = new URLSearchParams()
+  body.set('file_url', videoUrl)
+  body.set('access_token', accessToken)
+
+  const apiUrl = `${META_GRAPH_URL}/${adAccountId}/advideos`
+  const response = await fetch(apiUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body.toString(),
+    signal: AbortSignal.timeout(60_000),
+  })
+
+  const data = await response.json() as {
+    id?: string
+    error?: { code: number; message: string; error_subcode?: number; fbtrace_id?: string }
+  }
+
+  if (data.error) {
+    throw new MetaApiError(data.error.code, data.error.message, data.error.error_subcode, data.error.fbtrace_id)
+  }
+
+  if (!data.id) throw new MetaApiError(0, 'Meta não retornou ID do vídeo após upload')
   return data.id
 }
 
@@ -892,6 +933,86 @@ export async function updateCampaignBudget(
     }
   )
   return result.success === true
+}
+
+// ──────────────────────────────────────────
+// Horizontal Scaling — Ad Set duplication
+// ──────────────────────────────────────────
+
+export interface MetaAdSet {
+  id: string
+  name: string
+  status: string
+  daily_budget?: string
+}
+
+/**
+ * Lista os Ad Sets de uma campanha.
+ * Retorna apenas os ativos/pausados (exclui deletados/arquivados).
+ */
+export async function getAdSets(
+  campaignId: string,
+  accessToken: string
+): Promise<MetaAdSet[]> {
+  const data = await metaFetch<{ data: MetaAdSet[] }>(
+    `/${campaignId}/adsets?fields=id,name,status,daily_budget&limit=50`,
+    accessToken
+  )
+  return (data.data ?? []).filter(
+    (s) => s.status !== 'DELETED' && s.status !== 'ARCHIVED'
+  )
+}
+
+export interface DuplicateAdSetResult {
+  copiedAdSetId: string
+  adSetName: string
+}
+
+/**
+ * Duplica um Ad Set via endpoint /copies da Meta API (Escala Horizontal).
+ * O clone inicia PAUSED para ser ativado logo após a duplicação.
+ * deep_copy=true copia também os anúncios internos do conjunto.
+ */
+export async function duplicateAdSet(
+  adSetId: string,
+  campaignId: string,
+  accessToken: string
+): Promise<DuplicateAdSetResult> {
+  const body = {
+    campaign_id: campaignId,
+    deep_copy: true,
+    status_option: 'PAUSED',
+    rename_options: JSON.stringify({
+      rename_prefix: '[Escala] ',
+      rename_strategy: 'ONLY_NAME',
+    }),
+  }
+
+  const data = await metaFetch<{ copied_adset_id: string }>(
+    `/${adSetId}/copies`,
+    accessToken,
+    { method: 'POST', body: JSON.stringify(body) }
+  )
+
+  return {
+    copiedAdSetId: data.copied_adset_id,
+    adSetName: `[Escala] ${adSetId}`,
+  }
+}
+
+/**
+ * Ativa um Ad Set (passa de PAUSED para ACTIVE).
+ */
+export async function activateAdSet(
+  adSetId: string,
+  accessToken: string
+): Promise<boolean> {
+  const data = await metaFetch<{ success: boolean }>(
+    `/${adSetId}`,
+    accessToken,
+    { method: 'POST', body: JSON.stringify({ status: 'ACTIVE' }) }
+  )
+  return data.success === true
 }
 
 // ──────────────────────────────────────────

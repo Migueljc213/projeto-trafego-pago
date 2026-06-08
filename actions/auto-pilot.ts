@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { decrypt } from '@/lib/encryption'
-import { updateCampaignStatus, updateCampaignBudget } from '@/lib/meta-api'
+import { updateCampaignStatus, updateCampaignBudget, getAdSets, duplicateAdSet, activateAdSet } from '@/lib/meta-api'
 import { runAutoPilot, runCorrelatedAutoPilot, type CampaignMetrics } from '@/lib/ai/auto-pilot'
 import { analyzeAdCreative, type AdCreative } from '@/lib/ai/llm-analysis'
 import { logDecision, markDecisionExecuted, updateCampaignAiStatus } from '@/lib/ai/decision-logger'
@@ -68,8 +68,19 @@ export async function runAutoPilotAction(campaignId: string): Promise<ActionResu
     dailyBudget: Math.round((campaign.dailyBudget ?? 0) * 100), // Converte para centavos
   }
 
+  // Verifica se a campanha foi duplicada nos últimos 7 dias (evita duplicação excessiva)
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+  const recentDuplicate = await prisma.aiDecisionLog.findFirst({
+    where: {
+      campaignId: campaign.id,
+      type: 'DUPLICATE',
+      executed: true,
+      executedAt: { gte: sevenDaysAgo },
+    },
+  })
+
   // Executa o motor de decisão
-  const decision = runAutoPilot(metrics, campaign.aiMaxFrequency)
+  const decision = runAutoPilot(metrics, campaign.aiMaxFrequency, !!recentDuplicate)
 
   // Salva a decisão no log
   const logId = await logDecision(campaign.id, decision)
@@ -116,6 +127,20 @@ export async function runAutoPilotAction(campaignId: string): Promise<ActionResu
         data: { dailyBudget: decision.suggestedBudget! / 100 },
       })
       executed = true
+    }
+
+    if (decision.type === 'DUPLICATE') {
+      // Escala Horizontal: duplica os ad sets ativos da campanha
+      const adSets = await getAdSets(campaign.metaCampaignId, accessToken)
+      const activeAdSets = adSets.filter((s) => s.status === 'ACTIVE' || s.status === 'PAUSED')
+
+      for (const adSet of activeAdSets) {
+        const result = await duplicateAdSet(adSet.id, campaign.metaCampaignId, accessToken)
+        // Ativa imediatamente o clone para entrar no leilão
+        await activateAdSet(result.copiedAdSetId, accessToken)
+      }
+
+      executed = activeAdSets.length > 0
     }
 
     if (executed) {
@@ -365,8 +390,19 @@ export async function runCorrelatedAutoPilotAction(campaignId: string): Promise<
     }
   }
 
+  // ── Verifica duplicação recente ───────────────────────────────────────────
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+  const recentDuplicateCorr = await prisma.aiDecisionLog.findFirst({
+    where: {
+      campaignId: campaign.id,
+      type: 'DUPLICATE',
+      executed: true,
+      executedAt: { gte: sevenDaysAgo },
+    },
+  })
+
   // ── Executa decisão correlacionada ────────────────────────────────────────
-  const decision = runCorrelatedAutoPilot(metrics, correlation, campaign.aiMaxFrequency)
+  const decision = runCorrelatedAutoPilot(metrics, correlation, campaign.aiMaxFrequency, !!recentDuplicateCorr)
   const logId = await logDecision(campaign.id, decision)
 
   // Persiste insight estratégico no banco
@@ -437,6 +473,16 @@ export async function runCorrelatedAutoPilotAction(campaignId: string): Promise<
         data: { dailyBudget: decision.suggestedBudget! / 100 },
       })
       executed = true
+    }
+
+    if (decision.type === 'DUPLICATE') {
+      const adSets = await getAdSets(campaign.metaCampaignId, accessToken)
+      const activeAdSets = adSets.filter((s) => s.status === 'ACTIVE' || s.status === 'PAUSED')
+      for (const adSet of activeAdSets) {
+        const result = await duplicateAdSet(adSet.id, campaign.metaCampaignId, accessToken)
+        await activateAdSet(result.copiedAdSetId, accessToken)
+      }
+      executed = activeAdSets.length > 0
     }
 
     if (executed) {

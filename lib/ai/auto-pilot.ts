@@ -29,7 +29,7 @@ export interface CampaignMetrics {
   dailyBudget: number     // Orçamento diário atual (em centavos ou unidade da moeda)
 }
 
-export type DecisionType = 'PAUSE' | 'SCALE' | 'REDUCE_BUDGET' | 'MONITOR' | 'NO_ACTION'
+export type DecisionType = 'PAUSE' | 'SCALE' | 'REDUCE_BUDGET' | 'MONITOR' | 'NO_ACTION' | 'DUPLICATE'
 
 export interface AutoPilotDecision {
   type: DecisionType
@@ -153,25 +153,62 @@ export function evaluateScaling(metrics: CampaignMetrics): AutoPilotDecision | n
   return null
 }
 
+// ─── Escala Horizontal (Duplicação) ──────────────────────────────────────────
+
+/**
+ * Avalia se a campanha está performando tão bem que vale duplicar os ad sets
+ * (Escala Horizontal) em vez de apenas aumentar o orçamento do original.
+ *
+ * Limiar mais exigente que SCALE: ROAS ≥ 2× alvo E CPA ≤ 70% do limite.
+ * Só aciona se houver dados suficientes (spend ≥ 2× threshold).
+ * A última duplicação é verificada externamente para evitar duplicatas repetidas.
+ */
+export function evaluateDuplication(metrics: CampaignMetrics): AutoPilotDecision | null {
+  const { spend, roas, targetRoas, cpa, cpaLimit, spendThreshold } = metrics
+
+  if (spend < spendThreshold * 2) return null
+
+  if (roas >= targetRoas * 2.0 && cpa <= cpaLimit * 0.7) {
+    const roasPct = ((roas / targetRoas - 1) * 100).toFixed(0)
+    const cpaPct = (((cpaLimit - cpa) / cpaLimit) * 100).toFixed(0)
+    return {
+      type: 'DUPLICATE',
+      reason: `Escala Horizontal ativada: ROAS ${roas.toFixed(2)}x está ${roasPct}% acima do alvo e CPA R$${cpa.toFixed(2)} é ${cpaPct}% abaixo do limite. Os conjuntos de anúncios vencedores serão duplicados para ampliar o alcance sem interferir no aprendizado do original.`,
+      confidence: 88,
+      urgent: false,
+      metrics,
+    }
+  }
+
+  return null
+}
+
 // ─── Motor Principal ──────────────────────────────────────────────────────────
 
 /**
  * Executa o ciclo completo de avaliação do Auto-Pilot para uma campanha.
- * Stop-loss tem prioridade sobre scaling.
+ * Stop-loss tem prioridade sobre scaling; duplicação acima de scaling.
  */
 export function runAutoPilot(
   metrics: CampaignMetrics,
-  aiMaxFrequency: number = 4.0
+  aiMaxFrequency: number = 4.0,
+  recentlyDuplicated = false
 ): AutoPilotDecision {
   // 1. Verifica stop-loss primeiro (evita perda)
   const stopLoss = evaluateStopLoss(metrics, aiMaxFrequency)
   if (stopLoss) return stopLoss
 
-  // 2. Avalia oportunidade de scaling
+  // 2. Escala Horizontal — apenas se não foi duplicado nos últimos 7 dias
+  if (!recentlyDuplicated) {
+    const duplication = evaluateDuplication(metrics)
+    if (duplication) return duplication
+  }
+
+  // 3. Avalia scaling vertical (aumento de orçamento)
   const scaling = evaluateScaling(metrics)
   if (scaling) return scaling
 
-  // 3. Nenhuma ação necessária
+  // 4. Nenhuma ação necessária
   return {
     type: 'NO_ACTION',
     reason: `Campanha com performance estável. ROAS: ${metrics.roas.toFixed(2)}x | CPA: R$${metrics.cpa.toFixed(2)} | Frequência: ${metrics.frequency.toFixed(1)}`,
@@ -195,7 +232,8 @@ export function runAutoPilot(
 export function runCorrelatedAutoPilot(
   metrics: CampaignMetrics,
   correlation: CorrelationResult,
-  aiMaxFrequency: number = 4.0
+  aiMaxFrequency: number = 4.0,
+  recentlyDuplicated = false
 ): AutoPilotDecision {
   // Dados insuficientes — aguardar
   if (correlation.trigger === 'INSUFFICIENT_DATA') {
@@ -254,8 +292,13 @@ export function runCorrelatedAutoPilot(
     }
   }
 
-  // Funil saudável — avalia scaling normalmente (não existe risco de site/preço)
+  // Funil saudável — avalia duplicação e depois scaling vertical
   if (correlation.trigger === 'HEALTHY' && correlation.siteScore >= 70 && correlation.priceScore >= 70) {
+    if (!recentlyDuplicated) {
+      const duplication = evaluateDuplication(metrics)
+      if (duplication) return duplication
+    }
+
     const scaling = evaluateScaling(metrics)
     if (scaling) return scaling
   }

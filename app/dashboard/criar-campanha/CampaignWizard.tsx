@@ -4,7 +4,7 @@ import { useState, useTransition, useRef, useEffect, useCallback } from 'react'
 import {
   Megaphone, Users, ImageIcon, CheckCircle2,
   ChevronRight, ChevronLeft, Loader2, Zap,
-  ExternalLink, AlertTriangle, X, Search,
+  ExternalLink, AlertTriangle, X, Search, Video,
 } from 'lucide-react'
 import { createCampaignAction } from '@/actions/create-campaign'
 import type { CreateCampaignInput } from '@/actions/create-campaign'
@@ -267,7 +267,7 @@ interface Props {
   pages: Array<{ id: string; name: string }>
 }
 
-type FormData = Omit<CreateCampaignInput, 'dailyBudgetBRL'> & { dailyBudgetBRL: string }
+type FormData = Omit<CreateCampaignInput, 'dailyBudgetBRL'> & { dailyBudgetBRL: string; mediaType: 'image' | 'video' }
 
 export default function CampaignWizard({ pages }: Props) {
   const [step, setStep] = useState(0)
@@ -293,6 +293,8 @@ export default function CampaignWizard({ pages }: Props) {
     description: '',
     callToAction: 'LEARN_MORE',
     imageUrl: '',
+    videoUrl: '',
+    mediaType: 'image',
   })
 
   function update<K extends keyof FormData>(key: K, value: FormData[K]) {
@@ -304,8 +306,9 @@ export default function CampaignWizard({ pages }: Props) {
   function handleSubmit() {
     setSubmitError(null)
     startTransition(async () => {
+      const { mediaType, ...formData } = form
       const res = await createCampaignAction({
-        ...form,
+        ...formData,
         dailyBudgetBRL: parseFloat(form.dailyBudgetBRL) || 50,
       })
       if (res.success && res.data) {
@@ -572,31 +575,79 @@ export default function CampaignWizard({ pages }: Props) {
               />
             </Field>
 
-            <div className="grid grid-cols-2 gap-4">
-              <Field label="Chamada para Ação (CTA)">
-                <Select
-                  value={form.callToAction}
-                  onChange={e => update('callToAction', e.target.value as CallToActionType)}
-                >
-                  {CTA_OPTIONS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                </Select>
-              </Field>
-              <Field
-                label="URL da Imagem"
-                hint="Opcional — link direto para imagem (.jpg, .png, .webp)"
-                error={
-                  form.imageUrl && !/\.(jpe?g|png|gif|webp|bmp)(\?.*)?$/i.test(form.imageUrl)
-                    ? 'Use o link direto de uma imagem (.jpg, .png, .webp), não uma URL de página web'
-                    : undefined
-                }
+            <Field label="Chamada para Ação (CTA)">
+              <Select
+                value={form.callToAction}
+                onChange={e => update('callToAction', e.target.value as CallToActionType)}
               >
-                <Input
-                  type="url"
-                  value={form.imageUrl}
-                  onChange={e => update('imageUrl', e.target.value)}
-                  placeholder="https://cdn.exemplo.com/imagem.jpg"
-                />
-              </Field>
+                {CTA_OPTIONS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+              </Select>
+            </Field>
+
+            <div className="space-y-3">
+              <label className="text-sm font-medium text-gray-300">Mídia do Anúncio</label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => { update('mediaType', 'image'); update('videoUrl', '') }}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
+                    form.mediaType === 'image'
+                      ? 'border-neon-cyan/50 bg-neon-cyan/10 text-neon-cyan'
+                      : 'border-gray-700 text-gray-400 hover:border-gray-600'
+                  }`}
+                >
+                  <ImageIcon className="w-4 h-4" />
+                  Imagem
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { update('mediaType', 'video'); update('imageUrl', '') }}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
+                    form.mediaType === 'video'
+                      ? 'border-neon-cyan/50 bg-neon-cyan/10 text-neon-cyan'
+                      : 'border-gray-700 text-gray-400 hover:border-gray-600'
+                  }`}
+                >
+                  <Video className="w-4 h-4" />
+                  Vídeo
+                </button>
+              </div>
+
+              {form.mediaType === 'image' ? (
+                <Field
+                  label=""
+                  hint="Link direto para imagem (.jpg, .png, .webp)"
+                  error={
+                    form.imageUrl && !/\.(jpe?g|png|gif|webp|bmp)(\?.*)?$/i.test(form.imageUrl)
+                      ? 'Use o link direto de uma imagem (.jpg, .png, .webp), não uma URL de página web'
+                      : undefined
+                  }
+                >
+                  <Input
+                    type="url"
+                    value={form.imageUrl}
+                    onChange={e => update('imageUrl', e.target.value)}
+                    placeholder="https://cdn.exemplo.com/imagem.jpg"
+                  />
+                </Field>
+              ) : (
+                <Field
+                  label=""
+                  hint="Link direto para vídeo (.mp4, .mov) — a Meta irá baixar e processar o arquivo"
+                  error={
+                    form.videoUrl && !/\.(mp4|mov|avi|mkv|wmv|flv|webm)(\?.*)?$/i.test(form.videoUrl)
+                      ? 'Use o link direto de um arquivo de vídeo (.mp4, .mov), não uma URL de página web'
+                      : undefined
+                  }
+                >
+                  <Input
+                    type="url"
+                    value={form.videoUrl ?? ''}
+                    onChange={e => update('videoUrl', e.target.value)}
+                    placeholder="https://cdn.exemplo.com/video.mp4"
+                  />
+                </Field>
+              )}
             </div>
           </div>
         )}
@@ -634,6 +685,7 @@ export default function CampaignWizard({ pages }: Props) {
                   ['Headline', form.headline],
                   ['URL', form.destinationUrl],
                   ['CTA', CTA_OPTIONS.find(c => c.value === form.callToAction)?.label ?? form.callToAction ?? '—'],
+                  ['Mídia', form.mediaType === 'video' ? `Vídeo: ${form.videoUrl || '—'}` : `Imagem: ${form.imageUrl || '—'}`],
                 ],
               },
             ].map(section => (
@@ -678,7 +730,14 @@ export default function CampaignWizard({ pages }: Props) {
             onClick={() => setStep(s => s + 1)}
             disabled={
               (step === 0 && (!form.campaignName.trim() || !form.dailyBudgetBRL)) ||
-              (step === 2 && (!form.headline.trim() || !form.primaryText.trim() || !form.destinationUrl || !form.destinationUrl.startsWith('https://') || !form.pageId.trim()))
+              (step === 2 && (
+                !form.headline.trim() ||
+                !form.primaryText.trim() ||
+                !form.destinationUrl ||
+                !form.destinationUrl.startsWith('https://') ||
+                !form.pageId.trim() ||
+                (form.mediaType === 'image' ? !form.imageUrl?.trim() : !form.videoUrl?.trim())
+              ))
             }
             className="inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-neon-cyan/10 border border-neon-cyan/30 text-neon-cyan text-sm font-semibold hover:bg-neon-cyan/20 transition-all disabled:opacity-40"
           >

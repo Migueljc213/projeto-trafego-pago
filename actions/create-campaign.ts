@@ -11,6 +11,7 @@ import {
   createAdCreative,
   createAd,
   uploadAdImage,
+  uploadAdVideo,
   assertAdAccountReady,
   updateCampaignBudget,
   MetaRateLimitError,
@@ -48,7 +49,8 @@ export interface CreateCampaignInput {
   destinationUrl: string
   description?: string
   callToAction?: CallToActionType
-  imageUrl?: string               // URL de imagem para upload; opcional
+  imageUrl?: string               // URL de imagem para upload
+  videoUrl?: string               // URL de vídeo para upload (alternativa à imagem)
 }
 
 export interface CreateCampaignResult {
@@ -95,12 +97,14 @@ export async function createCampaignAction(
   if (!input.primaryText?.trim()) return { success: false, error: 'Texto principal é obrigatório' }
   if (!input.destinationUrl?.startsWith('https://')) return { success: false, error: 'URL de destino deve começar com https:// (exigido pela Meta)' }
   if (input.dailyBudgetBRL < 5) return { success: false, error: 'Orçamento mínimo: R$5,00/dia' }
-  if (!input.imageUrl) {
-    return { success: false, error: 'Imagem obrigatória: a Meta exige uma imagem para criar o anúncio. Informe a URL de uma imagem (.jpg, .png, .webp, etc.).' }
+  if (!input.imageUrl && !input.videoUrl) {
+    return { success: false, error: 'Mídia obrigatória: informe a URL de uma imagem (.jpg, .png, .webp) ou vídeo (.mp4, .mov).' }
   }
-  const isImageUrl = /\.(jpe?g|png|gif|webp|bmp)(\?.*)?$/i.test(input.imageUrl)
-  if (!isImageUrl) {
+  if (input.imageUrl && !/\.(jpe?g|png|gif|webp|bmp)(\?.*)?$/i.test(input.imageUrl)) {
     return { success: false, error: 'A URL da imagem deve apontar diretamente para um arquivo de imagem (.jpg, .png, .webp, etc.). Não use links de páginas web.' }
+  }
+  if (input.videoUrl && !/\.(mp4|mov|avi|mkv|wmv|flv|webm)(\?.*)?$/i.test(input.videoUrl)) {
+    return { success: false, error: 'A URL do vídeo deve apontar diretamente para um arquivo de vídeo (.mp4, .mov, .avi, etc.). Não use links de páginas web.' }
   }
 
   // LEAD_GENERATION requer Lead Form (não implementado)
@@ -199,20 +203,35 @@ export async function createCampaignAction(
       }
     }
 
-    // ── 3. Upload de imagem ────────────────────────────────────────────────
-    // imageUrl já foi validado como obrigatório acima.
-    // Fazemos o upload no nosso servidor (base64 → Meta adimages) para evitar
-    // que a Meta tente baixar a URL diretamente (muitos CDNs são bloqueados).
-    let imageHash: string
-    try {
-      imageHash = await uploadAdImage(actAccountId, input.imageUrl!, accessToken)
-      console.log('[createCampaign] Upload de imagem bem-sucedido; imageHash obtido')
-    } catch (uploadErr) {
-      const uploadMsg = uploadErr instanceof Error ? uploadErr.message : String(uploadErr)
-      console.error('[createCampaign] Falha ao fazer upload de imagem:', uploadMsg)
-      return {
-        success: false,
-        error: `Erro ao fazer upload da imagem: ${uploadMsg}. Use uma URL de imagem pública (.jpg, .png, .webp) acessível pela internet.`,
+    // ── 3. Upload de mídia ─────────────────────────────────────────────────
+    let imageHash: string | undefined
+    let videoId: string | undefined
+
+    if (input.videoUrl) {
+      try {
+        videoId = await uploadAdVideo(actAccountId, input.videoUrl, accessToken)
+        console.log('[createCampaign] Upload de vídeo bem-sucedido; videoId:', videoId)
+      } catch (uploadErr) {
+        const uploadMsg = uploadErr instanceof Error ? uploadErr.message : String(uploadErr)
+        console.error('[createCampaign] Falha ao fazer upload de vídeo:', uploadMsg)
+        return {
+          success: false,
+          error: `Erro ao fazer upload do vídeo: ${uploadMsg}. Use uma URL de vídeo pública (.mp4, .mov) acessível pela internet.`,
+        }
+      }
+    } else {
+      // Fazemos o download no nosso servidor (base64 → Meta adimages) para evitar
+      // que a Meta tente baixar a URL diretamente (muitos CDNs são bloqueados).
+      try {
+        imageHash = await uploadAdImage(actAccountId, input.imageUrl!, accessToken)
+        console.log('[createCampaign] Upload de imagem bem-sucedido; imageHash obtido')
+      } catch (uploadErr) {
+        const uploadMsg = uploadErr instanceof Error ? uploadErr.message : String(uploadErr)
+        console.error('[createCampaign] Falha ao fazer upload de imagem:', uploadMsg)
+        return {
+          success: false,
+          error: `Erro ao fazer upload da imagem: ${uploadMsg}. Use uma URL de imagem pública (.jpg, .png, .webp) acessível pela internet.`,
+        }
       }
     }
 
@@ -229,6 +248,7 @@ export async function createCampaignAction(
         description: input.description,
         callToAction: input.callToAction ?? 'LEARN_MORE',
         imageHash,
+        videoId,
       },
       accessToken
     )
