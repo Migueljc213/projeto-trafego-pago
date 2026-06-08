@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
 import ProblemSection from "@/components/ProblemSection";
@@ -15,7 +16,9 @@ export default function HomePage() {
       <ComparisonSection />
       <SimulatorSection />
       <WhiteGloveSection />
-      <WaitlistSection />
+      <Suspense>
+        <WaitlistSection />
+      </Suspense>
     </main>
   );
 }

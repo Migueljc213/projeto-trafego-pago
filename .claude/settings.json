@@ -1,18 +1,4 @@
 {
-  "hooks": {
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "timeout": 60,
-            "statusMessage": "Subindo alterações para o git...",
-            "command": "cd /home/miguel/projetos/projeto-trafego-pago && if [ -n \"$(git status --porcelain)\" ]; then git add -A -- ':!*.env' ':!.env*' && BRANCH=$(git rev-parse --abbrev-ref HEAD) && git commit -m \"auto: atualização automática pós-sessão Claude$(printf '\\n\\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>')\" && git push origin \"$BRANCH\"; fi 2>/dev/null || true"
-          }
-        ]
-      }
-    ]
-  },
   "permissions": {
     "allow": [
       "Bash(node_modules/.bin/next build:*)",
@@ -30,10 +16,26 @@
       "Bash(vercel --yes)",
       "Bash(git add:*)",
       "Bash(git commit -m ':*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_M1rms8bAWail@ep-orange-wind-anhunqmv-pooler.c-6.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require\" npx prisma migrate dev --name add_waitlist_entry)",
+      "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_M1rms8bAWail@ep-orange-wind-anhunqmv-pooler.c-6.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require\" npx prisma generate)"
     ],
     "additionalDirectories": [
       "/home/miguel/projetos/projeto-trafego-pago/app/api/auth"
+    ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd /home/miguel/projetos/projeto-trafego-pago && if [ -n \"$(git status --porcelain)\" ]; then git add -A -- ':!*.env' ':!.env*' && BRANCH=$(git rev-parse --abbrev-ref HEAD) && git commit -m \"auto: atualização automática pós-sessão Claude$(printf '\\n\\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>')\" && git push origin \"$BRANCH\"; fi 2>/dev/null || true",
+            "timeout": 60,
+            "statusMessage": "Subindo alterações para o git..."
+          }
+        ]
+      }
     ]
   }
 }

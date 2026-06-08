@@ -1,5 +1,7 @@
 "use server";
 
+import { prisma } from "@/lib/prisma";
+
 export type WaitlistFormState = {
   success: boolean;
   message: string;
@@ -47,14 +49,22 @@ export async function submitWaitlist(
     return { success: false, message: "Por favor, corrija os erros abaixo.", errors };
   }
 
-  // In production, save to your database or send to CRM/email service
-  // Example: await db.waitlist.create({ data: { email, website } });
-  // Example: await sendToMailchimp({ email, website });
+  const utmSource   = formData.get("utm_source")?.toString().trim() || null;
+  const utmMedium   = formData.get("utm_medium")?.toString().trim() || null;
+  const utmCampaign = formData.get("utm_campaign")?.toString().trim() || null;
+  const utmContent  = formData.get("utm_content")?.toString().trim() || null;
+  const utmTerm     = formData.get("utm_term")?.toString().trim() || null;
+  const referrer    = formData.get("referrer")?.toString().trim() || null;
 
-  // Simulate async operation
-  await new Promise((resolve) => setTimeout(resolve, 800));
-
-  console.log(`[Waitlist] New signup — Email: ${email} | Website: ${website}`);
+  try {
+    await prisma.waitlistEntry.upsert({
+      where: { email },
+      update: { website, utmSource, utmMedium, utmCampaign, utmContent, utmTerm, referrer },
+      create: { email, website, utmSource, utmMedium, utmCampaign, utmContent, utmTerm, referrer },
+    });
+  } catch (err) {
+    console.error("[Waitlist] DB error:", err);
+  }
 
   return {
     success: true,

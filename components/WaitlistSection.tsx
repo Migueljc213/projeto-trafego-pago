@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState, useTransition } from "react";
+import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Zap, Mail, Globe, CheckCircle, AlertCircle, Loader2, ArrowRight, Twitter, Linkedin, Github } from "lucide-react";
 import { submitWaitlist, type WaitlistFormState } from "@/app/actions";
@@ -46,6 +47,14 @@ export default function WaitlistSection() {
   const [state, setState] = useState<WaitlistFormState>(initialState);
   const [isPending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
+  const searchParams = useSearchParams();
+  const [referrer, setReferrer] = useState("");
+
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      setReferrer(document.referrer);
+    }
+  }, []);
 
   function formAction(formData: FormData) {
     startTransition(async () => {
@@ -134,6 +143,12 @@ export default function WaitlistSection() {
                     exit={{ opacity: 0 }}
                   >
                     <form ref={formRef} action={formAction} className="space-y-5">
+                      <input type="hidden" name="utm_source"   value={searchParams.get("utm_source")   ?? ""} />
+                      <input type="hidden" name="utm_medium"   value={searchParams.get("utm_medium")   ?? ""} />
+                      <input type="hidden" name="utm_campaign" value={searchParams.get("utm_campaign") ?? ""} />
+                      <input type="hidden" name="utm_content"  value={searchParams.get("utm_content")  ?? ""} />
+                      <input type="hidden" name="utm_term"     value={searchParams.get("utm_term")     ?? ""} />
+                      <input type="hidden" name="referrer"     value={referrer} />
                       {/* Global error */}
                       <AnimatePresence>
                         {state.message && !state.success && (

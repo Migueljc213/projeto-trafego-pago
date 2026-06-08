@@ -1,7 +1,7 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import { Shield } from 'lucide-react'
+import { Shield, Users } from 'lucide-react'
 import Link from 'next/link'
 
 export const metadata = { title: 'Admin | FunnelGuard AI' }
@@ -34,12 +34,25 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             </span>
           </div>
           <div className="flex items-center gap-4">
+            <Link
+              href="/admin"
+              className="text-xs text-gray-400 hover:text-white transition-colors"
+            >
+              Contas
+            </Link>
+            <Link
+              href="/admin/waitlist"
+              className="text-xs text-gray-400 hover:text-white flex items-center gap-1 transition-colors"
+            >
+              <Users className="w-3 h-3" />
+              Waitlist
+            </Link>
             <span className="text-xs text-gray-500">{session.user.email}</span>
             <Link
               href="/dashboard"
               className="text-xs text-gray-400 hover:text-white transition-colors"
             >
-              ← Voltar ao Dashboard
+              ← Dashboard
             </Link>
           </div>
         </div>
