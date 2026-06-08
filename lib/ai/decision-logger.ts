@@ -6,7 +6,7 @@
 import { prisma } from '@/lib/prisma'
 import type { AutoPilotDecision } from './auto-pilot'
 
-type DecisionType = 'PAUSE' | 'SCALE' | 'REDUCE_BUDGET' | 'MONITOR' | 'NO_ACTION'
+type DecisionType = 'PAUSE' | 'SCALE' | 'REDUCE_BUDGET' | 'MONITOR' | 'NO_ACTION' | 'DUPLICATE'
 
 // ─── Mappers ──────────────────────────────────────────────────────────────────
 
@@ -16,6 +16,7 @@ const DECISION_TYPE_MAP: Record<string, DecisionType> = {
   REDUCE_BUDGET: 'REDUCE_BUDGET',
   MONITOR: 'MONITOR',
   NO_ACTION: 'NO_ACTION',
+  DUPLICATE: 'DUPLICATE',
 }
 
 // ─── Logger Principal ─────────────────────────────────────────────────────────
