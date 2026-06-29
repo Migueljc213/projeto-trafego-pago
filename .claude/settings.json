@@ -18,7 +18,9 @@
       "Bash(git commit -m ':*)",
       "Bash(git push:*)",
       "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_M1rms8bAWail@ep-orange-wind-anhunqmv-pooler.c-6.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require\" npx prisma migrate dev --name add_waitlist_entry)",
-      "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_M1rms8bAWail@ep-orange-wind-anhunqmv-pooler.c-6.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require\" npx prisma generate)"
+      "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_M1rms8bAWail@ep-orange-wind-anhunqmv-pooler.c-6.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require\" npx prisma generate)",
+      "WebFetch(domain:madgicx.com)",
+      "WebFetch(domain:adlibrary.com)"
     ],
     "additionalDirectories": [
       "/home/miguel/projetos/projeto-trafego-pago/app/api/auth"

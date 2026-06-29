@@ -9,6 +9,7 @@ const TYPE_MAP: Record<string, string> = {
   REDUCE_BUDGET: 'alert',
   MONITOR: 'insight',
   NO_ACTION: 'insight',
+  DUPLICATE: 'scale',
 }
 
 const TITLE_MAP: Record<string, string> = {
@@ -17,6 +18,7 @@ const TITLE_MAP: Record<string, string> = {
   REDUCE_BUDGET: 'Orçamento reduzido',
   MONITOR: 'Em monitoramento',
   NO_ACTION: 'Sem ação',
+  DUPLICATE: 'Escala Horizontal ativada',
 }
 
 export async function GET(request: Request) {
