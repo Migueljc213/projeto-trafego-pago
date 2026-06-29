@@ -2,6 +2,8 @@ import { Resend } from 'resend'
 
 export const resend = new Resend(process.env.RESEND_API_KEY)
 
+const FROM_EMAIL = process.env.RESEND_FROM_EMAIL ?? 'FunnelGuard AI <onboarding@resend.dev>'
+
 // ─── Templates ────────────────────────────────────────────────────────────────
 
 interface AutoPilotAlertParams {
@@ -31,7 +33,7 @@ export async function sendAutoPilotAlert({
   const { emoji, label, color } = actionLabels[action]
 
   await resend.emails.send({
-    from: 'FunnelGuard AI <onboarding@resend.dev>',
+    from: FROM_EMAIL,
     to,
     subject: `${emoji} Campanha ${label}: ${campaignName}`,
     html: `
@@ -109,7 +111,7 @@ export async function sendCorrelationAlert({
     : ''
 
   await resend.emails.send({
-    from: 'FunnelGuard AI <onboarding@resend.dev>',
+    from: FROM_EMAIL,
     to,
     subject: `${icon} ${subject}`,
     html: `
@@ -179,7 +181,7 @@ export async function sendPredictivePriceDropAlert({
   dropPercent,
 }: PredictivePriceDropAlertParams) {
   await resend.emails.send({
-    from: 'FunnelGuard AI <onboarding@resend.dev>',
+    from: FROM_EMAIL,
     to,
     subject: `🔔 Alerta Preditivo: ${competitorName} baixou o preço ${dropPercent.toFixed(0)}%`,
     html: `
@@ -306,7 +308,7 @@ export async function sendWeeklyReport({
     .join('')
 
   await resend.emails.send({
-    from: 'FunnelGuard AI <onboarding@resend.dev>',
+    from: FROM_EMAIL,
     to,
     subject: `📊 Relatório Semanal FunnelGuard — ${weekLabel}`,
     html: `
@@ -415,7 +417,7 @@ export async function sendTokenExpiryAlert({
   const urgencyIcon = daysRemaining <= 1 ? '🚨' : daysRemaining <= 3 ? '⚠️' : '🔔'
 
   await resend.emails.send({
-    from: 'FunnelGuard AI <onboarding@resend.dev>',
+    from: FROM_EMAIL,
     to,
     subject: `${urgencyIcon} ${urgencyLabel}: Sua conexão com a Meta expira em ${daysRemaining} dia${daysRemaining !== 1 ? 's' : ''}`,
     html: `
@@ -493,7 +495,7 @@ export async function sendPriceAlert({
   diffPercent,
 }: PriceAlertParams) {
   await resend.emails.send({
-    from: 'FunnelGuard AI <onboarding@resend.dev>',
+    from: FROM_EMAIL,
     to,
     subject: `🔴 Alerta de Preço: ${productName} está ${diffPercent.toFixed(0)}% mais caro`,
     html: `

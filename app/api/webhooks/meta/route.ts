@@ -66,33 +66,115 @@ function verifySignature(rawBody: string, signature: string): boolean {
 async function processWebhookEvents(
   payload: z.infer<typeof MetaWebhookPayloadSchema>
 ) {
-  if (payload.object !== 'ad_campaign') return
-
   for (const entry of payload.entry) {
     for (const change of entry.changes) {
-      if (change.field === 'campaign_status') {
-        const value = change.value as { campaign_id?: string; status?: string }
-        if (value.campaign_id && value.status) {
-          // Mapeia status da Meta para nosso enum
-          const statusMap: Record<string, string> = {
-            ACTIVE: 'ACTIVE',
-            PAUSED: 'PAUSED',
-            DELETED: 'DELETED',
-            ARCHIVED: 'ARCHIVED',
-          }
-          const mappedStatus = statusMap[value.status]
-          if (mappedStatus) {
-            await prisma.campaign.updateMany({
-              where: { metaCampaignId: value.campaign_id },
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              data: { status: mappedStatus as any },
-            })
-            console.log(
-              `[Webhook] Campaign ${value.campaign_id} → ${mappedStatus}`
-            )
-          }
-        }
-      }
+      await handleChange(change.field, change.value).catch((err) =>
+        console.error(`[Webhook] Erro ao processar field=${change.field}:`, err)
+      )
     }
+  }
+}
+
+async function handleChange(field: string, value: Record<string, unknown>) {
+  // ── campaign_status: sincroniza status da campanha no banco ──────────────────
+  if (field === 'campaign_status') {
+    const campaignId = value.campaign_id as string | undefined
+    const status = value.status as string | undefined
+    if (!campaignId || !status) return
+
+    const statusMap: Record<string, string> = {
+      ACTIVE: 'ACTIVE',
+      PAUSED: 'PAUSED',
+      DELETED: 'DELETED',
+      ARCHIVED: 'ARCHIVED',
+    }
+    const mappedStatus = statusMap[status]
+    if (mappedStatus) {
+      await prisma.campaign.updateMany({
+        where: { metaCampaignId: campaignId },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        data: { status: mappedStatus as any },
+      })
+      console.log(`[Webhook] campaign_status ${campaignId} → ${mappedStatus}`)
+    }
+    return
+  }
+
+  // ── creative_fatigue: cria FunnelAudit para campanha com fadiga confirmada ───
+  // A Meta envia este evento quando um anúncio entra em nível de fadiga High/Medium.
+  // Fadiga = mesmo público viu o anúncio muitas vezes, performance cai.
+  if (field === 'creative_fatigue') {
+    const campaignId = value.campaign_id as string | undefined
+    const adAccountId = value.ad_account_id as string | undefined
+    const fatigueLevel = (value.fatigue_level as string | undefined) ?? 'MEDIUM'
+    if (!adAccountId) return
+
+    // Só registra fadiga High — Medium é ruído
+    if (fatigueLevel !== 'HIGH') return
+
+    const adAccount = await prisma.adAccount.findUnique({
+      where: { metaAccountId: adAccountId },
+    })
+    if (!adAccount) return
+
+    const campaign = campaignId
+      ? await prisma.campaign.findFirst({ where: { metaCampaignId: campaignId } })
+      : null
+
+    await prisma.funnelAudit.create({
+      data: {
+        adAccountId: adAccount.id,
+        type: 'BROKEN_CTA',
+        severity: 'HIGH',
+        title: 'Fadiga de criativo detectada pela Meta',
+        description: `A Meta sinalizou fadiga de criativo (nível: ${fatigueLevel}). O público já viu o anúncio muitas vezes e a performance está caindo. Troque ou renove os criativos.`,
+        url: '',
+      },
+    })
+    console.log(`[Webhook] creative_fatigue registrado — adAccount ${adAccountId}`)
+    return
+  }
+
+  // ── with_issues_ad_objects: registra objetos com problema reportados pela Meta ─
+  // A Meta envia quando uma campanha/ad set/ad muda para status WITH_ISSUES.
+  if (field === 'with_issues_ad_objects') {
+    const adAccountId = value.ad_account_id as string | undefined
+    const issues = value.issues as Array<{ error_code?: number; error_message?: string }> | undefined
+    if (!adAccountId || !issues?.length) return
+
+    const adAccount = await prisma.adAccount.findUnique({
+      where: { metaAccountId: adAccountId },
+    })
+    if (!adAccount) return
+
+    const description = issues
+      .map((i) => `[${i.error_code ?? '?'}] ${i.error_message ?? 'Problema desconhecido'}`)
+      .join(' | ')
+
+    await prisma.funnelAudit.create({
+      data: {
+        adAccountId: adAccount.id,
+        type: 'CHECKOUT_ERROR',
+        severity: 'HIGH',
+        title: 'Objetos com problema reportados pela Meta',
+        description: `Meta reportou objetos com problemas na conta: ${description}`,
+        url: '',
+      },
+    })
+    console.log(`[Webhook] with_issues_ad_objects registrado — adAccount ${adAccountId}`)
+    return
+  }
+
+  // ── in_process_ad_objects: atualiza campanha para status IN_PROCESS ──────────
+  if (field === 'in_process_ad_objects') {
+    const campaignId = value.campaign_id as string | undefined
+    if (!campaignId) return
+
+    await prisma.campaign.updateMany({
+      where: { metaCampaignId: campaignId },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data: { status: 'IN_PROCESS' as any },
+    })
+    console.log(`[Webhook] in_process_ad_objects ${campaignId}`)
   }
 }
