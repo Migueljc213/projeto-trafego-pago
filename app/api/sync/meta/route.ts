@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { decrypt } from '@/lib/encryption'
-import { getAdAccounts, getCampaigns } from '@/lib/meta-api'
+import { getAdAccounts, getCampaigns, subscribeAdAccountToWebhook } from '@/lib/meta-api'
 
 const STATUS_MAP: Record<string, 'ACTIVE' | 'PAUSED' | 'DELETED' | 'ARCHIVED' | 'IN_PROCESS' | 'WITH_ISSUES'> = {
   ACTIVE: 'ACTIVE',
@@ -79,6 +79,11 @@ export async function GET() {
         },
       })
       results.adAccounts++
+
+      // Subscreve o app nos eventos de webhook desta ad account (necessário para receber notificações Meta)
+      subscribeAdAccountToWebhook(account.id, accessToken).catch(() => {
+        // Falha silenciosa — não bloqueia o sync; webhook pode ser resubscrito manualmente
+      })
     } catch (err) {
       results.errors.push(`AdAccount ${account.id}: ${String(err)}`)
       continue

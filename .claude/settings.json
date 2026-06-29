@@ -23,7 +23,9 @@
       "WebFetch(domain:adlibrary.com)",
       "WebFetch(domain:www.get-ryze.ai)",
       "WebFetch(domain:watsspace.com)",
-      "WebFetch(domain:www.saurabhdhar.com)"
+      "WebFetch(domain:www.saurabhdhar.com)",
+      "WebFetch(domain:rollout.com)",
+      "WebFetch(domain:www.adamigo.ai)"
     ],
     "additionalDirectories": [
       "/home/miguel/projetos/projeto-trafego-pago/app/api/auth"

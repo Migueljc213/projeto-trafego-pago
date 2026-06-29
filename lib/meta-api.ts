@@ -936,6 +936,37 @@ export async function updateCampaignBudget(
 }
 
 // ──────────────────────────────────────────
+// Webhook subscription per Ad Account
+// ──────────────────────────────────────────
+
+/**
+ * Subscreve o app nos eventos de webhook desta Ad Account.
+ * Deve ser chamado uma vez quando o usuário conecta/sincroniza uma conta.
+ * Sem isso a Meta NÃO enviará eventos (campaign_status, creative_fatigue, etc).
+ *
+ * Campos disponíveis: campaign_status, with_issues_ad_objects,
+ *   in_process_ad_objects, ad_recommendations, creative_fatigue
+ */
+export async function subscribeAdAccountToWebhook(
+  adAccountId: string,
+  accessToken: string
+): Promise<boolean> {
+  const fields = [
+    'campaign_status',
+    'with_issues_ad_objects',
+    'in_process_ad_objects',
+    'creative_fatigue',
+  ].join(',')
+
+  const data = await metaFetch<{ success: boolean }>(
+    `/${adAccountId}/subscribed_apps?subscribed_fields=${fields}`,
+    accessToken,
+    { method: 'POST' }
+  )
+  return data.success === true
+}
+
+// ──────────────────────────────────────────
 // Horizontal Scaling — Ad Set duplication
 // ──────────────────────────────────────────
 
