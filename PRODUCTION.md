@@ -13,7 +13,7 @@ O FunnelGuard AI é um **software de gestão automatizada de campanhas de tráfe
 | Termo | O que significa |
 |---|---|
 | **ROAS** | Return on Ad Spend — retorno sobre o investimento em anúncios. ROAS 3x = para cada R$1 investido, gera R$3 em receita |
-| **CPA** | Custo por Aquisição — quanto você paga por cada venda ou lead |
+| **CPA** | Custo por Aquisição — quanto você paga por cada venda ou lead |  
 | **CPM** | Custo por Mil Impressões — quanto custa exibir o anúncio 1.000 vezes |
 | **CTR** | Click-Through Rate — % de pessoas que veem o anúncio e clicam |
 | **Frequência** | Quantas vezes a mesma pessoa viu o anúncio. Acima de 4x começa a gerar fadiga |
