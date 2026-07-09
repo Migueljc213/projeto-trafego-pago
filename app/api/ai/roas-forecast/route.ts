@@ -5,8 +5,6 @@ import OpenAI from 'openai'
 import { NextResponse } from 'next/server'
 import { checkRateLimit } from '@/lib/rate-limit'
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-
 export interface RoasForecastDay {
   offset: number      // 1–7
   label: string       // ex: "Seg 19/05"
@@ -24,6 +22,7 @@ export interface RoasForecast {
 }
 
 export async function POST(request: Request) {
+  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
