@@ -4,8 +4,6 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import OpenAI from 'openai'
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
 export interface CreativeVariation {
@@ -86,6 +84,7 @@ async function scrapeProductPage(url: string): Promise<string> {
 export async function generateCreativeBriefAction(
   productUrl: string
 ): Promise<CreativeBriefActionResult> {
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) {
     return { success: false, error: 'Não autenticado' }

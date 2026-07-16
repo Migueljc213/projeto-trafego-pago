@@ -1,6 +1,10 @@
 import { Resend } from 'resend'
 
-export const resend = new Resend(process.env.RESEND_API_KEY)
+let _resend: Resend | null = null
+function getResend(): Resend {
+  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY)
+  return _resend
+}
 
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL ?? 'FunnelGuard AI <onboarding@resend.dev>'
 
@@ -32,7 +36,7 @@ export async function sendAutoPilotAlert({
   }
   const { emoji, label, color } = actionLabels[action]
 
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM_EMAIL,
     to,
     subject: `${emoji} Campanha ${label}: ${campaignName}`,
@@ -110,7 +114,7 @@ export async function sendCorrelationAlert({
     ? `<ul style="margin: 0; padding: 0 0 0 16px; color: #9ca3af; font-size: 13px;">${details.map(d => `<li style="margin-bottom: 4px;">${d}</li>`).join('')}</ul>`
     : ''
 
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM_EMAIL,
     to,
     subject: `${icon} ${subject}`,
@@ -180,7 +184,7 @@ export async function sendPredictivePriceDropAlert({
   newPrice,
   dropPercent,
 }: PredictivePriceDropAlertParams) {
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM_EMAIL,
     to,
     subject: `🔔 Alerta Preditivo: ${competitorName} baixou o preço ${dropPercent.toFixed(0)}%`,
@@ -307,7 +311,7 @@ export async function sendWeeklyReport({
     })
     .join('')
 
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM_EMAIL,
     to,
     subject: `📊 Relatório Semanal FunnelGuard — ${weekLabel}`,
@@ -416,7 +420,7 @@ export async function sendTokenExpiryAlert({
   const urgencyLabel = daysRemaining <= 1 ? 'URGENTE' : daysRemaining <= 3 ? 'ATENÇÃO' : 'AVISO'
   const urgencyIcon = daysRemaining <= 1 ? '🚨' : daysRemaining <= 3 ? '⚠️' : '🔔'
 
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM_EMAIL,
     to,
     subject: `${urgencyIcon} ${urgencyLabel}: Sua conexão com a Meta expira em ${daysRemaining} dia${daysRemaining !== 1 ? 's' : ''}`,
@@ -494,7 +498,7 @@ export async function sendPriceAlert({
   competitorName,
   diffPercent,
 }: PriceAlertParams) {
-  await resend.emails.send({
+  await getResend().emails.send({
     from: FROM_EMAIL,
     to,
     subject: `🔴 Alerta de Preço: ${productName} está ${diffPercent.toFixed(0)}% mais caro`,
