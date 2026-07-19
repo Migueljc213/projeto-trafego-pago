@@ -11,7 +11,7 @@ export default async function CriarCampanhaPage() {
   const session = await getServerSession(authOptions)
 
   // Busca páginas disponíveis para o criativo
-  let pages: Array<{ id: string; name: string }> = []
+  let pages: Array<{ id: string; name: string; fanCount?: number; engagementCount?: number }> = []
   let hasMeta = false
 
   if (session?.user?.id) {
@@ -25,8 +25,13 @@ export default async function CriarCampanhaPage() {
     if (bm?.accessTokenEnc) {
       try {
         const token = decrypt(bm.accessTokenEnc)
-        const fetched = await getMyPages(token)
-        pages = fetched.map(p => ({ id: p.id, name: p.name }))
+        const fetched = await getMyPages(token, bm.metaBmId)
+        pages = fetched.map(p => ({
+          id: p.id,
+          name: p.name,
+          fanCount: p.fan_count,
+          engagementCount: p.engagement?.count,
+        }))
       } catch {
         // Silencia — wizard avisa sobre a falta de páginas
       }

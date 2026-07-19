@@ -264,7 +264,7 @@ function InterestSearch({
 // ─── Wizard principal ─────────────────────────────────────────────────────────
 
 interface Props {
-  pages: Array<{ id: string; name: string }>
+  pages: Array<{ id: string; name: string; fanCount?: number; engagementCount?: number }>
 }
 
 type FormData = Omit<CreateCampaignInput, 'dailyBudgetBRL'> & { dailyBudgetBRL: string; mediaType: 'image' | 'video' }
@@ -514,6 +514,24 @@ export default function CampaignWizard({ pages }: Props) {
                 <Select value={form.pageId} onChange={e => update('pageId', e.target.value)}>
                   {pages.map(p => <option key={p.id} value={p.id}>{p.name} ({p.id})</option>)}
                 </Select>
+                {(() => {
+                  const selectedPage = pages.find(p => p.id === form.pageId)
+                  if (!selectedPage || (selectedPage.fanCount == null && selectedPage.engagementCount == null)) return null
+                  return (
+                    <div className="flex items-center gap-4 mt-2 px-3 py-2 rounded-lg bg-blue-500/5 border border-blue-500/15">
+                      <Users className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
+                      <p className="text-xs text-gray-400">
+                        {selectedPage.fanCount != null && (
+                          <span>{selectedPage.fanCount.toLocaleString('pt-BR')} curtidas</span>
+                        )}
+                        {selectedPage.fanCount != null && selectedPage.engagementCount != null && ' · '}
+                        {selectedPage.engagementCount != null && (
+                          <span>{selectedPage.engagementCount.toLocaleString('pt-BR')} pessoas engajando com a página</span>
+                        )}
+                      </p>
+                    </div>
+                  )
+                })()}
               </Field>
             ) : (
               <Field

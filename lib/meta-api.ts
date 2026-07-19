@@ -105,6 +105,13 @@ export interface MetaFacebookPage {
   name: string
   access_token?: string
   category?: string
+  fan_count?: number
+  engagement?: { count: number; social_sentence?: string }
+}
+
+export interface MetaBusiness {
+  id: string
+  name: string
 }
 
 // ──────────────────────────────────────────
@@ -298,6 +305,18 @@ export async function assertAdAccountReady(
     const msg = reasons[statusCode] ?? `A conta de anúncio está em estado "${statusName}" e não pode criar campanhas.`
     throw new MetaApiError(100, `[AdAccount ${adAccountId}] ${msg}`)
   }
+}
+
+/**
+ * Busca as Business Managers reais às quais o usuário tem acesso (próprias ou como parceiro/agência).
+ * Requer o escopo business_management.
+ */
+export async function getBusinesses(accessToken: string): Promise<MetaBusiness[]> {
+  const data = await metaFetch<{ data: MetaBusiness[] }>(
+    `/me/businesses?fields=id,name`,
+    accessToken
+  )
+  return data.data ?? []
 }
 
 /**
@@ -524,18 +543,20 @@ export async function getMyPages(
   accessToken: string,
   bmId?: string
 ): Promise<MetaFacebookPage[]> {
+  const PAGE_FIELDS = 'id,name,category,fan_count,engagement'
+
   // Tenta páginas do BM primeiro (corretas para criar criativos)
   if (bmId) {
     try {
       const bmData = await metaFetch<{ data: MetaFacebookPage[] }>(
-        `/${bmId}/owned_pages?fields=id,name,category`,
+        `/${bmId}/owned_pages?fields=${PAGE_FIELDS}`,
         accessToken
       )
       if (bmData.data?.length) return bmData.data
 
       // Fallback: páginas de clientes vinculadas ao BM
       const clientData = await metaFetch<{ data: MetaFacebookPage[] }>(
-        `/${bmId}/client_pages?fields=id,name,category`,
+        `/${bmId}/client_pages?fields=${PAGE_FIELDS}`,
         accessToken
       )
       if (clientData.data?.length) return clientData.data
@@ -546,7 +567,7 @@ export async function getMyPages(
 
   // Fallback: todas as páginas do usuário (pode incluir páginas não vinculadas ao BM)
   const data = await metaFetch<{ data: MetaFacebookPage[] }>(
-    `/me/accounts?fields=id,name,category`,
+    `/me/accounts?fields=${PAGE_FIELDS}`,
     accessToken
   )
   return data.data ?? []

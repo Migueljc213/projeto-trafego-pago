@@ -2,14 +2,21 @@
 
 import { useState, useTransition, useEffect } from 'react'
 import { signIn } from 'next-auth/react'
-import { RefreshCw, Link2, AlertTriangle, CheckCircle, XCircle, Clock, Loader2, ChevronRight, Zap, Trash2, BarChart2 } from 'lucide-react'
+import { RefreshCw, Link2, AlertTriangle, CheckCircle, XCircle, Clock, Loader2, ChevronRight, Zap, Trash2, BarChart2, Building2 } from 'lucide-react'
 import { listAdAccountsAction } from '@/actions/ad-accounts'
 import { syncMetaCampaignsAction } from '@/actions/campaigns'
 import { savePixelAction, removePixelAction } from '@/actions/pixel'
+import { listBusinessesAction, selectBusinessManagerAction } from '@/actions/business'
 import { useRouter } from 'next/navigation'
+
+interface MetaBusinessOption {
+  id: string
+  name: string
+}
 
 interface BmData {
   name: string
+  metaBmId: string
   tokenExpiresAt: string | null
   adAccounts: Array<{
     id: string
@@ -72,6 +79,42 @@ export default function ConfiguracoesClient({ bm, googleAdsConnected }: Props) {
   const [syncingAccounts, startSyncAccounts] = useTransition()
   const [syncingCampaigns, startSyncCampaigns] = useTransition()
   const [syncMsg, setSyncMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
+  // Business Manager selection state
+  const [businesses, setBusinesses] = useState<MetaBusinessOption[] | null>(null)
+  const [loadingBusinesses, setLoadingBusinesses] = useState(false)
+  const [selectingBmId, startSelectingBm] = useTransition()
+  const [bmMsg, setBmMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
+  async function handleLoadBusinesses() {
+    setLoadingBusinesses(true)
+    setBmMsg(null)
+    try {
+      const result = await listBusinessesAction()
+      if (result.success) {
+        setBusinesses(result.data ?? [])
+        if (!result.data?.length) setBmMsg({ type: 'error', text: 'Nenhuma Business Manager encontrada para esta conta Meta.' })
+      } else {
+        setBmMsg({ type: 'error', text: result.error ?? 'Erro ao buscar Business Managers' })
+      }
+    } finally {
+      setLoadingBusinesses(false)
+    }
+  }
+
+  function handleSelectBusiness(id: string, name: string) {
+    setBmMsg(null)
+    startSelectingBm(async () => {
+      const result = await selectBusinessManagerAction(id, name)
+      if (result.success) {
+        setBmMsg({ type: 'success', text: `Business Manager "${name}" conectada com sucesso.` })
+        setBusinesses(null)
+        router.refresh()
+      } else {
+        setBmMsg({ type: 'error', text: result.error ?? 'Erro ao selecionar Business Manager' })
+      }
+    })
+  }
 
   // Pixel state
   const firstAccount = bm?.adAccounts[0] ?? null
@@ -194,12 +237,71 @@ export default function ConfiguracoesClient({ bm, googleAdsConnected }: Props) {
               <div className="p-3 rounded-lg bg-white/3 border border-gray-800">
                 <p className="text-xs text-gray-500 mb-1">Business Manager</p>
                 <p className="text-sm font-medium text-gray-200 truncate">{bm.name}</p>
+                <p className="text-xs text-gray-600 font-mono truncate">{bm.metaBmId}</p>
               </div>
               <div className="p-3 rounded-lg bg-white/3 border border-gray-800">
                 <p className="text-xs text-gray-500 mb-1">Status do Token</p>
                 <TokenStatusBadge expiresAt={bm.tokenExpiresAt} />
               </div>
             </div>
+
+            {bmMsg && (
+              <div className={`px-3 py-2 rounded-lg text-xs border ${
+                bmMsg.type === 'error'
+                  ? 'bg-red-500/10 border-red-500/30 text-red-400'
+                  : 'bg-green-500/10 border-green-500/30 text-green-400'
+              }`}>
+                {bmMsg.text}
+              </div>
+            )}
+
+            {businesses === null ? (
+              <button
+                onClick={handleLoadBusinesses}
+                disabled={loadingBusinesses}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-700 text-xs text-gray-400 hover:text-white hover:border-gray-500 transition-all disabled:opacity-50"
+              >
+                {loadingBusinesses ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Building2 className="w-3.5 h-3.5" />}
+                Selecionar Business Manager
+              </button>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-gray-500">Escolha a Business Manager que o FunnelGuard AI vai gerenciar</p>
+                  <button
+                    onClick={() => { setBusinesses(null); setBmMsg(null) }}
+                    className="text-xs text-gray-600 hover:text-gray-300"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+                <div className="divide-y divide-gray-800 rounded-lg border border-gray-800 overflow-hidden">
+                  {businesses.map(b => (
+                    <button
+                      key={b.id}
+                      onClick={() => handleSelectBusiness(b.id, b.name)}
+                      disabled={selectingBmId}
+                      className={`w-full flex items-center justify-between gap-3 px-4 py-2.5 text-left transition-all disabled:opacity-50 ${
+                        b.id === bm.metaBmId ? 'bg-neon-cyan/5' : 'hover:bg-white/5'
+                      }`}
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm text-gray-200 truncate">{b.name}</p>
+                        <p className="text-xs text-gray-600 font-mono">{b.id}</p>
+                      </div>
+                      {b.id === bm.metaBmId ? (
+                        <CheckCircle className="w-4 h-4 text-neon-cyan flex-shrink-0" />
+                      ) : selectingBmId ? (
+                        <Loader2 className="w-4 h-4 text-gray-500 animate-spin flex-shrink-0" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4 text-gray-600 flex-shrink-0" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {bm.tokenExpiresAt && new Date(bm.tokenExpiresAt) <= new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) && (
               <div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/25 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">

@@ -10,6 +10,7 @@ export default async function ConfiguracoesPage() {
 
   let bmData: {
     name: string
+    metaBmId: string
     tokenExpiresAt: string | null
     adAccounts: Array<{ id: string; metaAccountId: string; name: string; currency: string; status: number; pixelId: string | null; pixelName: string | null }>
   } | null = null
@@ -28,6 +29,7 @@ export default async function ConfiguracoesPage() {
     if (bm) {
       bmData = {
         name: bm.name,
+        metaBmId: bm.metaBmId,
         tokenExpiresAt: bm.tokenExpiresAt?.toISOString() ?? null,
         adAccounts: bm.adAccounts.map(a => ({
           id: a.id,
