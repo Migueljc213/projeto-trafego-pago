@@ -3,7 +3,9 @@
 import { useState } from 'react'
 import { Wand2, Loader2, Copy, Check, ChevronDown, AlertTriangle } from 'lucide-react'
 import type { RewriteAdResult, AdVariant } from '@/app/api/ai/rewrite-ad/route'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
+// Chaves em português: correspondem aos "angle" retornados pela IA (não são texto de UI a traduzir).
 const ANGLE_COLOR: Record<string, string> = {
   'Urgência': 'text-red-400 border-red-400/25 bg-red-500/5',
   'Prova Social': 'text-blue-400 border-blue-400/25 bg-blue-500/5',
@@ -14,6 +16,8 @@ const ANGLE_COLOR: Record<string, string> = {
 }
 
 function VariantCard({ variant }: { variant: AdVariant }) {
+  const { dict } = useLanguage()
+  const t = dict.campaigns.adRewriter
   const [copiedField, setCopiedField] = useState<string | null>(null)
   const angleClass = ANGLE_COLOR[variant.angle] ?? 'text-neon-cyan border-neon-cyan/25 bg-neon-cyan/5'
 
@@ -31,39 +35,39 @@ function VariantCard({ variant }: { variant: AdVariant }) {
         <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${angleClass}`}>
           {variant.angle}
         </span>
-        <span className="text-[10px] text-gray-600 font-mono">CTA: {variant.ctaLabel}</span>
+        <span className="text-[10px] text-gray-600 font-mono">{t.ctaPrefixo(variant.ctaLabel)}</span>
       </div>
 
       <div className="p-4 space-y-3">
         {/* Headline */}
         <div>
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] text-gray-500 uppercase font-semibold tracking-wide">Título</span>
+            <span className="text-[10px] text-gray-500 uppercase font-semibold tracking-wide">{t.tituloLabel}</span>
             <button
               onClick={() => copy(variant.headline, 'headline')}
               className="flex items-center gap-1 text-[10px] text-gray-600 hover:text-gray-300 transition-colors"
             >
               {copiedField === 'headline'
-                ? <><Check className="w-3 h-3 text-green-400" /> Copiado</>
-                : <><Copy className="w-3 h-3" /> Copiar</>
+                ? <><Check className="w-3 h-3 text-green-400" /> {t.copiado}</>
+                : <><Copy className="w-3 h-3" /> {t.copiar}</>
               }
             </button>
           </div>
           <p className="text-sm font-semibold text-white leading-snug">{variant.headline}</p>
-          <p className="text-[10px] text-gray-600 mt-0.5">{variant.headline.length}/40 chars</p>
+          <p className="text-[10px] text-gray-600 mt-0.5">{t.charsSufixo40(variant.headline.length)}</p>
         </div>
 
         {/* Primary text */}
         <div>
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] text-gray-500 uppercase font-semibold tracking-wide">Texto Principal</span>
+            <span className="text-[10px] text-gray-500 uppercase font-semibold tracking-wide">{t.textoPrincipalLabel}</span>
             <button
               onClick={() => copy(variant.primaryText, 'body')}
               className="flex items-center gap-1 text-[10px] text-gray-600 hover:text-gray-300 transition-colors"
             >
               {copiedField === 'body'
-                ? <><Check className="w-3 h-3 text-green-400" /> Copiado</>
-                : <><Copy className="w-3 h-3" /> Copiar</>
+                ? <><Check className="w-3 h-3 text-green-400" /> {t.copiado}</>
+                : <><Copy className="w-3 h-3" /> {t.copiar}</>
               }
             </button>
           </div>

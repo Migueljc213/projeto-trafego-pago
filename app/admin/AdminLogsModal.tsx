@@ -102,7 +102,7 @@ export default function AdminLogsModal({ userId, userName }: Props) {
                       <span className="text-[10px] font-bold text-gray-600 ml-auto flex-shrink-0">{log.type}</span>
                       {log.executed && (
                         <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/10 border border-green-500/20 text-green-400 flex-shrink-0">
-                          Executado
+                          {t.executedBadge}
                         </span>
                       )}
                     </div>
@@ -119,7 +119,7 @@ export default function AdminLogsModal({ userId, userName }: Props) {
                 onClick={() => setOpen(false)}
                 className="px-4 py-2 rounded-lg border border-gray-700 text-xs text-gray-400 hover:text-white hover:border-gray-600 transition-all"
               >
-                Fechar
+                {dict.common.actions.close}
               </button>
             </div>
           </div>

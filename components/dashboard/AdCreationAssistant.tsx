@@ -51,14 +51,14 @@ function CopyCard({
     >
       <div className="flex items-center justify-between mb-1">
         <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-          Variação {index + 1}
+          {t.variacao(index + 1)}
         </span>
         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
           type === 'headline'
             ? 'bg-purple-500/20 text-purple-400'
             : 'bg-blue-500/20 text-blue-400'
         }`}>
-          {type === 'headline' ? 'Foco no Título' : 'Foco no Texto'}
+          {type === 'headline' ? t.focoTitulo : t.focoTexto}
         </span>
       </div>
 
@@ -66,8 +66,8 @@ function CopyCard({
       <div className="mb-3">
         <div className="flex items-center justify-between mb-1">
           <span className="text-xs text-gray-500 flex items-center gap-1">
-            <Type className="w-3 h-3" /> Headline
-            <span className="text-gray-700">({variation.headline.length} chars)</span>
+            <Type className="w-3 h-3" /> {t.headlineLabel}
+            <span className="text-gray-700">{t.charsSufixo(variation.headline.length)}</span>
           </span>
           <button
             onClick={() => copyToClipboard(variation.headline, setCopiedHeadline)}
@@ -83,8 +83,8 @@ function CopyCard({
       <div>
         <div className="flex items-center justify-between mb-1">
           <span className="text-xs text-gray-500 flex items-center gap-1">
-            <AlignLeft className="w-3 h-3" /> Primary Text
-            <span className="text-gray-700">({variation.primaryText.length} chars)</span>
+            <AlignLeft className="w-3 h-3" /> {t.primaryTextLabel}
+            <span className="text-gray-700">{t.charsSufixo(variation.primaryText.length)}</span>
           </span>
           <button
             onClick={() => copyToClipboard(variation.primaryText, setCopiedText)}
@@ -156,6 +156,8 @@ function ProductPreview({ product, expanded, onToggle }: {
 // ─── Componente Principal ─────────────────────────────────────────────────────
 
 export default function AdCreationAssistant() {
+  const { dict } = useLanguage()
+  const t = dict.campaigns.adCreationAssistant
   const [url, setUrl] = useState('')
   const [result, setResult] = useState<AdCreationResult | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -174,7 +176,7 @@ export default function AdCreationAssistant() {
         setResult(res.data)
         setProductExpanded(false)
       } else {
-        setError(res.error ?? 'Erro desconhecido')
+        setError(res.error ?? t.erroDesconhecido)
       }
     })
   }
@@ -191,8 +193,8 @@ export default function AdCreationAssistant() {
           <Wand2 className="w-4 h-4 text-purple-400" />
         </div>
         <div>
-          <h3 className="text-base font-semibold text-white">Assistente de Criação</h3>
-          <p className="text-xs text-gray-500">Cole a URL do produto — a IA gera 6 variações de copy</p>
+          <h3 className="text-base font-semibold text-white">{t.tituloAssistente}</h3>
+          <p className="text-xs text-gray-500">{t.subtitulo}</p>
         </div>
       </div>
 
@@ -205,7 +207,7 @@ export default function AdCreationAssistant() {
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
-            placeholder="https://loja.com/produto/nome-do-produto"
+            placeholder={t.urlPlaceholder}
             className="w-full pl-9 pr-3 py-2.5 bg-white/3 border border-gray-700 rounded-lg text-sm text-white placeholder-gray-600 focus:outline-none focus:border-neon-cyan/50 focus:ring-1 focus:ring-neon-cyan/20 transition"
             disabled={isPending}
           />
@@ -218,12 +220,12 @@ export default function AdCreationAssistant() {
           {isPending ? (
             <>
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              Gerando…
+              {t.gerando}
             </>
           ) : (
             <>
               <Sparkles className="w-3.5 h-3.5" />
-              Gerar Copy
+              {t.gerarCopy}
             </>
           )}
         </button>
@@ -233,8 +235,8 @@ export default function AdCreationAssistant() {
       {isPending && (
         <div className="text-center py-8">
           <Loader2 className="w-8 h-8 text-purple-400 animate-spin mx-auto mb-3" />
-          <p className="text-sm text-gray-400">Analisando produto e gerando copy…</p>
-          <p className="text-xs text-gray-600 mt-1">Isso pode levar até 15 segundos</p>
+          <p className="text-sm text-gray-400">{t.analisandoProduto}</p>
+          <p className="text-xs text-gray-600 mt-1">{t.podeLevarAte}</p>
         </div>
       )}
 
@@ -274,7 +276,7 @@ export default function AdCreationAssistant() {
                 }`}
               >
                 <Type className="w-3 h-3" />
-                Headlines (3)
+                {t.headlinesTab}
               </button>
               <button
                 onClick={() => setActiveTab('primaryTexts')}
@@ -285,7 +287,7 @@ export default function AdCreationAssistant() {
                 }`}
               >
                 <AlignLeft className="w-3 h-3" />
-                Primary Texts (3)
+                {t.primaryTextsTab}
               </button>
             </div>
 
@@ -303,9 +305,9 @@ export default function AdCreationAssistant() {
 
             {/* Footer */}
             <p className="mt-3 text-xs text-gray-600 text-center">
-              Gerado em {result.generatedAt instanceof Date
+              {t.geradoEm(result.generatedAt instanceof Date
                 ? result.generatedAt.toLocaleTimeString('pt-BR')
-                : new Date(result.generatedAt).toLocaleTimeString('pt-BR')} · Passe o mouse para copiar
+                : new Date(result.generatedAt).toLocaleTimeString('pt-BR'))}
             </p>
           </motion.div>
         )}

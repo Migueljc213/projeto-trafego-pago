@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { Users, Globe, Link2, BarChart3 } from "lucide-react";
+import { getDictionary, getServerLanguage, type Dictionary } from "@/lib/i18n/language";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,7 @@ function sourceLabel(entry: Awaited<ReturnType<typeof getWaitlistEntries>>[numbe
   return "direto";
 }
 
-function SourceBadge({ source }: { source: string }) {
+function SourceBadge({ source, dict }: { source: string; dict: Dictionary }) {
   const colors: Record<string, string> = {
     facebook:  "bg-blue-500/10 border-blue-500/30 text-blue-400",
     instagram: "bg-pink-500/10 border-pink-500/30 text-pink-400",
@@ -33,15 +34,22 @@ function SourceBadge({ source }: { source: string }) {
   };
   const key = Object.keys(colors).find((k) => source.toLowerCase().includes(k)) ?? "";
   const cls = colors[key] ?? "bg-purple-500/10 border-purple-500/30 text-purple-400";
+  // "direto" é um identificador interno de agrupamento (fallback quando não há utm_source/referrer);
+  // apenas o rótulo exibido é traduzido, a chave de agrupamento permanece a mesma.
+  const label = source === "direto" ? dict.adminLoginLegal.waitlistPage.sourceDirect : source;
   return (
     <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border font-medium ${cls}`}>
-      {source}
+      {label}
     </span>
   );
 }
 
 export default async function WaitlistAdminPage() {
   const entries = await getWaitlistEntries();
+  const language = await getServerLanguage();
+  const dict = getDictionary(language);
+  const t = dict.adminLoginLegal.waitlistPage;
+  const locale = language === "en" ? "en-US" : "pt-BR";
 
   // Contagem por fonte
   const bySource = entries.reduce<Record<string, number>>((acc, e) => {
@@ -53,43 +61,44 @@ export default async function WaitlistAdminPage() {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5);
 
-  // Contagem por medium
+  // Contagem por medium ("orgânico/direto" é a chave interna de agrupamento; o rótulo exibido é traduzido)
   const byMedium = entries.reduce<Record<string, number>>((acc, e) => {
     const key = e.utmMedium ?? "orgânico/direto";
     acc[key] = (acc[key] ?? 0) + 1;
     return acc;
   }, {});
+  const mediumLabel = (medium: string) => (medium === "orgânico/direto" ? t.mediumOrganicDirect : medium);
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-bold text-white flex items-center gap-2">
           <Users className="w-5 h-5 text-neon-cyan" />
-          Waitlist — Origens de Tráfego
+          {t.title}
         </h1>
         <p className="text-sm text-gray-500 mt-0.5">
-          {entries.length} inscrito{entries.length !== 1 ? "s" : ""} · dados em tempo real
+          {entries.length} {entries.length !== 1 ? t.signupPlural : t.signupSingular} · {t.realTimeData}
         </p>
       </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="glass-card rounded-xl border border-gray-800 p-4">
-          <p className="text-xs text-gray-500 mb-1">Total de Inscritos</p>
+          <p className="text-xs text-gray-500 mb-1">{t.kpiTotalSignups}</p>
           <p className="text-2xl font-bold font-mono text-white">{entries.length}</p>
         </div>
         <div className="glass-card rounded-xl border border-gray-800 p-4">
-          <p className="text-xs text-gray-500 mb-1">Fontes Únicas</p>
+          <p className="text-xs text-gray-500 mb-1">{t.kpiUniqueSources}</p>
           <p className="text-2xl font-bold font-mono text-neon-cyan">{Object.keys(bySource).length}</p>
         </div>
         <div className="glass-card rounded-xl border border-gray-800 p-4">
-          <p className="text-xs text-gray-500 mb-1">Com UTM</p>
+          <p className="text-xs text-gray-500 mb-1">{t.kpiWithUtm}</p>
           <p className="text-2xl font-bold font-mono text-green-400">
             {entries.filter((e) => e.utmSource).length}
           </p>
         </div>
         <div className="glass-card rounded-xl border border-gray-800 p-4">
-          <p className="text-xs text-gray-500 mb-1">Orgânico / Direto</p>
+          <p className="text-xs text-gray-500 mb-1">{t.kpiOrganicDirect}</p>
           <p className="text-2xl font-bold font-mono text-gray-400">
             {entries.filter((e) => !e.utmSource && !e.referrer).length}
           </p>
@@ -101,7 +110,7 @@ export default async function WaitlistAdminPage() {
         <div className="glass-card rounded-xl border border-gray-800 p-5">
           <p className="text-sm font-semibold text-white flex items-center gap-2 mb-4">
             <BarChart3 className="w-4 h-4 text-neon-cyan" />
-            Top Fontes (utm_source / referrer)
+            {t.topSourcesTitle}
           </p>
           <div className="space-y-2">
             {topSources.map(([source, count]) => {
@@ -109,7 +118,7 @@ export default async function WaitlistAdminPage() {
               return (
                 <div key={source}>
                   <div className="flex items-center justify-between mb-0.5">
-                    <SourceBadge source={source} />
+                    <SourceBadge source={source} dict={dict} />
                     <span className="text-xs text-gray-400 font-mono">{count} ({pct}%)</span>
                   </div>
                   <div className="h-1.5 rounded-full bg-gray-800 overflow-hidden">
@@ -119,7 +128,7 @@ export default async function WaitlistAdminPage() {
               );
             })}
             {topSources.length === 0 && (
-              <p className="text-xs text-gray-600">Nenhum dado ainda.</p>
+              <p className="text-xs text-gray-600">{t.noDataYet}</p>
             )}
           </div>
         </div>
@@ -127,7 +136,7 @@ export default async function WaitlistAdminPage() {
         <div className="glass-card rounded-xl border border-gray-800 p-5">
           <p className="text-sm font-semibold text-white flex items-center gap-2 mb-4">
             <Globe className="w-4 h-4 text-neon-purple" />
-            Mediums (utm_medium)
+            {t.mediumsTitle}
           </p>
           <div className="space-y-2">
             {Object.entries(byMedium)
@@ -137,7 +146,7 @@ export default async function WaitlistAdminPage() {
                 return (
                   <div key={medium}>
                     <div className="flex items-center justify-between mb-0.5">
-                      <span className="text-xs text-gray-300">{medium}</span>
+                      <span className="text-xs text-gray-300">{mediumLabel(medium)}</span>
                       <span className="text-xs text-gray-400 font-mono">{count} ({pct}%)</span>
                     </div>
                     <div className="h-1.5 rounded-full bg-gray-800 overflow-hidden">
@@ -153,14 +162,14 @@ export default async function WaitlistAdminPage() {
       {/* Tabela completa */}
       <div className="glass-card rounded-xl border border-gray-800 overflow-hidden">
         <div className="px-5 py-3.5 border-b border-gray-800 flex items-center justify-between">
-          <p className="text-sm font-semibold text-white">Todos os inscritos</p>
-          <p className="text-xs text-gray-500">Mais recentes primeiro</p>
+          <p className="text-sm font-semibold text-white">{t.allSignupsTitle}</p>
+          <p className="text-xs text-gray-500">{t.mostRecentFirst}</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-800">
-                {["E-mail", "Site", "Fonte", "Medium", "Campanha", "Referrer", "Data"].map((h) => (
+                {t.tableHeaders.map((h) => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     {h}
                   </th>
@@ -184,7 +193,7 @@ export default async function WaitlistAdminPage() {
                   </td>
                   <td className="px-4 py-3">
                     {e.utmSource ? (
-                      <SourceBadge source={e.utmSource} />
+                      <SourceBadge source={e.utmSource} dict={dict} />
                     ) : (
                       <span className="text-xs text-gray-600">—</span>
                     )}
@@ -199,7 +208,7 @@ export default async function WaitlistAdminPage() {
                     ) : "—"}
                   </td>
                   <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
-                    {e.createdAt.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                    {e.createdAt.toLocaleString(locale, { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })}
                   </td>
                 </tr>
               ))}
@@ -207,7 +216,7 @@ export default async function WaitlistAdminPage() {
           </table>
           {entries.length === 0 && (
             <div className="py-16 text-center text-gray-600 text-sm">
-              Nenhum inscrito ainda.
+              {t.emptySignups}
             </div>
           )}
         </div>
