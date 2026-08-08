@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { Search, TrendingDown, TrendingUp, Loader2, AlertTriangle, CheckCircle } from 'lucide-react'
 import { runPriceIntelligenceAction } from '@/actions/price-intelligence'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 interface PriceResult {
   alert: string | null
@@ -13,6 +14,7 @@ interface PriceResult {
 }
 
 export default function PriceIntelligenceForm({ adAccountId }: { adAccountId: string }) {
+  const { dict } = useLanguage()
   const [myPrice, setMyPrice] = useState('')
   const [productName, setProductName] = useState('')
   const [result, setResult] = useState<PriceResult | null>(null)
@@ -25,7 +27,7 @@ export default function PriceIntelligenceForm({ adAccountId }: { adAccountId: st
     setResult(null)
 
     if (!adAccountId) {
-      setError('Nenhuma conta de anúncio encontrada.')
+      setError(dict.audit.priceIntelligenceForm.noAdAccount)
       return
     }
 
@@ -34,23 +36,23 @@ export default function PriceIntelligenceForm({ adAccountId }: { adAccountId: st
       if (res.success && res.data) {
         setResult(res.data as unknown as PriceResult)
       } else {
-        setError(res.error ?? 'Erro ao executar Price Intelligence.')
+        setError(res.error ?? dict.audit.priceIntelligenceForm.genericError)
       }
     })
   }
 
   return (
     <div className="glass-card rounded-xl p-5 border border-gray-800">
-      <h3 className="text-sm font-semibold text-white mb-1">Executar Coleta de Preços</h3>
+      <h3 className="text-sm font-semibold text-white mb-1">{dict.audit.priceIntelligenceForm.title}</h3>
       <p className="text-xs text-gray-500 mb-4">
-        Informe seu preço e o produto. A IA visita os sites dos concorrentes cadastrados e compara.
+        {dict.audit.priceIntelligenceForm.description}
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-3">
         <input
           type="text"
           required
-          placeholder="Nome do produto (ex: Tênis Air Max 90)"
+          placeholder={dict.audit.priceIntelligenceForm.productPlaceholder}
           value={productName}
           onChange={e => setProductName(e.target.value)}
           className="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-neon-cyan/50"
@@ -63,7 +65,7 @@ export default function PriceIntelligenceForm({ adAccountId }: { adAccountId: st
               step="0.01"
               min="0"
               required
-              placeholder="0,00"
+              placeholder={dict.audit.priceIntelligenceForm.pricePlaceholder}
               value={myPrice}
               onChange={e => setMyPrice(e.target.value)}
               className="w-full bg-gray-900 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-neon-cyan/50"
@@ -75,7 +77,7 @@ export default function PriceIntelligenceForm({ adAccountId }: { adAccountId: st
             className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-neon-cyan text-gray-950 font-semibold text-sm hover:bg-neon-cyan/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-            {isPending ? 'Coletando...' : 'Coletar'}
+            {isPending ? dict.audit.priceIntelligenceForm.collecting : dict.audit.priceIntelligenceForm.collectButton}
           </button>
         </div>
       </form>
@@ -93,11 +95,11 @@ export default function PriceIntelligenceForm({ adAccountId }: { adAccountId: st
             <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-start gap-2">
               <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-semibold text-red-400">Risco de Preço Alto</p>
+                <p className="text-sm font-semibold text-red-400">{dict.audit.priceIntelligenceForm.highPriceRisk}</p>
                 <p className="text-xs text-red-400/70 mt-0.5">{result.alertMessage}</p>
                 {result.priceDiffPercent && (
                   <p className="text-xs text-red-300 mt-1 font-mono">
-                    Seu preço está {result.priceDiffPercent.toFixed(1)}% acima do concorrente mais barato
+                    {dict.audit.priceIntelligenceForm.priceDiffMessage(result.priceDiffPercent.toFixed(1))}
                   </p>
                 )}
               </div>
@@ -106,7 +108,7 @@ export default function PriceIntelligenceForm({ adAccountId }: { adAccountId: st
             <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20 flex items-start gap-2">
               <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-semibold text-green-400">Preço Competitivo</p>
+                <p className="text-sm font-semibold text-green-400">{dict.audit.priceIntelligenceForm.competitivePrice}</p>
                 <p className="text-xs text-green-400/70 mt-0.5">{result.alertMessage}</p>
               </div>
             </div>
@@ -115,7 +117,7 @@ export default function PriceIntelligenceForm({ adAccountId }: { adAccountId: st
           {/* Resultados por concorrente */}
           {result.competitors.length > 0 && (
             <div className="space-y-2">
-              <p className="text-xs font-medium text-gray-400">Preços coletados:</p>
+              <p className="text-xs font-medium text-gray-400">{dict.audit.priceIntelligenceForm.collectedPrices}</p>
               {result.competitors.map((comp, i) => (
                 <div key={i} className="flex items-center justify-between p-2.5 rounded-lg bg-white/3 border border-gray-800">
                   <div>
@@ -134,7 +136,7 @@ export default function PriceIntelligenceForm({ adAccountId }: { adAccountId: st
                         </span>
                       </>
                     ) : (
-                      <span className="text-xs text-gray-600">Não encontrado</span>
+                      <span className="text-xs text-gray-600">{dict.audit.priceIntelligenceForm.notFound}</span>
                     )}
                   </div>
                 </div>

@@ -5,16 +5,20 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { XOctagon, AlertTriangle, TrendingUp, Search, Bell } from 'lucide-react'
 import type { FeedInsight } from '@/lib/dashboard-data'
 import { SkeletonFeedItem } from './SkeletonCards'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
+import type { Dictionary } from '@/lib/i18n/language'
 
-const insightConfig = {
-  pause: { icon: XOctagon, label: 'PAUSE', color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/20', dotColor: 'bg-red-400' },
-  alert: { icon: AlertTriangle, label: 'ALERTA', color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/20', dotColor: 'bg-orange-400' },
-  scale: { icon: TrendingUp, label: 'SCALE', color: 'text-green-400', bg: 'bg-green-500/10', border: 'border-green-500/20', dotColor: 'bg-green-400' },
-  insight: { icon: Search, label: 'INSIGHT', color: 'text-neon-cyan', bg: 'bg-neon-cyan/10', border: 'border-neon-cyan/20', dotColor: 'bg-neon-cyan' },
+function insightConfig(t: Dictionary['dashboardHome']['aiInsightsFeed']) {
+  return {
+    pause: { icon: XOctagon, label: t.pauseLabel, color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/20', dotColor: 'bg-red-400' },
+    alert: { icon: AlertTriangle, label: t.alertLabel, color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/20', dotColor: 'bg-orange-400' },
+    scale: { icon: TrendingUp, label: t.scaleLabel, color: 'text-green-400', bg: 'bg-green-500/10', border: 'border-green-500/20', dotColor: 'bg-green-400' },
+    insight: { icon: Search, label: t.insightLabel, color: 'text-neon-cyan', bg: 'bg-neon-cyan/10', border: 'border-neon-cyan/20', dotColor: 'bg-neon-cyan' },
+  }
 }
 
-function InsightItem({ insight, isNew }: { insight: FeedInsight; isNew?: boolean }) {
-  const cfg = insightConfig[insight.type]
+function InsightItem({ insight, isNew, t }: { insight: FeedInsight; isNew?: boolean; t: Dictionary['dashboardHome']['aiInsightsFeed'] }) {
+  const cfg = insightConfig(t)[insight.type]
   const Icon = cfg.icon
   return (
     <motion.div
@@ -33,7 +37,7 @@ function InsightItem({ insight, isNew }: { insight: FeedInsight; isNew?: boolean
           <div className="flex items-center gap-2 mb-1">
             <span className="font-mono text-xs text-gray-500">[{insight.timestamp}]</span>
             <span className={`text-xs font-bold tracking-wider ${cfg.color}`}>{cfg.label}</span>
-            {isNew && <span className="text-xs px-1 py-0.5 rounded bg-neon-cyan/20 text-neon-cyan font-medium border border-neon-cyan/30">NOVO</span>}
+            {isNew && <span className="text-xs px-1 py-0.5 rounded bg-neon-cyan/20 text-neon-cyan font-medium border border-neon-cyan/30">{t.newBadge}</span>}
           </div>
           <p className="text-xs font-semibold text-gray-200 leading-snug mb-1">{insight.title}</p>
           <p className="text-xs text-gray-400 leading-relaxed">{insight.description}</p>
@@ -49,6 +53,8 @@ function InsightItem({ insight, isNew }: { insight: FeedInsight; isNew?: boolean
 }
 
 export default function AIInsightsFeed({ insights }: { insights: FeedInsight[] }) {
+  const { dict } = useLanguage()
+  const t = dict.dashboardHome.aiInsightsFeed
   const [unreadCount, setUnreadCount] = useState(Math.min(2, insights.length))
   const [newIds, setNewIds] = useState<Set<string>>(new Set(insights.slice(0, 2).map(i => i.id)))
   const feedRef = useRef<HTMLDivElement>(null)
@@ -60,7 +66,7 @@ export default function AIInsightsFeed({ insights }: { insights: FeedInsight[] }
   if (insights.length === 0) {
     return (
       <div className="glass-card rounded-xl border border-gray-800 flex items-center justify-center min-h-[200px]">
-        <p className="text-gray-500 text-sm">Nenhuma decisão da IA ainda.</p>
+        <p className="text-gray-500 text-sm">{t.noInsights}</p>
       </div>
     )
   }
@@ -83,7 +89,7 @@ export default function AIInsightsFeed({ insights }: { insights: FeedInsight[] }
               className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-neon-cyan/10 border border-neon-cyan/20 text-neon-cyan text-xs font-medium hover:bg-neon-cyan/20 transition-colors"
             >
               <Bell className="w-3 h-3" />
-              <span>{unreadCount} novos</span>
+              <span>{t.newCount(unreadCount)}</span>
             </button>
           )}
           <div className="flex items-center gap-1.5">
@@ -94,22 +100,22 @@ export default function AIInsightsFeed({ insights }: { insights: FeedInsight[] }
       </div>
 
       <div className="px-4 py-3 border-b border-gray-800 flex-shrink-0">
-        <h3 className="text-sm font-semibold text-white">Feed de Insights da IA</h3>
-        <p className="text-xs text-gray-500 mt-0.5">Ações e alertas em tempo real</p>
+        <h3 className="text-sm font-semibold text-white">{t.title}</h3>
+        <p className="text-xs text-gray-500 mt-0.5">{t.subtitle}</p>
       </div>
 
       <div ref={feedRef} className="flex-1 overflow-y-auto p-3 space-y-2 scrollbar-thin" style={{ maxHeight: '420px' }}>
         <AnimatePresence initial={false}>
           {insights.map(insight => (
-            <InsightItem key={insight.id} insight={insight} isNew={newIds.has(insight.id)} />
+            <InsightItem key={insight.id} insight={insight} isNew={newIds.has(insight.id)} t={t} />
           ))}
         </AnimatePresence>
       </div>
 
       <div className="px-4 py-2.5 border-t border-gray-800 bg-black/20 rounded-b-xl flex-shrink-0">
         <div className="flex items-center justify-between">
-          <span className="font-mono text-xs text-gray-600">{insights.length} eventos</span>
-          <span className="font-mono text-xs text-green-400/60">&gt; monitorando 24/7_</span>
+          <span className="font-mono text-xs text-gray-600">{t.eventsCount(insights.length)}</span>
+          <span className="font-mono text-xs text-green-400/60">&gt; {t.monitoring247}</span>
         </div>
       </div>
     </div>

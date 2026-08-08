@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Check, Clock, Loader2, Headphones } from 'lucide-react';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 interface SetupStep {
   id: string
@@ -12,6 +13,8 @@ interface SetupStep {
 }
 
 function StepItem({ step, index }: { step: SetupStep; index: number }) {
+  const { dict } = useLanguage();
+  const d = dict.account.whiteGloveChecklist;
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -60,7 +63,7 @@ function StepItem({ step, index }: { step: SetupStep; index: number }) {
           </p>
           {step.inProgress && (
             <span className="text-xs px-1.5 py-0.5 rounded bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/20 font-medium">
-              Em progresso...
+              {d.inProgress}
             </span>
           )}
         </div>
@@ -85,39 +88,42 @@ export default function WhiteGloveChecklist({
   hasAudit,
   hasAutoPilot,
 }: Props) {
+  const { dict } = useLanguage();
+  const d = dict.account.whiteGloveChecklist;
+
   const steps: SetupStep[] = [
     {
       id: '1',
-      title: 'Conta Meta conectada',
-      description: 'Facebook OAuth autorizado e token de acesso salvo com segurança.',
+      title: d.steps[0].title,
+      description: d.steps[0].description,
       completed: hasFacebookConnected,
       inProgress: false,
     },
     {
       id: '2',
-      title: 'Conta de anúncios sincronizada',
-      description: 'Ad Account vinculada e campanhas disponíveis para monitoramento.',
+      title: d.steps[1].title,
+      description: d.steps[1].description,
       completed: hasAdAccount,
       inProgress: hasFacebookConnected && !hasAdAccount,
     },
     {
       id: '3',
-      title: 'Concorrentes adicionados',
-      description: 'Monitor de preços configurado para rastrear concorrentes em tempo real.',
+      title: d.steps[2].title,
+      description: d.steps[2].description,
       completed: hasCompetitors,
       inProgress: hasAdAccount && !hasCompetitors,
     },
     {
       id: '4',
-      title: 'Primeira auditoria de funil',
-      description: 'LP analisada pela IA para detectar gargalos de conversão.',
+      title: d.steps[3].title,
+      description: d.steps[3].description,
       completed: hasAudit,
       inProgress: hasAdAccount && !hasAudit,
     },
     {
       id: '5',
-      title: 'AI Auto-Pilot ativado',
-      description: 'Campanhas sendo gerenciadas automaticamente com base em ROAS e frequência.',
+      title: d.steps[4].title,
+      description: d.steps[4].description,
       completed: hasAutoPilot,
       inProgress: hasAdAccount && !hasAutoPilot,
     },
@@ -134,8 +140,8 @@ export default function WhiteGloveChecklist({
             <Headphones className="w-4 h-4 text-neon-purple" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-white">Setup do FunnelGuard</h3>
-            <p className="text-xs text-gray-500">{completedCount}/{steps.length} etapas concluídas</p>
+            <h3 className="text-sm font-semibold text-white">{d.setupTitle}</h3>
+            <p className="text-xs text-gray-500">{d.stepsCompleted.replace('{completed}', String(completedCount)).replace('{total}', String(steps.length))}</p>
           </div>
         </div>
         <span className="text-lg font-bold font-mono text-neon-purple">{progressPct}%</span>
@@ -156,9 +162,9 @@ export default function WhiteGloveChecklist({
 
       <div className="mt-5 p-3 rounded-lg bg-neon-purple/10 border border-neon-purple/20">
         <p className="text-xs text-gray-400">
-          Precisa de ajuda?{' '}
+          {d.needHelp}{' '}
           <span className="text-neon-purple font-medium cursor-pointer hover:underline">
-            Agendar call com especialista
+            {d.scheduleCallWithExpert}
           </span>
         </p>
       </div>

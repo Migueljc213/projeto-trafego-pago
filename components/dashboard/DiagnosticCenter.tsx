@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
+import type { Dictionary } from '@/lib/i18n/language'
 import {
   Megaphone,
   Globe,
@@ -53,20 +55,20 @@ function getTextColor(score: number, isBottleneck: boolean): string {
   return 'text-red-400'
 }
 
-function getScoreLabel(score: number): string {
-  if (score >= 80) return 'Saudável'
-  if (score >= 60) return 'Atenção'
-  if (score >= 40) return 'Risco'
-  return 'Crítico'
+function getScoreLabel(score: number, labels: Dictionary['audit']['diagnosticCenter']['scoreLabels']): string {
+  if (score >= 80) return labels.healthy
+  if (score >= 60) return labels.attention
+  if (score >= 40) return labels.risk
+  return labels.critical
 }
 
-function getBottleneckMeta(bottleneck: DiagnosticData['bottleneck']) {
+function getBottleneckMeta(bottleneck: DiagnosticData['bottleneck'], labels: Dictionary['audit']['diagnosticCenter']['bottleneckLabels']) {
   const map = {
-    AD: { label: 'Gargalo nos Criativos', color: 'text-purple-400', bg: 'bg-purple-500/10 border-purple-500/30' },
-    PRICE: { label: 'Gargalo no Preço', color: 'text-orange-400', bg: 'bg-orange-500/10 border-orange-500/30' },
-    SITE: { label: 'Gargalo no Site', color: 'text-red-400', bg: 'bg-red-500/10 border-red-500/30' },
-    MIXED: { label: 'Múltiplos Gargalos', color: 'text-yellow-400', bg: 'bg-yellow-500/10 border-yellow-500/30' },
-    HEALTHY: { label: 'Funil Saudável', color: 'text-green-400', bg: 'bg-green-500/10 border-green-500/30' },
+    AD: { label: labels.ad, color: 'text-purple-400', bg: 'bg-purple-500/10 border-purple-500/30' },
+    PRICE: { label: labels.price, color: 'text-orange-400', bg: 'bg-orange-500/10 border-orange-500/30' },
+    SITE: { label: labels.site, color: 'text-red-400', bg: 'bg-red-500/10 border-red-500/30' },
+    MIXED: { label: labels.mixed, color: 'text-yellow-400', bg: 'bg-yellow-500/10 border-yellow-500/30' },
+    HEALTHY: { label: labels.healthy, color: 'text-green-400', bg: 'bg-green-500/10 border-green-500/30' },
   }
   return map[bottleneck]
 }
@@ -78,15 +80,17 @@ function HealthBar({
   score,
   icon: Icon,
   isBottleneck,
+  scoreLabels,
 }: {
   label: string
   score: number
   icon: React.ElementType
   isBottleneck: boolean
+  scoreLabels: Dictionary['audit']['diagnosticCenter']['scoreLabels']
 }) {
   const barColor = getBarColor(score, isBottleneck)
   const textColor = getTextColor(score, isBottleneck)
-  const scoreLabel = getScoreLabel(score)
+  const scoreLabel = getScoreLabel(score, scoreLabels)
 
   return (
     <div className={`p-4 rounded-xl border transition-all ${
@@ -129,7 +133,7 @@ function HealthBar({
 
 // ─── Executive Summary Expandível ────────────────────────────────────────────
 
-function ExecutiveSummary({ summary }: { summary: string }) {
+function ExecutiveSummary({ summary, dict }: { summary: string; dict: Dictionary }) {
   const [expanded, setExpanded] = useState(false)
   const paragraphs = summary.split(/\n\n+/).filter(Boolean)
 
@@ -141,8 +145,8 @@ function ExecutiveSummary({ summary }: { summary: string }) {
       >
         <div className="flex items-center gap-2">
           <FileText className="w-4 h-4 text-neon-cyan" />
-          <span className="text-sm font-semibold text-white">Resumo Executivo</span>
-          <span className="text-xs text-gray-500 ml-1">3 parágrafos · foco em lucro</span>
+          <span className="text-sm font-semibold text-white">{dict.audit.diagnosticCenter.executiveSummary}</span>
+          <span className="text-xs text-gray-500 ml-1">{dict.audit.diagnosticCenter.executiveSummarySubtitle}</span>
         </div>
         {expanded
           ? <ChevronUp className="w-4 h-4 text-gray-400" />
@@ -162,9 +166,9 @@ function ExecutiveSummary({ summary }: { summary: string }) {
             <div className="px-4 pb-4 space-y-3 border-t border-gray-800 pt-4">
               {paragraphs.map((para, i) => (
                 <p key={i} className="text-sm text-gray-300 leading-relaxed">
-                  {i === 0 && <span className="text-neon-cyan font-semibold mr-1">Situação:</span>}
-                  {i === 1 && <span className="text-yellow-400 font-semibold mr-1">Causa Raiz:</span>}
-                  {i === 2 && <span className="text-green-400 font-semibold mr-1">Ações:</span>}
+                  {i === 0 && <span className="text-neon-cyan font-semibold mr-1">{dict.audit.diagnosticCenter.situationLabel}</span>}
+                  {i === 1 && <span className="text-yellow-400 font-semibold mr-1">{dict.audit.diagnosticCenter.rootCauseLabel}</span>}
+                  {i === 2 && <span className="text-green-400 font-semibold mr-1">{dict.audit.diagnosticCenter.actionsLabel}</span>}
                   {para}
                 </p>
               ))}
@@ -183,14 +187,16 @@ export default function DiagnosticCenter({
   onRunDiagnosis,
   loading = false,
 }: DiagnosticCenterProps) {
+  const { dict } = useLanguage()
+
   if (!data) {
     return (
       <div className="glass-card rounded-xl border border-gray-800 p-6 flex flex-col items-center justify-center gap-4 min-h-[280px]">
         <TrendingDown className="w-10 h-10 text-gray-700" />
         <div className="text-center">
-          <p className="text-sm font-medium text-gray-400">Sem diagnóstico disponível</p>
+          <p className="text-sm font-medium text-gray-400">{dict.audit.diagnosticCenter.noDiagnosisAvailable}</p>
           <p className="text-xs text-gray-600 mt-1">
-            Execute o Auto-Pilot Correlacionado em uma campanha para gerar o primeiro diagnóstico.
+            {dict.audit.diagnosticCenter.noDiagnosisHint}
           </p>
         </div>
         {onRunDiagnosis && (
@@ -199,14 +205,14 @@ export default function DiagnosticCenter({
             disabled={loading}
             className="px-4 py-2 rounded-lg bg-neon-cyan/10 border border-neon-cyan/30 text-neon-cyan text-sm font-medium hover:bg-neon-cyan/20 transition-all disabled:opacity-40"
           >
-            {loading ? 'Diagnosticando...' : 'Gerar Primeiro Diagnóstico'}
+            {loading ? dict.audit.diagnosticCenter.diagnosing : dict.audit.diagnosticCenter.generateFirstDiagnosis}
           </button>
         )}
       </div>
     )
   }
 
-  const bottleneckMeta = getBottleneckMeta(data.bottleneck)
+  const bottleneckMeta = getBottleneckMeta(data.bottleneck, dict.audit.diagnosticCenter.bottleneckLabels)
   const isAdBottleneck = data.bottleneck === 'AD' || data.bottleneck === 'MIXED'
   const isPriceBottleneck = data.bottleneck === 'PRICE' || data.bottleneck === 'MIXED'
   const isSiteBottleneck = data.bottleneck === 'SITE' || data.bottleneck === 'MIXED'
@@ -230,7 +236,7 @@ export default function DiagnosticCenter({
         <div>
           <h3 className="text-base font-semibold text-white flex items-center gap-2">
             <TrendingDown className="w-4 h-4 text-neon-cyan" />
-            Centro de Diagnóstico
+            {dict.audit.diagnosticCenter.title}
           </h3>
           {data.campaignName && (
             <p className="text-xs text-gray-500 mt-0.5 truncate max-w-[220px]">
@@ -255,25 +261,28 @@ export default function DiagnosticCenter({
       {/* Gráfico de Saúde do Funil — 3 Barras */}
       <div className="space-y-3">
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-          Saúde do Funil
+          {dict.audit.diagnosticCenter.funnelHealth}
         </p>
         <HealthBar
-          label="Criativos"
+          label={dict.audit.diagnosticCenter.creatives}
           score={data.adScore}
           icon={Megaphone}
           isBottleneck={isAdBottleneck}
+          scoreLabels={dict.audit.diagnosticCenter.scoreLabels}
         />
         <HealthBar
-          label="Site / LP"
+          label={dict.audit.diagnosticCenter.siteLp}
           score={data.siteScore}
           icon={Globe}
           isBottleneck={isSiteBottleneck}
+          scoreLabels={dict.audit.diagnosticCenter.scoreLabels}
         />
         <HealthBar
-          label="Preço"
+          label={dict.audit.diagnosticCenter.price}
           score={data.priceScore}
           icon={Tag}
           isBottleneck={isPriceBottleneck}
+          scoreLabels={dict.audit.diagnosticCenter.scoreLabels}
         />
       </div>
 
@@ -282,7 +291,7 @@ export default function DiagnosticCenter({
         <div className="flex items-start gap-2">
           <Sparkles className="w-3.5 h-3.5 text-neon-cyan mt-0.5 flex-shrink-0" />
           <div>
-            <p className="text-xs font-semibold text-neon-cyan mb-1">Causa Raiz (IA)</p>
+            <p className="text-xs font-semibold text-neon-cyan mb-1">{dict.audit.diagnosticCenter.aiRootCause}</p>
             <p className="text-xs text-gray-300 leading-relaxed">{data.rootCause}</p>
           </div>
         </div>
@@ -290,7 +299,7 @@ export default function DiagnosticCenter({
 
       {/* Executive Summary (expandível) */}
       {data.executiveSummary && (
-        <ExecutiveSummary summary={data.executiveSummary} />
+        <ExecutiveSummary summary={data.executiveSummary} dict={dict} />
       )}
 
       {/* Botão de Rediagnóstico */}
@@ -301,7 +310,7 @@ export default function DiagnosticCenter({
           className="w-full py-2.5 rounded-lg border border-gray-700 text-sm text-gray-400 hover:text-white hover:border-gray-500 transition-all disabled:opacity-40 flex items-center justify-center gap-2"
         >
           <TrendingDown className={`w-3.5 h-3.5 ${loading ? 'animate-pulse' : ''}`} />
-          {loading ? 'Diagnosticando...' : 'Atualizar Diagnóstico'}
+          {loading ? dict.audit.diagnosticCenter.diagnosing : dict.audit.diagnosticCenter.updateDiagnosis}
         </button>
       )}
     </motion.div>

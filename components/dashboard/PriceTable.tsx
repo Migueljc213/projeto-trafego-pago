@@ -2,17 +2,20 @@
 
 import { TrendingDown } from 'lucide-react'
 import type { CompetitorRow } from '@/lib/dashboard-data'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 function formatPrice(value: number): string {
   return `R$ ${value.toFixed(2).replace('.', ',')}`
 }
 
 export default function PriceTable({ competitors }: { competitors: CompetitorRow[] }) {
+  const { dict } = useLanguage()
+
   if (competitors.length === 0) {
     return (
       <div className="glass-card rounded-xl border border-gray-800 p-8 text-center">
-        <p className="text-gray-500 text-sm">Nenhum concorrente monitorado ainda.</p>
-        <p className="text-gray-600 text-xs mt-1">Adicione concorrentes na aba Preços.</p>
+        <p className="text-gray-500 text-sm">{dict.audit.priceTable.noCompetitorsYet}</p>
+        <p className="text-gray-600 text-xs mt-1">{dict.audit.priceTable.addCompetitorsHint}</p>
       </div>
     )
   }
@@ -25,9 +28,9 @@ export default function PriceTable({ competitors }: { competitors: CompetitorRow
     <div className="glass-card rounded-xl border border-gray-800 overflow-hidden">
       <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
         <div>
-          <h3 className="text-base font-semibold text-white">Monitor de Preços</h3>
+          <h3 className="text-base font-semibold text-white">{dict.audit.priceTable.title}</h3>
           <p className="text-xs text-gray-500 mt-0.5">
-            {lastUpdated ? `Atualizado às ${lastUpdated}` : 'Aguardando primeira coleta'}
+            {lastUpdated ? dict.audit.priceTable.updatedAt(lastUpdated) : dict.audit.priceTable.awaitingFirstCollection}
           </p>
         </div>
       </div>
@@ -36,9 +39,9 @@ export default function PriceTable({ competitors }: { competitors: CompetitorRow
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-800 bg-white/2">
-              <th className="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Concorrente</th>
-              <th className="text-right px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Último Preço</th>
-              <th className="text-center px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Atualizado</th>
+              <th className="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">{dict.audit.priceTable.table.competitor}</th>
+              <th className="text-right px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">{dict.audit.priceTable.table.lastPrice}</th>
+              <th className="text-center px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">{dict.audit.priceTable.table.updated}</th>
             </tr>
           </thead>
           <tbody>
@@ -56,7 +59,7 @@ export default function PriceTable({ competitors }: { competitors: CompetitorRow
                       {formatPrice(comp.lastPrice)}
                     </span>
                   ) : (
-                    <span className="text-gray-600 text-xs">Não coletado</span>
+                    <span className="text-gray-600 text-xs">{dict.audit.priceTable.table.notCollected}</span>
                   )}
                 </td>
                 <td className="px-4 py-3.5 text-center">
@@ -66,7 +69,7 @@ export default function PriceTable({ competitors }: { competitors: CompetitorRow
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-orange-500/15 text-orange-400 border border-orange-500/25">
-                      <TrendingDown className="w-3 h-3" /> Pendente
+                      <TrendingDown className="w-3 h-3" /> {dict.audit.priceTable.table.pending}
                     </span>
                   )}
                 </td>
@@ -78,8 +81,7 @@ export default function PriceTable({ competitors }: { competitors: CompetitorRow
 
       <div className="px-5 py-3 border-t border-gray-800 bg-white/2">
         <p className="text-xs text-gray-500">
-          <span className="text-neon-cyan/70 font-medium">{competitors.length} concorrentes</span> monitorados.
-          Use a aba Preços para executar uma nova coleta.
+          <span className="text-neon-cyan/70 font-medium">{dict.audit.priceTable.footer(competitors.length)}</span> {dict.audit.priceTable.footerSuffix}
         </p>
       </div>
     </div>

@@ -4,6 +4,7 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { ChevronDown, Building2 } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 import type { AdAccountInfo } from '@/lib/dashboard-data'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 interface Props {
   accounts: AdAccountInfo[]
@@ -11,6 +12,8 @@ interface Props {
 }
 
 export default function AdAccountSwitcher({ accounts, currentId }: Props) {
+  const { dict } = useLanguage()
+  const t = dict.dashboardHome.adAccountSwitcher
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -43,14 +46,14 @@ export default function AdAccountSwitcher({ accounts, currentId }: Props) {
         className="flex items-center gap-2 px-3 py-2 rounded-lg glass-card border border-gray-700 hover:border-gray-500 transition-all text-sm text-gray-300"
       >
         <Building2 className="w-3.5 h-3.5 text-neon-cyan flex-shrink-0" />
-        <span className="max-w-[160px] truncate">{current?.name ?? 'Selecionar conta'}</span>
+        <span className="max-w-[160px] truncate">{current?.name ?? t.selectAccount}</span>
         <ChevronDown className={`w-3.5 h-3.5 text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {open && (
         <div className="absolute right-0 mt-1 w-64 glass-card border border-gray-700 rounded-xl shadow-xl z-50 overflow-hidden">
           <p className="px-3 py-2 text-xs text-gray-500 border-b border-gray-800">
-            Contas de Anúncio
+            {t.accountsListTitle}
           </p>
           {accounts.map((acc) => (
             <button

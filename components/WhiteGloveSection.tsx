@@ -5,66 +5,16 @@ import { useRef } from "react";
 import { useInView } from "framer-motion";
 import { Shield, CheckCircle, Code2, BarChart3, Headphones, Lock } from "lucide-react";
 import AnimatedSection from "./AnimatedSection";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
-const steps = [
-  {
-    step: "01",
-    icon: Headphones,
-    title: "Discovery Call (30 min)",
-    description:
-      "Um especialista dedicado mapeia toda a sua stack: CRM, plataforma de e-commerce, contas de anúncios e configuração atual do pixel. Sem formulários, sem bots.",
-    highlight: "Conduzido por humanos",
-    color: "neon-cyan",
-  },
-  {
-    step: "02",
-    icon: Code2,
-    title: "CAPI + Pixel Setup",
-    description:
-      "Configuramos manualmente sua integração server-side com a Conversions API, garantindo 100% de deduplicação de eventos e precisão de dados à prova de iOS. Escrevemos o código. Verificamos cada evento.",
-    highlight: "Feito para você",
-    color: "neon-purple",
-  },
-  {
-    step: "03",
-    icon: BarChart3,
-    title: "Funnel Baseline Audit",
-    description:
-      "Nossa IA executa um diagnóstico completo nas suas landing pages, fluxo de checkout e preços dos concorrentes. Você recebe uma lista priorizada de correções em até 24h.",
-    highlight: "AI-powered",
-    color: "blue-500",
-  },
-  {
-    step: "04",
-    icon: Shield,
-    title: "Go Live & Monitoramento",
-    description:
-      "FunnelGuard AI entra em operação monitorando seu funil 24/7. Você recebe relatórios semanais de lucro com ações específicas. Sem dashboards para verificar — a gente traz o que importa.",
-    highlight: "Automatizado",
-    color: "emerald-500",
-  },
+const stepStyles = [
+  { step: "01", icon: Headphones, color: "neon-cyan" },
+  { step: "02", icon: Code2, color: "neon-purple" },
+  { step: "03", icon: BarChart3, color: "blue-500" },
+  { step: "04", icon: Shield, color: "emerald-500" },
 ];
 
-const guarantees = [
-  {
-    icon: Lock,
-    title: "Garantia de 100% de Precisão nos Dados",
-    description:
-      "Se o seu CAPI setup não capturar pelo menos 95% dos seus eventos de compra reais em 7 dias, corrigimos gratuitamente — sem perguntas.",
-  },
-  {
-    icon: CheckCircle,
-    title: "Sem Contratos de Fidelidade",
-    description:
-      "Cancele quando quiser. O código do CAPI, a configuração do pixel e os relatórios de auditoria são seus. Ganhamos sua fidelidade entregando resultados, não te prendendo.",
-  },
-  {
-    icon: Shield,
-    title: "Conformidade SOC 2 no Tratamento de Dados",
-    description:
-      "Seus dados empresariais nunca treinam modelos públicos de IA. Todo o processamento é isolado por conta com criptografia de nível empresarial.",
-  },
-];
+const guaranteeIcons = [Lock, CheckCircle, Shield];
 
 const stepVariants = {
   hidden: { opacity: 0, x: -30 },
@@ -99,6 +49,17 @@ const iconBgMap: Record<string, string> = {
 export default function WhiteGloveSection() {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: "-80px 0px" });
+  const { dict } = useLanguage();
+
+  const steps = stepStyles.map((style, i) => ({
+    ...style,
+    ...dict.landing.whiteGlove.steps[i],
+  }));
+
+  const guarantees = guaranteeIcons.map((icon, i) => ({
+    icon,
+    ...dict.landing.whiteGlove.guarantees[i],
+  }));
 
   return (
     <section className="relative py-24 lg:py-32 overflow-hidden">
@@ -112,22 +73,22 @@ export default function WhiteGloveSection() {
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-neon-purple/30 bg-neon-purple/5 mb-6">
             <Shield className="w-3.5 h-3.5 text-neon-purple" />
             <span className="text-xs font-semibold text-neon-purple tracking-wider uppercase">
-              White Glove Onboarding
+              {dict.landing.whiteGlove.sectionBadge}
             </span>
           </div>
 
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black leading-tight mb-6">
-            <span className="text-white">Não Entregamos um Login.</span>
+            <span className="text-white">{dict.landing.whiteGlove.heading.part1}</span>
             <br />
-            <span className="text-gradient-cyan-purple">Configuramos Tudo.</span>
+            <span className="text-gradient-cyan-purple">{dict.landing.whiteGlove.heading.part2}</span>
           </h2>
 
           <p className="text-lg text-gray-400 max-w-2xl mx-auto leading-relaxed">
-            A maioria das ferramentas te joga num dashboard e te deseja boa sorte. FunnelGuard AI é diferente:{" "}
+            {dict.landing.whiteGlove.description.prefix}{" "}
             <span className="text-white font-semibold">
-              um especialista humano configura seu CAPI e Pixel manualmente
+              {dict.landing.whiteGlove.description.bold}
             </span>{" "}
-            para garantir 100% de precisão nos dados antes de a IA assumir.
+            {dict.landing.whiteGlove.description.suffix}
           </p>
         </AnimatedSection>
 
@@ -162,7 +123,7 @@ export default function WhiteGloveSection() {
                     <div className="flex items-start justify-between gap-4 mb-3">
                       <div>
                         <span className="text-xs font-mono text-gray-600 mb-1 block">
-                          Etapa {step.step}
+                          {dict.landing.whiteGlove.stepLabel} {step.step}
                         </span>
                         <h3 className="text-lg font-bold text-white group-hover:text-neon-cyan transition-colors duration-300">
                           {step.title}
@@ -185,7 +146,7 @@ export default function WhiteGloveSection() {
         {/* Guarantees */}
         <AnimatedSection delay={0.3} className="mt-16">
           <div className="text-center mb-8">
-            <h3 className="text-xl font-bold text-white">Nossas Garantias</h3>
+            <h3 className="text-xl font-bold text-white">{dict.landing.whiteGlove.guaranteesTitle}</h3>
           </div>
           <div className="grid sm:grid-cols-3 gap-5">
             {guarantees.map((g, i) => {

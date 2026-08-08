@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion'
 import { TrendingDown, Zap, BarChart2, PauseCircle } from 'lucide-react'
 import type { AiSavings } from '@/lib/dashboard-data'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 interface ROISavingsCardProps {
   savings: AiSavings
@@ -17,6 +18,8 @@ function AnimatedCurrency({ value }: { value: number }) {
 }
 
 export default function ROISavingsCard({ savings }: ROISavingsCardProps) {
+  const { dict } = useLanguage()
+  const t = dict.dashboardHome.roiSavingsCard
   const hasSavings = savings.totalSaved > 0
 
   return (
@@ -38,14 +41,14 @@ export default function ROISavingsCard({ savings }: ROISavingsCardProps) {
           </div>
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-green-400/80">
-              Economia da IA — 30 dias
+              {t.title}
             </p>
-            <p className="text-[11px] text-gray-500">Baseado em campanhas pausadas / orçamentos reduzidos</p>
+            <p className="text-[11px] text-gray-500">{t.subtitle}</p>
           </div>
         </div>
         <div className="flex items-center gap-1 rounded-full border border-green-500/25 bg-green-500/10 px-2.5 py-0.5">
           <Zap className="h-3 w-3 text-green-400" />
-          <span className="text-[10px] font-bold text-green-400">AUTO-PILOT</span>
+          <span className="text-[10px] font-bold text-green-400">{t.autopilotBadge}</span>
         </div>
       </div>
 
@@ -63,7 +66,7 @@ export default function ROISavingsCard({ savings }: ROISavingsCardProps) {
           </motion.span>
         </div>
         <p className="mt-1.5 text-sm text-gray-400">
-          economizados em gasto que não converteria
+          {t.description}
         </p>
       </div>
 
@@ -71,21 +74,21 @@ export default function ROISavingsCard({ savings }: ROISavingsCardProps) {
       <div className="grid grid-cols-3 gap-3">
         <StatPill
           icon={PauseCircle}
-          label="Pausas"
+          label={t.pauses}
           value={savings.pauseCount}
           color="text-red-400"
           bg="bg-red-500/10 border-red-500/20"
         />
         <StatPill
           icon={BarChart2}
-          label="Decisões"
+          label={t.decisions}
           value={savings.totalDecisions}
           color="text-neon-cyan"
           bg="bg-neon-cyan/10 border-neon-cyan/20"
         />
         <StatPill
           icon={TrendingDown}
-          label="Escaladas"
+          label={t.scaled}
           value={savings.scaleCount}
           color="text-purple-400"
           bg="bg-purple-500/10 border-purple-500/20"
@@ -96,15 +99,14 @@ export default function ROISavingsCard({ savings }: ROISavingsCardProps) {
       {!hasSavings && (
         <div className="mt-4 rounded-lg border border-gray-700 bg-gray-900/60 px-3 py-2.5 text-center">
           <p className="text-xs text-gray-500">
-            Ative o Auto-Pilot em suas campanhas para começar a registrar economia.
+            {t.emptyState}
           </p>
         </div>
       )}
 
       {hasSavings && (
         <p className="mt-4 text-[11px] text-gray-600">
-          Estimativa: cada pausa equivale a 50% do orçamento diário economizado.
-          Valores reais podem variar conforme performance histórica.
+          {t.disclaimer}
         </p>
       )}
     </motion.div>

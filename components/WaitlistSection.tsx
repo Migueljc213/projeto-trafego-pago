@@ -6,6 +6,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Zap, Mail, Globe, CheckCircle, AlertCircle, Loader2, ArrowRight, Twitter, Linkedin, Github } from "lucide-react";
 import { submitWaitlist, type WaitlistFormState } from "@/app/actions";
 import AnimatedSection from "./AnimatedSection";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
+import type { Dictionary } from "@/lib/i18n/language";
 
 const initialState: WaitlistFormState = {
   success: false,
@@ -18,7 +20,7 @@ const socialLinks = [
   { icon: Github, href: "#", label: "GitHub" },
 ];
 
-function SubmitButton({ isPending }: { isPending: boolean }) {
+function SubmitButton({ isPending, dict }: { isPending: boolean; dict: Dictionary }) {
   return (
     <motion.button
       type="submit"
@@ -30,12 +32,12 @@ function SubmitButton({ isPending }: { isPending: boolean }) {
       {isPending ? (
         <>
           <Loader2 className="w-4 h-4 animate-spin text-dark-base" />
-          <span>Processando sua inscrição...</span>
+          <span>{dict.landing.waitlist.submittingText}</span>
         </>
       ) : (
         <>
           <Zap className="w-4 h-4" />
-          <span>Solicitar Acesso Beta</span>
+          <span>{dict.landing.waitlist.submitButton}</span>
           <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />
         </>
       )}
@@ -44,6 +46,7 @@ function SubmitButton({ isPending }: { isPending: boolean }) {
 }
 
 export default function WaitlistSection() {
+  const { dict } = useLanguage();
   const [state, setState] = useState<WaitlistFormState>(initialState);
   const [isPending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
@@ -85,21 +88,20 @@ export default function WaitlistSection() {
               <span className="relative inline-flex rounded-full h-2 w-2 bg-neon-cyan" />
             </span>
             <span className="text-xs font-semibold text-neon-cyan tracking-wider uppercase">
-              Beta Limitado — 47 Vagas Restantes
+              {dict.landing.waitlist.limitedBetaBadge}
             </span>
           </div>
 
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black leading-tight mb-6">
-            <span className="text-white">Pare de Adivinhar.</span>
+            <span className="text-white">{dict.landing.waitlist.heading.part1}</span>
             <br />
-            <span className="text-gradient-cyan-purple">Comece a Diagnosticar.</span>
+            <span className="text-gradient-cyan-purple">{dict.landing.waitlist.heading.part2}</span>
           </h2>
 
           <p className="text-lg text-gray-400 max-w-xl mx-auto leading-relaxed">
-            Solicite acesso beta e ganhe um{" "}
-            <span className="text-white font-semibold">White Glove onboarding gratuito</span>
-            — configuramos seu CAPI, auditamos seu funil e mostramos exatamente onde você está
-            perdendo dinheiro.
+            {dict.landing.waitlist.description.prefix}{" "}
+            <span className="text-white font-semibold">{dict.landing.waitlist.description.bold}</span>
+            {dict.landing.waitlist.description.suffix}
           </p>
         </AnimatedSection>
 
@@ -125,14 +127,14 @@ export default function WaitlistSection() {
                       <CheckCircle className="w-8 h-8 text-green-400" />
                     </div>
                     <h3 className="text-2xl font-bold text-white mb-3">
-                      Você está na lista!
+                      {dict.landing.waitlist.successTitle}
                     </h3>
                     <p className="text-gray-400 max-w-md mx-auto leading-relaxed">
                       {state.message}
                     </p>
                     <div className="mt-6 flex items-center justify-center gap-2 text-xs text-gray-600">
                       <CheckCircle className="w-3.5 h-3.5 text-neon-cyan" />
-                      <span>Verifique seu e-mail para confirmação</span>
+                      <span>{dict.landing.waitlist.successNote}</span>
                     </div>
                   </motion.div>
                 ) : (
@@ -171,7 +173,7 @@ export default function WaitlistSection() {
                             htmlFor="email"
                             className="block text-xs font-semibold text-gray-400 uppercase tracking-wider"
                           >
-                            E-mail Corporativo
+                            {dict.landing.waitlist.emailLabel}
                           </label>
                           <div className="relative">
                             <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
@@ -202,7 +204,7 @@ export default function WaitlistSection() {
                             htmlFor="website"
                             className="block text-xs font-semibold text-gray-400 uppercase tracking-wider"
                           >
-                            URL do Site / Loja
+                            {dict.landing.waitlist.websiteLabel}
                           </label>
                           <div className="relative">
                             <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
@@ -228,12 +230,12 @@ export default function WaitlistSection() {
                         </div>
                       </div>
 
-                      <SubmitButton isPending={isPending} />
+                      <SubmitButton isPending={isPending} dict={dict} />
 
                       <p className="text-center text-xs text-gray-600">
-                        Não é necessário cartão de crédito. Ao se inscrever, você concorda com nossa{" "}
+                        {dict.landing.waitlist.privacy.prefix}{" "}
                         <a href="#" className="text-gray-500 hover:text-gray-400 underline">
-                          Política de Privacidade
+                          {dict.landing.waitlist.privacy.link}
                         </a>
                         .
                       </p>
@@ -249,10 +251,10 @@ export default function WaitlistSection() {
         <AnimatedSection delay={0.2} className="mt-10">
           <div className="flex flex-wrap items-center justify-center gap-6 text-xs text-gray-600">
             {[
-              "White Glove Setup Incluído",
-              "Sem Contratos de Fidelidade",
-              "SOC 2 Compliant",
-              "Resposta em até 48h",
+              dict.landing.waitlist.trustBadges.whiteGlove,
+              dict.landing.waitlist.trustBadges.noLockIn,
+              dict.landing.waitlist.trustBadges.soc2,
+              dict.landing.waitlist.trustBadges.response,
             ].map((item) => (
               <div key={item} className="flex items-center gap-2">
                 <CheckCircle className="w-3.5 h-3.5 text-neon-cyan/60" />

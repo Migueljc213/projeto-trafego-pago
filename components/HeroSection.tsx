@@ -3,14 +3,23 @@
 import { motion } from "framer-motion";
 import { ArrowRight, Zap, Shield, TrendingUp } from "lucide-react";
 import FunnelVisual from "./FunnelVisual";
-
-const badgeItems = [
-  { icon: Shield, label: "White Glove CAPI Setup" },
-  { icon: TrendingUp, label: "Full Funnel AI Diagnosis" },
-  { icon: Zap, label: "Detecção de Vazamentos em Tempo Real" },
-];
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 export default function HeroSection() {
+  const { dict } = useLanguage();
+
+  const badgeItems = [
+    { icon: Shield, label: dict.landing.hero.badges.whiteGlove },
+    { icon: TrendingUp, label: dict.landing.hero.badges.fullFunnel },
+    { icon: Zap, label: dict.landing.hero.badges.leakDetection },
+  ];
+
+  const stats = [
+    { label: dict.landing.hero.stats.lostRevenueLabel, value: dict.landing.hero.stats.lostRevenueValue, color: "text-red-400" },
+    { label: dict.landing.hero.stats.issuesLabel, value: dict.landing.hero.stats.issuesValue, color: "text-yellow-400" },
+    { label: dict.landing.hero.stats.roasLabel, value: dict.landing.hero.stats.roasValue, color: "text-neon-cyan" },
+  ];
+
   return (
     <section className="relative min-h-screen flex items-center overflow-hidden pt-20">
       {/* Background effects */}
@@ -35,7 +44,7 @@ export default function HeroSection() {
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-neon-cyan" />
               </span>
               <span className="text-xs font-semibold text-neon-cyan tracking-wider uppercase">
-                Aceitando Inscrições para o Beta
+                {dict.landing.hero.betaBadge}
               </span>
             </motion.div>
 
@@ -46,14 +55,14 @@ export default function HeroSection() {
               transition={{ duration: 0.7, delay: 0.1 }}
               className="text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.05] tracking-tight mb-6"
             >
-              <span className="text-white">PARE DE QUEIMAR</span>
+              <span className="text-white">{dict.landing.hero.headline.line1}</span>
               <br />
-              <span className="text-gradient-cyan-purple">VERBA DE ADS.</span>
+              <span className="text-gradient-cyan-purple">{dict.landing.hero.headline.line2}</span>
               <br />
               <span className="text-white text-3xl sm:text-4xl lg:text-5xl font-bold">
-                DESCUBRA O{" "}
+                {dict.landing.hero.headline.line3Prefix}{" "}
                 <span className="relative inline-block">
-                  <span className="text-neon-cyan">&ldquo;PORQUÊ&rdquo;</span>
+                  <span className="text-neon-cyan">{dict.landing.hero.headline.why}</span>
                   <motion.span
                     className="absolute -bottom-1 left-0 right-0 h-0.5 bg-neon-cyan"
                     initial={{ scaleX: 0 }}
@@ -62,7 +71,7 @@ export default function HeroSection() {
                   />
                 </span>
                 <br />
-                DE CADA VENDA PERDIDA.
+                {dict.landing.hero.headline.line3Suffix}
               </span>
             </motion.h1>
 
@@ -73,12 +82,11 @@ export default function HeroSection() {
               transition={{ duration: 0.6, delay: 0.3 }}
               className="text-lg text-gray-400 leading-relaxed mb-8 max-w-xl"
             >
-              Nossa IA diagnostica seu{" "}
-              <span className="text-white font-semibold">funil, não só seus anúncios</span>. Identifique
-              instantaneamente os vazamentos na sua{" "}
-              <span className="text-neon-cyan font-semibold">Landing Page</span>,{" "}
-              <span className="text-neon-purple font-semibold">Carrinho</span> e{" "}
-              <span className="text-white font-semibold">preços dos concorrentes</span>.
+              {dict.landing.hero.subheadline.prefix}{" "}
+              <span className="text-white font-semibold">{dict.landing.hero.subheadline.boldFunnel}</span>. {dict.landing.hero.subheadline.middle}{" "}
+              <span className="text-neon-cyan font-semibold">{dict.landing.hero.subheadline.lp}</span>,{" "}
+              <span className="text-neon-purple font-semibold">{dict.landing.hero.subheadline.cart}</span> {dict.landing.hero.subheadline.and}{" "}
+              <span className="text-white font-semibold">{dict.landing.hero.subheadline.boldCompetitor}</span>.
             </motion.p>
 
             {/* CTA Button */}
@@ -97,7 +105,7 @@ export default function HeroSection() {
                 <span className="absolute inset-0 bg-gradient-to-r from-neon-cyan via-blue-500 to-neon-purple" />
                 <span className="absolute inset-0 bg-gradient-to-r from-neon-cyan via-blue-500 to-neon-purple opacity-0 group-hover:opacity-100 blur-xl transition-opacity duration-500" />
                 <Zap className="relative w-5 h-5" />
-                <span className="relative">Receba Seu Diagnóstico de Funil Gratuito</span>
+                <span className="relative">{dict.landing.hero.ctaButton}</span>
                 <ArrowRight className="relative w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />
               </motion.a>
 
@@ -112,7 +120,7 @@ export default function HeroSection() {
                   ))}
                 </div>
                 <span className="text-xs text-gray-500">
-                  <span className="text-white font-semibold">47 marcas</span> na lista de espera
+                  <span className="text-white font-semibold">{dict.landing.hero.waitlistCount}</span> {dict.landing.hero.waitlistSuffix}
                 </span>
               </div>
             </motion.div>
@@ -171,11 +179,7 @@ export default function HeroSection() {
 
               {/* Bottom stat row */}
               <div className="mt-6 grid grid-cols-3 gap-3 border-t border-dark-border/60 pt-5">
-                {[
-                  { label: "Receita Perdida", value: "$23.400", color: "text-red-400" },
-                  { label: "Problemas Encontrados", value: "7 Críticos", color: "text-yellow-400" },
-                  { label: "ROAS Potencial", value: "+4.1x", color: "text-neon-cyan" },
-                ].map((stat) => (
+                {stats.map((stat) => (
                   <div key={stat.label} className="text-center">
                     <div className={`text-base font-bold font-mono ${stat.color}`}>{stat.value}</div>
                     <div className="text-xs text-gray-600 mt-0.5">{stat.label}</div>

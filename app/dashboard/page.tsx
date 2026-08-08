@@ -23,6 +23,7 @@ import {
   getMoneySavedByAI,
   getUserAdAccounts,
 } from '@/lib/dashboard-data'
+import { getDictionary, getServerLanguage } from '@/lib/i18n/language'
 
 const VALID_DAYS = [7, 30, 90] as const
 type Days = typeof VALID_DAYS[number]
@@ -32,6 +33,7 @@ export default async function DashboardPage({
 }: {
   searchParams: { account?: string; days?: string }
 }) {
+  const dict = getDictionary(await getServerLanguage())
   const adAccountId = searchParams.account
   const days = (VALID_DAYS as readonly number[]).includes(Number(searchParams.days))
     ? (Number(searchParams.days) as Days)
@@ -67,26 +69,22 @@ export default async function DashboardPage({
       }
     : null
 
-  const DAYS_LABEL: Record<number, string> = {
-    7: 'Últimos 7 dias',
-    30: 'Últimos 30 dias',
-    90: 'Últimos 90 dias',
-  }
+  const DAYS_LABEL = dict.dashboardHome.home.daysLabel
 
   return (
     <div className="space-y-6">
       {/* Page header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-white capitalize">Visão Geral</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{DAYS_LABEL[days]} &bull; Todas as campanhas</p>
+          <h1 className="text-xl font-bold text-white capitalize">{dict.dashboardHome.home.title}</h1>
+          <p className="text-sm text-gray-500 mt-0.5">{DAYS_LABEL[days]} &bull; {dict.dashboardHome.home.allCampaigns}</p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           <AdAccountSwitcher accounts={accounts} currentId={effectiveAccountId} />
           <DateRangePicker currentDays={days} />
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg glass-card border border-neon-cyan/20">
             <span className="w-2 h-2 rounded-full bg-neon-cyan animate-pulse block" />
-            <span className="text-xs font-medium text-neon-cyan">IA monitorando em tempo real</span>
+            <span className="text-xs font-medium text-neon-cyan">{dict.dashboardHome.home.aiMonitoring}</span>
           </div>
         </div>
       </div>
@@ -129,15 +127,15 @@ export default async function DashboardPage({
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <DiagnosticCenter data={diagnosticData} />
         <div className="glass-card rounded-xl border border-gray-800 p-5 flex flex-col justify-center items-center gap-3 text-center min-h-[200px]">
-          <p className="text-sm font-semibold text-white">Diagnóstico Completo</p>
+          <p className="text-sm font-semibold text-white">{dict.dashboardHome.home.fullDiagnosticTitle}</p>
           <p className="text-xs text-gray-500 max-w-[260px]">
-            Selecione uma campanha e execute o motor de correlação multivariável para ver a análise completa com resumo executivo.
+            {dict.dashboardHome.home.fullDiagnosticDesc}
           </p>
           <a
             href="/dashboard/diagnostico"
             className="mt-1 px-4 py-2 rounded-lg bg-neon-cyan/10 border border-neon-cyan/30 text-neon-cyan text-sm font-medium hover:bg-neon-cyan/20 transition-all"
           >
-            Abrir Centro de Diagnóstico →
+            {dict.dashboardHome.home.fullDiagnosticCta}
           </a>
         </div>
       </div>

@@ -3,6 +3,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import Image from 'next/image'
+import { getDictionary, getServerLanguage } from '@/lib/i18n/language'
 
 export const metadata = { title: 'Meu Perfil | FunnelGuard AI' }
 
@@ -26,11 +27,14 @@ export default async function PerfilPage() {
   const adAccounts = bm?.adAccounts ?? []
   const sub = user.subscription
 
+  const dict = getDictionary(await getServerLanguage())
+  const d = dict.account.perfilPage
+
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
-        <h1 className="text-xl font-bold text-white">Meu Perfil</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Dados da sua conta conectada ao Facebook</p>
+        <h1 className="text-xl font-bold text-white">{d.title}</h1>
+        <p className="text-sm text-gray-500 mt-0.5">{d.subtitle}</p>
       </div>
 
       {/* Avatar + nome */}
@@ -38,7 +42,7 @@ export default async function PerfilPage() {
         {user.image ? (
           <Image
             src={user.image}
-            alt={user.name ?? 'Avatar'}
+            alt={user.name ?? d.avatarAlt}
             width={72}
             height={72}
             className="rounded-full border-2 border-neon-cyan/30"
@@ -50,52 +54,52 @@ export default async function PerfilPage() {
         )}
         <div>
           <p className="text-lg font-semibold text-white">{user.name ?? '—'}</p>
-          <p className="text-sm text-gray-400">{user.email ?? 'Email não disponível'}</p>
+          <p className="text-sm text-gray-400">{user.email ?? d.emailUnavailable}</p>
           <p className="text-xs text-gray-600 mt-1">
-            Conta criada em {user.createdAt.toLocaleDateString('pt-BR')}
+            {d.accountCreatedAt.replace('{date}', user.createdAt.toLocaleDateString('pt-BR'))}
           </p>
         </div>
       </div>
 
       {/* Plano */}
       <div className="glass-card rounded-xl p-5 border border-gray-800">
-        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Assinatura</h2>
+        <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">{d.subscriptionSection.title}</h2>
         {sub ? (
           <div className="flex items-center justify-between">
             <div>
               <p className="text-white font-semibold capitalize">{sub.plan} Plan</p>
               <p className={`text-xs mt-1 ${sub.status === 'active' ? 'text-green-400' : 'text-red-400'}`}>
-                {sub.status === 'active' ? 'Ativa' : 'Inativa'}
+                {sub.status === 'active' ? d.subscriptionSection.active : d.subscriptionSection.inactive}
               </p>
             </div>
             {sub.currentPeriodEnd && (
               <p className="text-xs text-gray-500">
-                Renova em {sub.currentPeriodEnd.toLocaleDateString('pt-BR')}
+                {d.subscriptionSection.renewsOn.replace('{date}', sub.currentPeriodEnd.toLocaleDateString('pt-BR'))}
               </p>
             )}
           </div>
         ) : (
-          <p className="text-sm text-gray-500">Nenhuma assinatura ativa.</p>
+          <p className="text-sm text-gray-500">{d.subscriptionSection.noActiveSubscription}</p>
         )}
       </div>
 
       {/* Business Manager */}
       <div className="glass-card rounded-xl p-5 border border-gray-800">
         <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">
-          Conta Meta conectada
+          {d.metaSection.title}
         </h2>
         {bm ? (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-300">Business Manager</p>
+              <p className="text-sm text-gray-300">{d.metaSection.businessManager}</p>
               <p className="text-sm text-white font-medium">{bm.name}</p>
             </div>
             <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-300">ID</p>
+              <p className="text-sm text-gray-300">{d.metaSection.id}</p>
               <p className="text-xs font-mono text-gray-400">{bm.metaBmId}</p>
             </div>
             <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-300">Token expira em</p>
+              <p className="text-sm text-gray-300">{d.metaSection.tokenExpiresAt}</p>
               <p className="text-xs text-gray-400">
                 {bm.tokenExpiresAt
                   ? bm.tokenExpiresAt.toLocaleDateString('pt-BR')
@@ -104,14 +108,14 @@ export default async function PerfilPage() {
             </div>
           </div>
         ) : (
-          <p className="text-sm text-gray-500">Nenhuma conta Meta conectada.</p>
+          <p className="text-sm text-gray-500">{d.metaSection.noAccountConnected}</p>
         )}
       </div>
 
       {/* Ad Accounts */}
       <div className="glass-card rounded-xl p-5 border border-gray-800">
         <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">
-          Contas de Anúncio ({adAccounts.length})
+          {d.adAccountsSection.title.replace('{count}', String(adAccounts.length))}
         </h2>
         {adAccounts.length > 0 ? (
           <div className="space-y-2">
@@ -124,7 +128,7 @@ export default async function PerfilPage() {
           </div>
         ) : (
           <p className="text-sm text-gray-500">
-            Nenhuma conta de anúncio sincronizada ainda.
+            {d.adAccountsSection.noneSynced}
           </p>
         )}
       </div>

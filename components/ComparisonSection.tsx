@@ -5,58 +5,19 @@ import { useRef } from "react";
 import { useInView } from "framer-motion";
 import { X, Check, Minus, Zap, ArrowRight } from "lucide-react";
 import AnimatedSection from "./AnimatedSection";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
-const comparisonRows = [
-  {
-    feature: "Monitoramento de Performance de Ads",
-    tradicional: { status: "yes", note: "Funcionalidade principal" },
-    funnelguard: { status: "yes", note: "Incluído" },
-  },
-  {
-    feature: "Landing Page UX Analysis",
-    tradicional: { status: "no", note: "Indisponível" },
-    funnelguard: { status: "yes", note: "AI-powered audit" },
-  },
-  {
-    feature: "Mobile/iOS Rendering Check",
-    tradicional: { status: "no", note: "Indisponível" },
-    funnelguard: { status: "yes", note: "Monitoramento em tempo real" },
-  },
-  {
-    feature: "Monitoramento de Preços dos Concorrentes",
-    tradicional: { status: "no", note: "Indisponível" },
-    funnelguard: { status: "yes", note: "Benchmarking diário" },
-  },
-  {
-    feature: "Diagnóstico de Abandono de Checkout",
-    tradicional: { status: "partial", note: "Limitado" },
-    funnelguard: { status: "yes", note: "Análise de causa raiz" },
-  },
-  {
-    feature: "CAPI Setup (White Glove)",
-    tradicional: { status: "no", note: "DIY only" },
-    funnelguard: { status: "yes", note: "Feito para você" },
-  },
-  {
-    feature: "Meta Pixel Audit & Repair",
-    tradicional: { status: "partial", note: "Verificação básica" },
-    funnelguard: { status: "yes", note: "Setup completo + validação" },
-  },
-  {
-    feature: "Atribuição de Receita do Funil Completo",
-    tradicional: { status: "partial", note: "Apenas nível de ad" },
-    funnelguard: { status: "yes", note: "Do clique à compra" },
-  },
-  {
-    feature: "Recomendações de Correção por IA",
-    tradicional: { status: "partial", note: "Sugestões de ads" },
-    funnelguard: { status: "yes", note: "Correções de funil completo" },
-  },
-  {
-    feature: "Especialista de Onboarding Dedicado",
-    tradicional: { status: "no", note: "Self-serve" },
-    funnelguard: { status: "yes", note: "White glove only" },
-  },
+const rowStatuses = [
+  { tradicional: "yes", funnelguard: "yes" },
+  { tradicional: "no", funnelguard: "yes" },
+  { tradicional: "no", funnelguard: "yes" },
+  { tradicional: "no", funnelguard: "yes" },
+  { tradicional: "partial", funnelguard: "yes" },
+  { tradicional: "no", funnelguard: "yes" },
+  { tradicional: "partial", funnelguard: "yes" },
+  { tradicional: "partial", funnelguard: "yes" },
+  { tradicional: "partial", funnelguard: "yes" },
+  { tradicional: "no", funnelguard: "yes" },
 ];
 
 const StatusIcon = ({ status }: { status: string }) => {
@@ -91,6 +52,13 @@ const rowVariants = {
 export default function ComparisonSection() {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: "-80px 0px" });
+  const { dict } = useLanguage();
+
+  const comparisonRows = rowStatuses.map((status, i) => ({
+    feature: dict.landing.comparison.rows[i].feature,
+    tradicional: { status: status.tradicional, note: dict.landing.comparison.rows[i].traditionalNote },
+    funnelguard: { status: status.funnelguard, note: dict.landing.comparison.rows[i].funnelguardNote },
+  }));
 
   return (
     <section id="comparison" className="relative py-24 lg:py-32 overflow-hidden">
@@ -104,20 +72,19 @@ export default function ComparisonSection() {
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-neon-purple/30 bg-neon-purple/5 mb-6">
             <Zap className="w-3.5 h-3.5 text-neon-purple" />
             <span className="text-xs font-semibold text-neon-purple tracking-wider uppercase">
-              A Vantagem Injusta
+              {dict.landing.comparison.sectionBadge}
             </span>
           </div>
 
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black leading-tight mb-6">
-            <span className="text-white">Nossa Solução</span>
-            <span className="text-gradient-cyan-purple"> vs. Ferramentas Tradicionais</span>
+            <span className="text-white">{dict.landing.comparison.heading.part1}</span>
+            <span className="text-gradient-cyan-purple">{dict.landing.comparison.heading.part2}</span>
           </h2>
 
           <p className="text-lg text-gray-400 max-w-2xl mx-auto">
-            Ferramentas tradicionais são ótimas{" "}
-            <span className="text-white font-semibold">dentro da plataforma de anúncios</span>. FunnelGuard AI
-            cobre os outros{" "}
-            <span className="text-neon-cyan font-semibold">80% do seu funil</span> que elas ignoram.
+            {dict.landing.comparison.description.prefix}{" "}
+            <span className="text-white font-semibold">{dict.landing.comparison.description.bold1}</span>. {dict.landing.comparison.description.middle}{" "}
+            <span className="text-neon-cyan font-semibold">{dict.landing.comparison.description.bold2}</span> {dict.landing.comparison.description.suffix}
           </p>
         </AnimatedSection>
 
@@ -128,26 +95,26 @@ export default function ComparisonSection() {
             <AnimatedSection>
               <div className="grid grid-cols-[1fr_180px_180px] gap-3 mb-3 px-4">
                 <div className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Capacidade
+                  {dict.landing.comparison.table.capability}
                 </div>
                 <div className="text-center">
                   <div className="glass-card border border-dark-border rounded-xl px-4 py-3">
                     <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                      Tradicional
+                      {dict.landing.comparison.table.traditional}
                     </div>
-                    <div className="text-xs text-gray-600 mt-0.5">Foco Apenas em Ads</div>
+                    <div className="text-xs text-gray-600 mt-0.5">{dict.landing.comparison.table.traditionalSub}</div>
                   </div>
                 </div>
                 <div className="text-center">
                   <div className="relative rounded-xl px-4 py-3 border border-neon-cyan/30 bg-neon-cyan/5">
                     <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-gradient-to-r from-neon-cyan to-neon-purple text-xs font-bold text-white whitespace-nowrap">
-                      Recomendado
+                      {dict.landing.comparison.table.recommended}
                     </div>
                     <div className="flex items-center justify-center gap-1.5 mt-1">
                       <Zap className="w-3 h-3 text-neon-cyan" />
                       <span className="text-xs font-bold text-neon-cyan">FunnelGuard AI</span>
                     </div>
-                    <div className="text-xs text-gray-500 mt-0.5">Diagnóstico de Funil Completo</div>
+                    <div className="text-xs text-gray-500 mt-0.5">{dict.landing.comparison.table.funnelguardSub}</div>
                   </div>
                 </div>
               </div>
@@ -198,9 +165,9 @@ export default function ComparisonSection() {
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="glass-card rounded-2xl border border-dark-border p-6 text-center">
               <div className="text-4xl font-black text-gray-600 mb-1">3/10</div>
-              <div className="text-sm text-gray-500">Ferramenta / Gestor Tradicional</div>
+              <div className="text-sm text-gray-500">{dict.landing.comparison.score.traditionalLabel}</div>
               <div className="text-xs text-gray-600 mt-2">
-                Excelente em otimização de ads. Cego para tudo mais.
+                {dict.landing.comparison.score.traditionalNote}
               </div>
             </div>
             <div className="relative glass-card rounded-2xl border border-neon-cyan/30 bg-neon-cyan/5 p-6 text-center overflow-hidden">
@@ -208,7 +175,7 @@ export default function ComparisonSection() {
               <div className="relative text-4xl font-black text-gradient-cyan-purple mb-1">10/10</div>
               <div className="relative text-sm text-gray-300 font-semibold">FunnelGuard AI</div>
               <div className="relative text-xs text-gray-500 mt-2">
-                Cobertura total do funil, do clique à conversão.
+                {dict.landing.comparison.score.funnelguardNote}
               </div>
             </div>
           </div>
@@ -220,7 +187,7 @@ export default function ComparisonSection() {
               whileTap={{ scale: 0.97 }}
               className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl text-sm font-bold text-dark-base bg-gradient-to-r from-neon-cyan to-neon-purple hover:opacity-90 transition-opacity"
             >
-              Obtenha Cobertura Total do Funil
+              {dict.landing.comparison.cta}
               <ArrowRight className="w-4 h-4" />
             </motion.a>
           </div>

@@ -10,6 +10,8 @@ import {
   WifiOff,
 } from 'lucide-react'
 import AdminLogsModal from './AdminLogsModal'
+import { getDictionary, getServerLanguage } from '@/lib/i18n/language'
+import type { Dictionary } from '@/lib/i18n/language'
 
 export const dynamic = 'force-dynamic'
 
@@ -118,13 +120,13 @@ async function getAllUsersHealth(): Promise<UserHealthRow[]> {
 
 // ─── Helpers de Badge ─────────────────────────────────────────────────────────
 
-function TokenBadge({ status, expiresAt }: { status: UserHealthRow['tokenStatus']; expiresAt: Date | null }) {
+function TokenBadge({ status, expiresAt, dict }: { status: UserHealthRow['tokenStatus']; expiresAt: Date | null; dict: Dictionary }) {
   if (status === 'none') return <span className="text-xs text-gray-600">—</span>
 
   const configs = {
-    valid: { color: 'text-green-400 bg-green-500/10 border-green-500/25', icon: <CheckCircle2 className="w-3 h-3" />, label: 'Válido' },
-    expiring: { color: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/25', icon: <Clock className="w-3 h-3" />, label: 'Expirando' },
-    expired: { color: 'text-red-400 bg-red-500/10 border-red-500/25', icon: <XCircle className="w-3 h-3" />, label: 'Expirado' },
+    valid: { color: 'text-green-400 bg-green-500/10 border-green-500/25', icon: <CheckCircle2 className="w-3 h-3" />, label: dict.adminLoginLegal.adminPage.tokenBadgeValid },
+    expiring: { color: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/25', icon: <Clock className="w-3 h-3" />, label: dict.adminLoginLegal.adminPage.tokenBadgeExpiring },
+    expired: { color: 'text-red-400 bg-red-500/10 border-red-500/25', icon: <XCircle className="w-3 h-3" />, label: dict.adminLoginLegal.adminPage.tokenBadgeExpired },
   }
   const { color, icon, label } = configs[status]
   const daysLabel = expiresAt
@@ -138,9 +140,9 @@ function TokenBadge({ status, expiresAt }: { status: UserHealthRow['tokenStatus'
   )
 }
 
-function SyncBadge({ ok, lastSync }: { ok: boolean; lastSync: Date | null }) {
-  if (!lastSync) return <span className="text-xs text-gray-600">Nunca</span>
-  const label = lastSync.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+function SyncBadge({ ok, lastSync, dict, locale }: { ok: boolean; lastSync: Date | null; dict: Dictionary; locale: string }) {
+  if (!lastSync) return <span className="text-xs text-gray-600">{dict.adminLoginLegal.adminPage.syncNever}</span>
+  const label = lastSync.toLocaleString(locale, { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
   return (
     <span className={`inline-flex items-center gap-1 text-xs ${ok ? 'text-green-400' : 'text-red-400'}`}>
       {ok ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
@@ -185,6 +187,10 @@ function StatCard({ label, value, sub, accent }: { label: string; value: string 
 
 export default async function AdminPage() {
   const rows = await getAllUsersHealth()
+  const language = await getServerLanguage()
+  const dict = getDictionary(language)
+  const t = dict.adminLoginLegal.adminPage
+  const locale = language === 'en' ? 'en-US' : 'pt-BR'
 
   const totalUsers = rows.length
   const activeTokens = rows.filter((r) => r.tokenStatus === 'valid').length
@@ -198,19 +204,19 @@ export default async function AdminPage() {
       <div>
         <h1 className="text-xl font-bold text-white flex items-center gap-2">
           <Users className="w-5 h-5 text-red-400" />
-          Super Admin — Saúde das Contas
+          {t.headerTitle}
         </h1>
         <p className="text-sm text-gray-500 mt-0.5">
-          {totalUsers} usuário{totalUsers !== 1 ? 's' : ''} cadastrado{totalUsers !== 1 ? 's' : ''} · dados em tempo real
+          {totalUsers} {totalUsers !== 1 ? t.userPlural : t.userSingular} {totalUsers !== 1 ? t.registeredPlural : t.registeredSingular} · {t.realTimeData}
         </p>
       </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Total de Usuários" value={totalUsers} />
-        <StatCard label="Tokens Válidos" value={activeTokens} accent="text-green-400" sub={`${expiredTokens} expirado${expiredTokens !== 1 ? 's' : ''}`} />
-        <StatCard label="Expirando em 5d" value={expiringTokens} accent={expiringTokens > 0 ? 'text-yellow-400' : 'text-gray-400'} />
-        <StatCard label="Assinantes Ativos" value={paidUsers} accent="text-neon-cyan" sub="Stripe active/trialing" />
+        <StatCard label={t.statTotalUsers} value={totalUsers} />
+        <StatCard label={t.statValidTokens} value={activeTokens} accent="text-green-400" sub={`${expiredTokens} ${expiredTokens !== 1 ? t.expiredSuffixPlural : t.expiredSuffixSingular}`} />
+        <StatCard label={t.statExpiringIn5d} value={expiringTokens} accent={expiringTokens > 0 ? 'text-yellow-400' : 'text-gray-400'} />
+        <StatCard label={t.statActiveSubscribers} value={paidUsers} accent="text-neon-cyan" sub={t.stripeActiveTrialingSub} />
       </div>
 
       {/* Alerta de tokens expirando */}
@@ -218,8 +224,8 @@ export default async function AdminPage() {
         <div className="flex items-start gap-3 p-4 rounded-xl border border-yellow-500/30 bg-yellow-500/5">
           <AlertTriangle className="w-4 h-4 text-yellow-400 mt-0.5 flex-shrink-0" />
           <p className="text-sm text-yellow-300">
-            <strong>{expiringTokens} token{expiringTokens > 1 ? 's' : ''}</strong> expira{expiringTokens === 1 ? '' : 'm'} em menos de 5 dias.
-            O cron já enviou alertas automáticos. Verifique se os clientes reconectaram.
+            <strong>{expiringTokens} {expiringTokens > 1 ? t.tokenPlural : t.tokenSingular}</strong> {expiringTokens === 1 ? t.expiresSingular : t.expiresPlural} {t.expiringWarningRest}
+            {' '}{t.cronAlertSent}
           </p>
         </div>
       )}
@@ -227,15 +233,15 @@ export default async function AdminPage() {
       {/* Tabela */}
       <div className="glass-card rounded-xl border border-gray-800 overflow-hidden">
         <div className="px-5 py-3.5 border-b border-gray-800 flex items-center justify-between">
-          <p className="text-sm font-semibold text-white">Todos os Usuários</p>
-          <p className="text-xs text-gray-500">Atualizado agora</p>
+          <p className="text-sm font-semibold text-white">{t.tableTitle}</p>
+          <p className="text-xs text-gray-500">{t.tableUpdatedNow}</p>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-800">
-                {['Usuário', 'Token Meta', 'Última Sync', 'Stripe', 'Campanhas', 'Último Log IA', 'Ações'].map((h) => (
+                {t.tableHeaders.map((h) => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     {h}
                   </th>
@@ -248,7 +254,7 @@ export default async function AdminPage() {
                   {/* Usuário */}
                   <td className="px-4 py-3">
                     <p className="font-medium text-gray-200 truncate max-w-[160px]">
-                      {row.name ?? 'Sem nome'}
+                      {row.name ?? t.noName}
                     </p>
                     <p className="text-xs text-gray-500 truncate max-w-[160px]">{row.email ?? '—'}</p>
                     <p className="text-[10px] text-gray-700 font-mono mt-0.5">{row.id.slice(0, 8)}…</p>
@@ -256,12 +262,12 @@ export default async function AdminPage() {
 
                   {/* Token Meta */}
                   <td className="px-4 py-3">
-                    <TokenBadge status={row.tokenStatus} expiresAt={row.tokenExpiresAt} />
+                    <TokenBadge status={row.tokenStatus} expiresAt={row.tokenExpiresAt} dict={dict} />
                   </td>
 
                   {/* Última Sync */}
                   <td className="px-4 py-3">
-                    <SyncBadge ok={row.lastSyncOk} lastSync={row.lastSync} />
+                    <SyncBadge ok={row.lastSyncOk} lastSync={row.lastSync} dict={dict} locale={locale} />
                   </td>
 
                   {/* Stripe */}
@@ -283,7 +289,7 @@ export default async function AdminPage() {
                         <p className="text-xs text-gray-400 truncate">{row.lastErrorLog.slice(0, 60)}…</p>
                         {row.lastErrorAt && (
                           <p className="text-[10px] text-gray-600 mt-0.5">
-                            {row.lastErrorAt.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                            {row.lastErrorAt.toLocaleString(locale, { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                           </p>
                         )}
                       </div>
@@ -303,7 +309,7 @@ export default async function AdminPage() {
 
           {rows.length === 0 && (
             <div className="py-16 text-center text-gray-600 text-sm">
-              Nenhum usuário cadastrado ainda.
+              {t.emptyUsers}
             </div>
           )}
         </div>

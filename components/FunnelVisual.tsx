@@ -2,59 +2,7 @@
 
 import { motion } from "framer-motion";
 import { MousePointerClick, FileText, ShoppingCart, CreditCard, AlertTriangle, DollarSign } from "lucide-react";
-
-const funnelSteps = [
-  {
-    id: "ad",
-    icon: MousePointerClick,
-    label: "Clique no Ad",
-    sublabel: "1.000 cliques",
-    color: "from-neon-cyan to-blue-500",
-    borderColor: "border-neon-cyan/40",
-    bgColor: "bg-neon-cyan/10",
-    width: "w-full",
-    leak: null,
-  },
-  {
-    id: "lp",
-    icon: FileText,
-    label: "Landing Page",
-    sublabel: "340 visitas",
-    color: "from-yellow-400 to-orange-500",
-    borderColor: "border-yellow-500/40",
-    bgColor: "bg-yellow-500/10",
-    width: "w-4/5",
-    leak: {
-      label: 'Erro: Botão Oculto (iOS)',
-      sublabel: "-660 perdidos aqui",
-    },
-  },
-  {
-    id: "cart",
-    icon: ShoppingCart,
-    label: "Checkout",
-    sublabel: "89 sessões",
-    color: "from-orange-500 to-red-500",
-    borderColor: "border-orange-500/40",
-    bgColor: "bg-orange-500/10",
-    width: "w-3/5",
-    leak: {
-      label: "Concorrente 15% Mais Barato",
-      sublabel: "-251 abandonaram",
-    },
-  },
-  {
-    id: "purchase",
-    icon: CreditCard,
-    label: "Compra",
-    sublabel: "24 conversões",
-    color: "from-green-400 to-emerald-500",
-    borderColor: "border-green-500/40",
-    bgColor: "bg-green-500/10",
-    width: "w-2/5",
-    leak: null,
-  },
-];
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 const containerVariants = {
   hidden: {},
@@ -94,6 +42,62 @@ const moneyVariants = {
 };
 
 export default function FunnelVisual() {
+  const { dict } = useLanguage();
+  const s = dict.landing.funnelVisual.steps;
+
+  const funnelSteps = [
+    {
+      id: "ad",
+      icon: MousePointerClick,
+      label: s.ad.label,
+      sublabel: s.ad.sublabel,
+      color: "from-neon-cyan to-blue-500",
+      borderColor: "border-neon-cyan/40",
+      bgColor: "bg-neon-cyan/10",
+      width: "w-full",
+      leak: null as { label: string; sublabel: string } | null,
+    },
+    {
+      id: "lp",
+      icon: FileText,
+      label: s.lp.label,
+      sublabel: s.lp.sublabel,
+      color: "from-yellow-400 to-orange-500",
+      borderColor: "border-yellow-500/40",
+      bgColor: "bg-yellow-500/10",
+      width: "w-4/5",
+      leak: {
+        label: s.lp.leakLabel,
+        sublabel: s.lp.leakSublabel,
+      },
+    },
+    {
+      id: "cart",
+      icon: ShoppingCart,
+      label: s.cart.label,
+      sublabel: s.cart.sublabel,
+      color: "from-orange-500 to-red-500",
+      borderColor: "border-orange-500/40",
+      bgColor: "bg-orange-500/10",
+      width: "w-3/5",
+      leak: {
+        label: s.cart.leakLabel,
+        sublabel: s.cart.leakSublabel,
+      },
+    },
+    {
+      id: "purchase",
+      icon: CreditCard,
+      label: s.purchase.label,
+      sublabel: s.purchase.sublabel,
+      color: "from-green-400 to-emerald-500",
+      borderColor: "border-green-500/40",
+      bgColor: "bg-green-500/10",
+      width: "w-2/5",
+      leak: null as { label: string; sublabel: string } | null,
+    },
+  ];
+
   return (
     <motion.div
       variants={containerVariants}
@@ -174,9 +178,9 @@ export default function FunnelVisual() {
         transition={{ delay: 1.2, duration: 0.5 }}
         className="mt-4 glass-card border border-dark-border rounded-xl p-3 flex items-center justify-between"
       >
-        <span className="text-xs text-gray-500 font-mono">Taxa de Conversão Real</span>
+        <span className="text-xs text-gray-500 font-mono">{dict.landing.funnelVisual.conversionRateLabel}</span>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-red-400 font-mono line-through">Esperado: 4.8%</span>
+          <span className="text-xs text-red-400 font-mono line-through">{dict.landing.funnelVisual.expectedLabel}</span>
           <span className="text-sm font-bold text-red-400 font-mono">2.4%</span>
           <div className="text-xs text-neon-cyan font-mono bg-neon-cyan/10 px-2 py-0.5 rounded-md">
             AI Fix: +2.4%

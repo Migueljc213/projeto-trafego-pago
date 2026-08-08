@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { FileSearch, X, Loader2, AlertTriangle, CheckCircle2, PauseCircle, TrendingUp, TrendingDown } from 'lucide-react'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 interface LogEntry {
   id: string
@@ -26,6 +27,8 @@ const TYPE_ICONS: Record<string, React.ReactNode> = {
 }
 
 export default function AdminLogsModal({ userId, userName }: Props) {
+  const { dict } = useLanguage()
+  const t = dict.adminLoginLegal.adminLogsModal
   const [open, setOpen] = useState(false)
   const [logs, setLogs] = useState<LogEntry[]>([])
   const [isPending, startTransition] = useTransition()
@@ -50,7 +53,7 @@ export default function AdminLogsModal({ userId, userName }: Props) {
         className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-700 text-xs text-gray-400 hover:text-white hover:border-gray-500 transition-all"
       >
         <FileSearch className="w-3.5 h-3.5" />
-        Logs
+        {t.logsButton}
       </button>
 
       {open && (
@@ -59,8 +62,8 @@ export default function AdminLogsModal({ userId, userName }: Props) {
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
               <div>
-                <p className="text-sm font-bold text-white">Logs IA — {userName}</p>
-                <p className="text-xs text-gray-500 mt-0.5">Últimas 20 decisões do Auto-Pilot</p>
+                <p className="text-sm font-bold text-white">{t.title} — {userName}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{t.subtitle}</p>
               </div>
               <button
                 onClick={() => setOpen(false)}
@@ -75,13 +78,13 @@ export default function AdminLogsModal({ userId, userName }: Props) {
               {isPending && (
                 <div className="flex items-center justify-center py-12 gap-3 text-gray-500">
                   <Loader2 className="w-5 h-5 animate-spin" />
-                  <span className="text-sm">Carregando logs…</span>
+                  <span className="text-sm">{t.loading}</span>
                 </div>
               )}
 
               {!isPending && logs.length === 0 && (
                 <div className="py-12 text-center text-sm text-gray-600">
-                  Nenhum log de decisão encontrado para este usuário.
+                  {t.empty}
                 </div>
               )}
 

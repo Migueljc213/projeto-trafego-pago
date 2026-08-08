@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TrendingUp, DollarSign, Zap, ArrowRight, Info } from "lucide-react";
 import AnimatedSection from "./AnimatedSection";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 const MIN_BUDGET = 3001;
 const MAX_BUDGET = 100000;
@@ -71,6 +72,7 @@ const leaks = [
 ];
 
 export default function SimulatorSection() {
+  const { dict } = useLanguage();
   const [budget, setBudget] = useState(15000);
   const [result, setResult] = useState<SimResult>(calculateResults(15000));
   const [isAnimating, setIsAnimating] = useState(false);
@@ -103,17 +105,16 @@ export default function SimulatorSection() {
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-neon-cyan/30 bg-neon-cyan/5 mb-6">
             <TrendingUp className="w-3.5 h-3.5 text-neon-cyan" />
             <span className="text-xs font-semibold text-neon-cyan tracking-wider uppercase">
-              Simulador de IA Interativo
+              {dict.landing.simulator.sectionBadge}
             </span>
           </div>
 
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black leading-tight mb-4">
-            <span className="text-white">O Simulador de Lucro</span>{" "}
-            <span className="text-gradient-cyan-purple">com IA</span>
+            <span className="text-white">{dict.landing.simulator.heading.part1}</span>{" "}
+            <span className="text-gradient-cyan-purple">{dict.landing.simulator.heading.part2}</span>
           </h2>
           <p className="text-lg text-gray-400 max-w-xl mx-auto">
-            Arraste o controle para ver quanta receita você está deixando na mesa — e quanto vale
-            corrigir cada vazamento do seu funil.
+            {dict.landing.simulator.description}
           </p>
         </AnimatedSection>
 
@@ -125,7 +126,7 @@ export default function SimulatorSection() {
               <div className="flex items-start justify-between mb-6">
                 <div>
                   <label className="text-sm font-semibold text-gray-400 uppercase tracking-wider block mb-1">
-                    Orçamento Mensal de Ads
+                    {dict.landing.simulator.budgetLabel}
                   </label>
                   <motion.div
                     key={budget}
@@ -140,7 +141,7 @@ export default function SimulatorSection() {
                 </div>
                 <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neon-cyan/10 border border-neon-cyan/20">
                   <Info className="w-3.5 h-3.5 text-neon-cyan" />
-                  <span className="text-xs text-neon-cyan font-medium">Baseado em benchmarks da indústria</span>
+                  <span className="text-xs text-neon-cyan font-medium">{dict.landing.simulator.benchmarkNote}</span>
                 </div>
               </div>
 
@@ -166,7 +167,7 @@ export default function SimulatorSection() {
               {/* Current ROAS */}
               <div className="p-6 text-center">
                 <div className="text-xs text-gray-500 uppercase tracking-wider mb-2">
-                  ROAS Atual
+                  {dict.landing.simulator.currentRoasLabel}
                 </div>
                 <div className="text-3xl font-black text-gray-400 font-mono mb-1">
                   {result.currentROAS}x
@@ -192,7 +193,7 @@ export default function SimulatorSection() {
               {/* Projected ROAS */}
               <div className="p-6 text-center bg-neon-cyan/5">
                 <div className="text-xs text-neon-cyan uppercase tracking-wider mb-2 font-semibold">
-                  Com FunnelGuard AI
+                  {dict.landing.simulator.projectedRoasLabel}
                 </div>
                 <AnimatePresence mode="wait">
                   <motion.div
@@ -217,7 +218,7 @@ export default function SimulatorSection() {
               {/* Total gain */}
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <div className="text-sm text-gray-400 mb-1">Receita Adicional / Mês</div>
+                  <div className="text-sm text-gray-400 mb-1">{dict.landing.simulator.revenueGainLabel}</div>
                   <AnimatePresence mode="wait">
                     <motion.div
                       key={Math.round(result.revenueGain)}
@@ -234,7 +235,7 @@ export default function SimulatorSection() {
                   </AnimatePresence>
                 </div>
                 <div className="text-right hidden sm:block">
-                  <div className="text-xs text-gray-600 mb-1">Ganho anual</div>
+                  <div className="text-xs text-gray-600 mb-1">{dict.landing.simulator.annualGainLabel}</div>
                   <div className="text-xl font-bold text-green-400/70 font-mono">
                     {formatCurrencyFull(result.revenueGain * 12)}/yr
                   </div>
@@ -244,7 +245,7 @@ export default function SimulatorSection() {
               {/* Leak breakdown bars */}
               <div className="space-y-3">
                 <div className="text-xs text-gray-600 uppercase tracking-wider mb-4">
-                  Detalhamento por tipo de correção
+                  {dict.landing.simulator.breakdownLabel}
                 </div>
                 {leaks.map((leak) => {
                   const gainValue = result[leak.key];
@@ -272,9 +273,7 @@ export default function SimulatorSection() {
 
               {/* Disclaimer */}
               <p className="text-xs text-gray-700 mt-6 leading-relaxed">
-                * Estimativas baseadas em melhorias médias de taxa de conversão da indústria. Os resultados
-                reais variam conforme a saúde atual do funil, nicho e qualidade do tráfego. Resultados
-                geralmente observados entre 30 e 90 dias após a implementação.
+                {dict.landing.simulator.disclaimer}
               </p>
             </div>
           </div>
@@ -283,7 +282,7 @@ export default function SimulatorSection() {
         {/* Bottom CTA */}
         <AnimatedSection delay={0.2} className="mt-10 text-center">
           <p className="text-gray-500 text-sm mb-5">
-            Pronto para descobrir seus números reais? Vamos rodar um diagnóstico ao vivo no seu funil.
+            {dict.landing.simulator.bottomCtaText}
           </p>
           <motion.a
             href="#waitlist"
@@ -292,7 +291,7 @@ export default function SimulatorSection() {
             className="inline-flex items-center gap-2.5 px-8 py-4 rounded-xl text-sm font-bold text-dark-base bg-gradient-to-r from-neon-cyan to-neon-purple hover:opacity-90 transition-opacity shadow-neon-cyan"
           >
             <Zap className="w-4 h-4" />
-            Reivindique Seu Diagnóstico de Funil Gratuito
+            {dict.landing.simulator.bottomCtaButton}
           </motion.a>
         </AnimatedSection>
       </div>

@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { Sparkles, Link2, Loader2, Copy, Check, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react'
 import { generateCreativeBriefAction } from '@/actions/creative-lab'
 import type { CreativeBriefResult, CreativeVariation } from '@/actions/creative-lab'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 const FRAMEWORK_COLORS = {
   AIDA: { bg: 'bg-blue-500/10', border: 'border-blue-500/30', badge: 'bg-blue-500/20 text-blue-300' },
@@ -11,6 +12,8 @@ const FRAMEWORK_COLORS = {
 }
 
 function VariationCard({ v, index }: { v: CreativeVariation; index: number }) {
+  const { dict } = useLanguage()
+  const d = dict.account.creativeLab
   const [copied, setCopied] = useState<'headline' | 'text' | null>(null)
   const [expanded, setExpanded] = useState(index < 2)
 
@@ -44,7 +47,7 @@ function VariationCard({ v, index }: { v: CreativeVariation; index: number }) {
               copy('headline', v.headline)
             }}
             className="p-1.5 rounded text-gray-400 hover:text-neon-cyan transition-colors"
-            title="Copiar headline"
+            title={d.copyHeadline}
           >
             {copied === 'headline' ? (
               <Check className="w-3.5 h-3.5 text-neon-cyan" />
@@ -67,16 +70,16 @@ function VariationCard({ v, index }: { v: CreativeVariation; index: number }) {
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wider">
-                Primary Text
+                {d.primaryText}
               </span>
               <button
                 onClick={() => copy('text', v.primaryText)}
                 className="flex items-center gap-1 text-xs text-gray-400 hover:text-neon-cyan transition-colors"
               >
                 {copied === 'text' ? (
-                  <><Check className="w-3 h-3 text-neon-cyan" /> Copiado</>
+                  <><Check className="w-3 h-3 text-neon-cyan" /> {d.copied}</>
                 ) : (
-                  <><Copy className="w-3 h-3" /> Copiar</>
+                  <><Copy className="w-3 h-3" /> {d.copy}</>
                 )}
               </button>
             </div>
@@ -87,10 +90,10 @@ function VariationCard({ v, index }: { v: CreativeVariation; index: number }) {
 
           {/* Copy Full */}
           <button
-            onClick={() => copy('text', `HEADLINE:\n${v.headline}\n\nTEXTO:\n${v.primaryText}`)}
+            onClick={() => copy('text', `HEADLINE:\n${v.headline}\n\n${d.primaryText.toUpperCase()}:\n${v.primaryText}`)}
             className="w-full py-1.5 rounded-lg border border-gray-700 text-xs text-gray-400 hover:text-white hover:border-gray-500 transition-colors"
           >
-            Copiar tudo (headline + texto)
+            {d.copyAll}
           </button>
         </div>
       )}
@@ -99,6 +102,8 @@ function VariationCard({ v, index }: { v: CreativeVariation; index: number }) {
 }
 
 export default function CreativeLab() {
+  const { dict } = useLanguage()
+  const d = dict.account.creativeLab
   const [url, setUrl] = useState('')
   const [result, setResult] = useState<CreativeBriefResult | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -112,7 +117,7 @@ export default function CreativeLab() {
       if (res.success && res.data) {
         setResult(res.data)
       } else {
-        setError(res.error ?? 'Erro desconhecido')
+        setError(res.error ?? d.errorGeneric)
       }
     })
   }
@@ -126,8 +131,8 @@ export default function CreativeLab() {
             <Link2 className="w-4 h-4 text-neon-cyan" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-white">URL do Produto</p>
-            <p className="text-xs text-gray-500">Cole a página do produto que você quer anunciar</p>
+            <p className="text-sm font-semibold text-white">{d.urlLabel}</p>
+            <p className="text-xs text-gray-500">{d.urlDesc}</p>
           </div>
         </div>
 
@@ -137,7 +142,7 @@ export default function CreativeLab() {
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && !isPending && handleGenerate()}
-            placeholder="https://sua-loja.com/produto"
+            placeholder={d.urlPlaceholder}
             className="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:border-neon-cyan focus:outline-none transition-colors"
           />
           <button
@@ -148,12 +153,12 @@ export default function CreativeLab() {
             {isPending ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Gerando...
+                {d.generating}
               </>
             ) : (
               <>
                 <Sparkles className="w-4 h-4" />
-                Gerar Criativos
+                {d.generateButton}
               </>
             )}
           </button>
@@ -170,8 +175,8 @@ export default function CreativeLab() {
       {isPending && (
         <div className="glass-card border border-gray-800 rounded-xl p-8 text-center">
           <Loader2 className="w-8 h-8 animate-spin text-neon-cyan mx-auto mb-3" />
-          <p className="text-sm text-gray-300 font-medium">Analisando página do produto...</p>
-          <p className="text-xs text-gray-500 mt-1">A IA está lendo o site e criando os copies (até 30s)</p>
+          <p className="text-sm text-gray-300 font-medium">{d.loadingTitle}</p>
+          <p className="text-xs text-gray-500 mt-1">{d.loadingDesc}</p>
         </div>
       )}
 
@@ -182,20 +187,20 @@ export default function CreativeLab() {
           <div className="glass-card border border-gray-800 rounded-xl p-4">
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                Produto Analisado
+                {d.productAnalyzed}
               </p>
               <button
                 onClick={handleGenerate}
                 className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-neon-cyan transition-colors"
               >
                 <RefreshCw className="w-3 h-3" />
-                Regenerar
+                {d.regenerate}
               </button>
             </div>
             <p className="text-base font-bold text-white mb-1">{result.productName}</p>
             <p className="text-sm text-gray-400 mb-2">{result.productDescription}</p>
             <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-neon-cyan/10 border border-neon-cyan/20">
-              <span className="text-xs text-neon-cyan">🎯 Público-alvo:</span>
+              <span className="text-xs text-neon-cyan">{d.targetAudienceLabel}</span>
               <span className="text-xs text-gray-300">{result.targetAudience}</span>
             </div>
           </div>
@@ -205,7 +210,7 @@ export default function CreativeLab() {
             <div className="flex items-center gap-2 mb-3">
               <Sparkles className="w-4 h-4 text-neon-cyan" />
               <p className="text-sm font-semibold text-white">
-                {result.variations.length} Variações Geradas
+                {d.variationsGenerated.replace('{count}', String(result.variations.length))}
               </p>
               <span className="text-xs text-gray-500">
                 ({result.variations.filter(v => v.framework === 'AIDA').length} AIDA ·{' '}
@@ -222,8 +227,7 @@ export default function CreativeLab() {
 
           {/* Footer tip */}
           <div className="p-3 rounded-lg bg-gray-900 border border-gray-800 text-xs text-gray-500 leading-relaxed">
-            💡 <strong className="text-gray-300">Dica de teste A/B:</strong> Lance pelo menos 3 variações
-            com orçamento igual por 3 dias. Vencedor = menor CPA. O Auto-Pilot vai escalar automaticamente.
+            💡 <strong className="text-gray-300">{d.abTestTipLabel}</strong> {d.abTestTipText}
           </div>
         </div>
       )}
@@ -233,10 +237,10 @@ export default function CreativeLab() {
         <div className="glass-card border border-gray-800 rounded-xl p-10 text-center">
           <Sparkles className="w-10 h-10 text-neon-cyan/30 mx-auto mb-3" />
           <p className="text-sm text-gray-400 font-medium">
-            Cole a URL do produto para gerar variações de copy
+            {d.emptyStateTitle}
           </p>
           <p className="text-xs text-gray-600 mt-1">
-            AIDA · PAS · Frameworks profissionais de copywriting
+            {d.emptyStateDesc}
           </p>
         </div>
       )}

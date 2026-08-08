@@ -3,6 +3,7 @@ import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { Shield, Users } from 'lucide-react'
 import Link from 'next/link'
+import { getDictionary, getServerLanguage } from '@/lib/i18n/language'
 
 export const metadata = { title: 'Admin | FunnelGuard AI' }
 
@@ -18,6 +19,8 @@ async function assertAdmin() {
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await assertAdmin()
+  const dict = getDictionary(await getServerLanguage())
+  const t = dict.adminLoginLegal.adminLayout
 
   return (
     <div className="min-h-screen bg-dark-base text-gray-100">
@@ -30,7 +33,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             </div>
             <span className="text-sm font-bold text-white">FunnelGuard</span>
             <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/15 border border-red-500/30 text-red-400 font-semibold">
-              SUPER ADMIN
+              {t.badge}
             </span>
           </div>
           <div className="flex items-center gap-4">
@@ -38,21 +41,21 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               href="/admin"
               className="text-xs text-gray-400 hover:text-white transition-colors"
             >
-              Contas
+              {t.navAccounts}
             </Link>
             <Link
               href="/admin/waitlist"
               className="text-xs text-gray-400 hover:text-white flex items-center gap-1 transition-colors"
             >
               <Users className="w-3 h-3" />
-              Waitlist
+              {t.navWaitlist}
             </Link>
             <span className="text-xs text-gray-500">{session.user.email}</span>
             <Link
               href="/dashboard"
               className="text-xs text-gray-400 hover:text-white transition-colors"
             >
-              ← Dashboard
+              {t.navDashboard}
             </Link>
           </div>
         </div>

@@ -9,68 +9,72 @@ import {
 import { createCampaignAction } from '@/actions/create-campaign'
 import type { CreateCampaignInput } from '@/actions/create-campaign'
 import type { CampaignObjective, OptimizationGoal, CallToActionType } from '@/lib/meta-api'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
+import type { Dictionary } from '@/lib/i18n/language'
 
 // ─── Dados dos selects ────────────────────────────────────────────────────────
 
-const OBJECTIVES: { value: CampaignObjective; label: string; desc: string; icon: string }[] = [
-  { value: 'OUTCOME_TRAFFIC', label: 'Tráfego', desc: 'Direcionar pessoas para seu site ou app', icon: '🌐' },
-  { value: 'OUTCOME_SALES', label: 'Vendas', desc: 'Maximizar conversões e receita', icon: '🛒' },
-  { value: 'OUTCOME_LEADS', label: 'Geração de Leads', desc: 'Capturar contatos qualificados', icon: '📋' },
-  { value: 'OUTCOME_AWARENESS', label: 'Reconhecimento', desc: 'Ampliar o alcance da marca', icon: '📢' },
-  { value: 'OUTCOME_ENGAGEMENT', label: 'Engajamento', desc: 'Mais curtidas, comentários e compartilhamentos', icon: '❤️' },
-]
-
-const OPTIMIZATION_GOALS: Record<CampaignObjective, { value: OptimizationGoal; label: string; warning?: string }[]> = {
-  OUTCOME_TRAFFIC: [
-    { value: 'LINK_CLICKS', label: 'Cliques no Link' },
-    { value: 'LANDING_PAGE_VIEWS', label: 'Visualizações de Landing Page' },
-  ],
-  OUTCOME_SALES: [
-    { value: 'LINK_CLICKS', label: 'Cliques no Link' },
-    { value: 'LANDING_PAGE_VIEWS', label: 'Visualizações de Landing Page' },
-    { value: 'CONVERSIONS', label: 'Conversões', warning: 'Requer Pixel Meta vinculado em Configurações → Pixel Meta.' },
-  ],
-  OUTCOME_LEADS: [
-    { value: 'LINK_CLICKS', label: 'Cliques no Link' },
-    { value: 'LANDING_PAGE_VIEWS', label: 'Visualizações de Landing Page' },
-    { value: 'CONVERSIONS', label: 'Conversões', warning: 'Requer Pixel Meta vinculado em Configurações → Pixel Meta.' },
-  ],
-  OUTCOME_AWARENESS: [
-    { value: 'REACH', label: 'Alcance' },
-    { value: 'IMPRESSIONS', label: 'Impressões' },
-  ],
-  OUTCOME_ENGAGEMENT: [
-    { value: 'IMPRESSIONS', label: 'Impressões' },
-    { value: 'REACH', label: 'Alcance' },
-  ],
-  OUTCOME_APP_PROMOTION: [
-    { value: 'LINK_CLICKS', label: 'Cliques no Link' },
-  ],
+function useObjectives(dict: Dictionary): { value: CampaignObjective; label: string; desc: string; icon: string }[] {
+  const t = dict.campaigns.campaignWizard.objectives
+  return [
+    { value: 'OUTCOME_TRAFFIC', label: t.trafego.label, desc: t.trafego.desc, icon: '🌐' },
+    { value: 'OUTCOME_SALES', label: t.vendas.label, desc: t.vendas.desc, icon: '🛒' },
+    { value: 'OUTCOME_LEADS', label: t.leads.label, desc: t.leads.desc, icon: '📋' },
+    { value: 'OUTCOME_AWARENESS', label: t.reconhecimento.label, desc: t.reconhecimento.desc, icon: '📢' },
+    { value: 'OUTCOME_ENGAGEMENT', label: t.engajamento.label, desc: t.engajamento.desc, icon: '❤️' },
+  ]
 }
 
-const CTA_OPTIONS: { value: CallToActionType; label: string }[] = [
-  { value: 'LEARN_MORE', label: 'Saiba Mais' },
-  { value: 'SHOP_NOW', label: 'Comprar Agora' },
-  { value: 'SIGN_UP', label: 'Cadastre-se' },
-  { value: 'CONTACT_US', label: 'Fale Conosco' },
-  { value: 'GET_OFFER', label: 'Ver Oferta' },
-  { value: 'SUBSCRIBE', label: 'Assinar' },
-  { value: 'DOWNLOAD', label: 'Baixar' },
-]
+function useOptimizationGoals(dict: Dictionary): Record<CampaignObjective, { value: OptimizationGoal; label: string; warning?: string }[]> {
+  const t = dict.campaigns.campaignWizard.optimizationGoals
+  return {
+    OUTCOME_TRAFFIC: [
+      { value: 'LINK_CLICKS', label: t.linkClicks },
+      { value: 'LANDING_PAGE_VIEWS', label: t.landingPageViews },
+    ],
+    OUTCOME_SALES: [
+      { value: 'LINK_CLICKS', label: t.linkClicks },
+      { value: 'LANDING_PAGE_VIEWS', label: t.landingPageViews },
+      { value: 'CONVERSIONS', label: t.conversions, warning: t.pixelWarning },
+    ],
+    OUTCOME_LEADS: [
+      { value: 'LINK_CLICKS', label: t.linkClicks },
+      { value: 'LANDING_PAGE_VIEWS', label: t.landingPageViews },
+      { value: 'CONVERSIONS', label: t.conversions, warning: t.pixelWarning },
+    ],
+    OUTCOME_AWARENESS: [
+      { value: 'REACH', label: t.reach },
+      { value: 'IMPRESSIONS', label: t.impressions },
+    ],
+    OUTCOME_ENGAGEMENT: [
+      { value: 'IMPRESSIONS', label: t.impressions },
+      { value: 'REACH', label: t.reach },
+    ],
+    OUTCOME_APP_PROMOTION: [
+      { value: 'LINK_CLICKS', label: t.linkClicks },
+    ],
+  }
+}
+
+function useCtaOptions(dict: Dictionary): { value: CallToActionType; label: string }[] {
+  const t = dict.campaigns.campaignWizard.ctaOptions
+  return [
+    { value: 'LEARN_MORE', label: t.learnMore },
+    { value: 'SHOP_NOW', label: t.shopNow },
+    { value: 'SIGN_UP', label: t.signUp },
+    { value: 'CONTACT_US', label: t.contactUs },
+    { value: 'GET_OFFER', label: t.getOffer },
+    { value: 'SUBSCRIBE', label: t.subscribe },
+    { value: 'DOWNLOAD', label: t.download },
+  ]
+}
 
 // ─── Componente de step indicator ─────────────────────────────────────────────
 
-const STEPS = [
-  { label: 'Campanha', icon: Megaphone },
-  { label: 'Público', icon: Users },
-  { label: 'Criativo', icon: ImageIcon },
-  { label: 'Revisar', icon: CheckCircle2 },
-]
-
-function StepIndicator({ current }: { current: number }) {
+function StepIndicator({ current, steps }: { current: number; steps: { label: string; icon: typeof Megaphone }[] }) {
   return (
     <div className="flex items-center gap-0">
-      {STEPS.map((step, i) => {
+      {steps.map((step, i) => {
         const Icon = step.icon
         const done = i < current
         const active = i === current
@@ -92,7 +96,7 @@ function StepIndicator({ current }: { current: number }) {
                 active ? 'text-neon-cyan' : done ? 'text-green-400' : 'text-gray-600'
               }`}>{step.label}</span>
             </div>
-            {i < STEPS.length - 1 && (
+            {i < steps.length - 1 && (
               <div className={`w-8 h-px mx-1 ${i < current ? 'bg-green-500/40' : 'bg-gray-800'}`} />
             )}
           </div>
@@ -156,6 +160,8 @@ function InterestSearch({
   selected: Interest[]
   onChange: (interests: Interest[]) => void
 }) {
+  const { dict } = useLanguage()
+  const t = dict.campaigns.campaignWizard.step2
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<Interest[]>([])
   const [loading, setLoading] = useState(false)
@@ -229,7 +235,7 @@ function InterestSearch({
           type="text"
           value={query}
           onChange={handleInput}
-          placeholder="Buscar interesse: ex. Empreendedorismo, Marketing..."
+          placeholder={t.interestSearchPlaceholder}
           className="w-full bg-gray-900 border border-gray-700 rounded-lg pl-9 pr-3 py-2.5 text-sm text-white placeholder-gray-500 focus:border-neon-cyan focus:outline-none transition-colors"
         />
         {loading && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 animate-spin" />}
@@ -245,7 +251,7 @@ function InterestSearch({
                 <p className="text-sm text-gray-200">{r.name}</p>
                 <p className="text-xs text-gray-500 mt-0.5">
                   {r.path && <span>{r.path} · </span>}
-                  {r.audienceSize ? `~${(r.audienceSize / 1_000_000).toFixed(1)}M pessoas` : 'ID: ' + r.id}
+                  {r.audienceSize ? t.interestAudienceSize((r.audienceSize / 1_000_000).toFixed(1)) : t.interestIdPrefix + r.id}
                 </p>
               </button>
             ))}
@@ -253,7 +259,7 @@ function InterestSearch({
         )}
         {open && !loading && results.length === 0 && query.length >= 2 && (
           <div className="absolute z-50 left-0 right-0 mt-1 bg-gray-900 border border-gray-700 rounded-lg px-3 py-3 shadow-xl">
-            <p className="text-xs text-gray-500">Nenhum interesse encontrado para "{query}"</p>
+            <p className="text-xs text-gray-500">{t.interestNoneFound(query)}</p>
           </div>
         )}
       </div>
@@ -270,6 +276,18 @@ interface Props {
 type FormData = Omit<CreateCampaignInput, 'dailyBudgetBRL'> & { dailyBudgetBRL: string; mediaType: 'image' | 'video' }
 
 export default function CampaignWizard({ pages }: Props) {
+  const { dict } = useLanguage()
+  const wt = dict.campaigns.campaignWizard
+  const OBJECTIVES = useObjectives(dict)
+  const OPTIMIZATION_GOALS = useOptimizationGoals(dict)
+  const CTA_OPTIONS = useCtaOptions(dict)
+  const STEPS = [
+    { label: wt.steps[0], icon: Megaphone },
+    { label: wt.steps[1], icon: Users },
+    { label: wt.steps[2], icon: ImageIcon },
+    { label: wt.steps[3], icon: CheckCircle2 },
+  ]
+
   const [step, setStep] = useState(0)
   const [isPending, startTransition] = useTransition()
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -314,7 +332,7 @@ export default function CampaignWizard({ pages }: Props) {
       if (res.success && res.data) {
         setResult({ metaCampaignId: res.data.metaCampaignId, dashboardUrl: res.data.dashboardUrl })
       } else {
-        setSubmitError(res.error ?? 'Erro desconhecido')
+        setSubmitError(res.error ?? wt.submitErrorDefault)
       }
     })
   }
@@ -327,9 +345,9 @@ export default function CampaignWizard({ pages }: Props) {
           <CheckCircle2 className="w-8 h-8 text-green-400" />
         </div>
         <div>
-          <h2 className="text-xl font-bold text-white mb-2">Campanha criada com sucesso!</h2>
+          <h2 className="text-xl font-bold text-white mb-2">{wt.sucesso.titulo}</h2>
           <p className="text-sm text-gray-400">
-            ID Meta: <code className="font-mono text-neon-cyan">{result.metaCampaignId}</code>
+            {wt.sucesso.idMeta} <code className="font-mono text-neon-cyan">{result.metaCampaignId}</code>
           </p>
         </div>
         <div className="flex items-center justify-center gap-3">
@@ -338,7 +356,7 @@ export default function CampaignWizard({ pages }: Props) {
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-neon-cyan text-black text-sm font-bold hover:opacity-90 transition-all"
           >
             <Zap className="w-4 h-4" />
-            Ver Campanhas
+            {wt.sucesso.verCampanhas}
           </a>
           <a
             href={`https://business.facebook.com/adsmanager/manage/campaigns`}
@@ -347,7 +365,7 @@ export default function CampaignWizard({ pages }: Props) {
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-gray-700 text-gray-300 text-sm font-medium hover:border-gray-500 transition-all"
           >
             <ExternalLink className="w-4 h-4" />
-            Abrir no Meta Ads Manager
+            {wt.sucesso.abrirMetaAdsManager}
           </a>
         </div>
       </div>
@@ -358,23 +376,23 @@ export default function CampaignWizard({ pages }: Props) {
     <div className="glass-card rounded-2xl border border-gray-800 overflow-hidden">
       {/* Header com steps */}
       <div className="px-6 py-4 border-b border-gray-800 flex flex-wrap items-center justify-between gap-4">
-        <StepIndicator current={step} />
-        <p className="text-xs text-gray-600">Passo {step + 1} de {STEPS.length}</p>
+        <StepIndicator current={step} steps={STEPS} />
+        <p className="text-xs text-gray-600">{wt.stepCounter(step + 1, STEPS.length)}</p>
       </div>
 
       <div className="p-6 space-y-6">
         {/* ── PASSO 1: Campanha ────────────────────────────────────────────── */}
         {step === 0 && (
           <div className="space-y-5">
-            <Field label="Nome da Campanha" hint="Use um nome descritivo que identifique o produto e o objetivo">
+            <Field label={wt.step1.nomeCampanhaLabel} hint={wt.step1.nomeCampanhaHint}>
               <Input
                 value={form.campaignName}
                 onChange={e => update('campaignName', e.target.value)}
-                placeholder="Ex: Produto X — Tráfego Brasil Abril/2026"
+                placeholder={wt.step1.nomeCampanhaPlaceholder}
               />
             </Field>
 
-            <Field label="Objetivo">
+            <Field label={wt.step1.objetivoLabel}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {OBJECTIVES.map(obj => (
                   <button
@@ -403,7 +421,7 @@ export default function CampaignWizard({ pages }: Props) {
             </Field>
 
             <div className="grid grid-cols-2 gap-4">
-              <Field label="Orçamento Diário (R$)" hint="Mínimo: R$5,00/dia">
+              <Field label={wt.step1.orcamentoLabel} hint={wt.step1.orcamentoHint}>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">R$</span>
                   <Input
@@ -417,13 +435,13 @@ export default function CampaignWizard({ pages }: Props) {
                 </div>
               </Field>
 
-              <Field label="Iniciar como">
+              <Field label={wt.step1.iniciarComoLabel}>
                 <Select
                   value={form.startPaused ? 'paused' : 'active'}
                   onChange={e => update('startPaused', e.target.value === 'paused')}
                 >
-                  <option value="paused">Pausada (revisar antes)</option>
-                  <option value="active">Ativa (iniciar agora)</option>
+                  <option value="paused">{wt.step1.pausada}</option>
+                  <option value="active">{wt.step1.ativaAgora}</option>
                 </Select>
               </Field>
             </div>
@@ -434,22 +452,22 @@ export default function CampaignWizard({ pages }: Props) {
         {step === 1 && (
           <div className="space-y-5">
             <div className="grid grid-cols-2 gap-4">
-              <Field label="Idade Mínima">
+              <Field label={wt.step2.idadeMinLabel}>
                 <Input type="number" min="18" max="65" value={form.ageMin}
                   onChange={e => update('ageMin', parseInt(e.target.value) || 18)} />
               </Field>
-              <Field label="Idade Máxima">
+              <Field label={wt.step2.idadeMaxLabel}>
                 <Input type="number" min="18" max="65" value={form.ageMax}
                   onChange={e => update('ageMax', parseInt(e.target.value) || 65)} />
               </Field>
             </div>
 
-            <Field label="Gênero">
+            <Field label={wt.step2.generoLabel}>
               <div className="flex gap-3">
                 {[
-                  { value: 'all', label: 'Todos' },
-                  { value: 'male', label: 'Masculino' },
-                  { value: 'female', label: 'Feminino' },
+                  { value: 'all', label: wt.step2.generoTodos },
+                  { value: 'male', label: wt.step2.generoMasculino },
+                  { value: 'female', label: wt.step2.generoFeminino },
                 ].map(g => (
                   <button
                     key={g.value}
@@ -468,7 +486,7 @@ export default function CampaignWizard({ pages }: Props) {
             </Field>
 
             <Field
-              label="Otimização de Entrega"
+              label={wt.step2.otimizacaoLabel}
               warning={optimizationOptions.find(o => o.value === form.optimizationGoal)?.warning}
             >
               <Select
@@ -483,20 +501,20 @@ export default function CampaignWizard({ pages }: Props) {
 
             <div className="p-4 rounded-xl border border-gray-800 bg-gray-900/40">
               <p className="text-xs font-semibold text-gray-400 mb-2 flex items-center gap-1.5">
-                <span>🌍</span> Localização
+                <span>🌍</span> {wt.step2.localizacaoTitulo}
               </p>
-              <p className="text-sm text-gray-300">Brasil (BR) — padrão</p>
+              <p className="text-sm text-gray-300">{wt.step2.localizacaoValor}</p>
               <p className="text-xs text-gray-600 mt-1">
-                Para segmentação geográfica avançada, ajuste diretamente no Meta Ads Manager após a criação.
+                {wt.step2.localizacaoHint}
               </p>
             </div>
 
             <div className="p-4 rounded-xl border border-blue-500/20 bg-blue-500/5">
               <p className="text-xs font-semibold text-blue-400 mb-1 flex items-center gap-1.5">
-                <Zap className="w-3.5 h-3.5" /> Interesses (opcional)
+                <Zap className="w-3.5 h-3.5" /> {wt.step2.interessesTitulo}
               </p>
               <p className="text-xs text-gray-500 mb-3">
-                Busque interesses pelo nome. Deixe vazio para alcance amplo.
+                {wt.step2.interessesHint}
               </p>
               <InterestSearch
                 selected={form.interests ?? []}
@@ -510,7 +528,7 @@ export default function CampaignWizard({ pages }: Props) {
         {step === 2 && (
           <div className="space-y-5">
             {pages.length > 0 ? (
-              <Field label="Página do Facebook" hint="O anúncio será veiculado em nome desta página">
+              <Field label={wt.step3.paginaFacebookLabel} hint={wt.step3.paginaFacebookHint}>
                 <Select value={form.pageId} onChange={e => update('pageId', e.target.value)}>
                   {pages.map(p => <option key={p.id} value={p.id}>{p.name} ({p.id})</option>)}
                 </Select>
@@ -522,11 +540,11 @@ export default function CampaignWizard({ pages }: Props) {
                       <Users className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
                       <p className="text-xs text-gray-400">
                         {selectedPage.fanCount != null && (
-                          <span>{selectedPage.fanCount.toLocaleString('pt-BR')} curtidas</span>
+                          <span>{wt.step3.curtidas(selectedPage.fanCount.toLocaleString('pt-BR'))}</span>
                         )}
                         {selectedPage.fanCount != null && selectedPage.engagementCount != null && ' · '}
                         {selectedPage.engagementCount != null && (
-                          <span>{selectedPage.engagementCount.toLocaleString('pt-BR')} pessoas engajando com a página</span>
+                          <span>{wt.step3.pessoasEngajando(selectedPage.engagementCount.toLocaleString('pt-BR'))}</span>
                         )}
                       </p>
                     </div>
@@ -535,53 +553,53 @@ export default function CampaignWizard({ pages }: Props) {
               </Field>
             ) : (
               <Field
-                label="ID da Página do Facebook"
-                hint="Cole o ID numérico da sua Página. Encontre em: facebook.com/sua-pagina → Sobre → ID da Página"
-                error={step === 2 && !form.pageId.trim() ? 'Campo obrigatório para criar o criativo' : undefined}
+                label={wt.step3.idPaginaLabel}
+                hint={wt.step3.idPaginaHint}
+                error={step === 2 && !form.pageId.trim() ? wt.step3.idPaginaError : undefined}
               >
                 <div className="space-y-2">
                   <Input
                     value={form.pageId}
                     onChange={e => update('pageId', e.target.value.trim())}
-                    placeholder="Ex: 123456789012345"
+                    placeholder={wt.step3.idPaginaPlaceholder}
                   />
                   <div className="flex items-start gap-2 p-3 rounded-lg border border-yellow-500/20 bg-yellow-500/5">
                     <AlertTriangle className="w-4 h-4 text-yellow-400 flex-shrink-0 mt-0.5" />
                     <p className="text-xs text-yellow-300">
-                      Não encontramos páginas automaticamente. Cole o ID da sua Página do Facebook acima ou reconecte sua conta Meta em{' '}
-                      <a href="/dashboard/configuracoes" className="underline hover:text-yellow-200">Configurações</a>{' '}
-                      para tentar buscar novamente.
+                      {wt.step3.paginaNaoEncontradaPart1}{' '}
+                      <a href="/dashboard/configuracoes" className="underline hover:text-yellow-200">{wt.step3.paginaNaoEncontradaLink}</a>{' '}
+                      {wt.step3.paginaNaoEncontradaPart2}
                     </p>
                   </div>
                 </div>
               </Field>
             )}
 
-            <Field label="Headline" hint="Máximo 40 caracteres — aparece em destaque no anúncio">
+            <Field label={wt.step3.headlineLabel} hint={wt.step3.headlineHint}>
               <Input
                 value={form.headline}
                 onChange={e => update('headline', e.target.value)}
                 maxLength={40}
-                placeholder="Ex: Economize 50% em Softwares de IA"
+                placeholder={wt.step3.headlinePlaceholder}
               />
               <p className="text-xs text-gray-600 text-right">{form.headline.length}/40</p>
             </Field>
 
-            <Field label="Texto Principal" hint="Máximo 150 palavras — o corpo do anúncio">
+            <Field label={wt.step3.textoPrincipalLabel} hint={wt.step3.textoPrincipalHint}>
               <Textarea
                 rows={4}
                 value={form.primaryText}
                 onChange={e => update('primaryText', e.target.value)}
-                placeholder="Descreva a proposta de valor, use gatilhos mentais e finalize com uma chamada para ação."
+                placeholder={wt.step3.textoPrincipalPlaceholder}
               />
             </Field>
 
             <Field
-              label="URL de Destino"
-              hint="Página para onde o usuário será direcionado ao clicar"
+              label={wt.step3.urlDestinoLabel}
+              hint={wt.step3.urlDestinoHint}
               error={
                 form.destinationUrl && !form.destinationUrl.startsWith('https://')
-                  ? 'A URL deve começar com https:// (exigido pela Meta)'
+                  ? wt.step3.urlDestinoError
                   : undefined
               }
             >
@@ -589,11 +607,11 @@ export default function CampaignWizard({ pages }: Props) {
                 type="url"
                 value={form.destinationUrl}
                 onChange={e => update('destinationUrl', e.target.value)}
-                placeholder="https://seu-site.com/produto"
+                placeholder={wt.step3.urlDestinoPlaceholder}
               />
             </Field>
 
-            <Field label="Chamada para Ação (CTA)">
+            <Field label={wt.step3.ctaLabel}>
               <Select
                 value={form.callToAction}
                 onChange={e => update('callToAction', e.target.value as CallToActionType)}
@@ -603,7 +621,7 @@ export default function CampaignWizard({ pages }: Props) {
             </Field>
 
             <div className="space-y-3">
-              <label className="text-sm font-medium text-gray-300">Mídia do Anúncio</label>
+              <label className="text-sm font-medium text-gray-300">{wt.step3.midiaLabel}</label>
               <div className="flex gap-2">
                 <button
                   type="button"
@@ -615,7 +633,7 @@ export default function CampaignWizard({ pages }: Props) {
                   }`}
                 >
                   <ImageIcon className="w-4 h-4" />
-                  Imagem
+                  {wt.step3.imagemBtn}
                 </button>
                 <button
                   type="button"
@@ -627,17 +645,17 @@ export default function CampaignWizard({ pages }: Props) {
                   }`}
                 >
                   <Video className="w-4 h-4" />
-                  Vídeo
+                  {wt.step3.videoBtn}
                 </button>
               </div>
 
               {form.mediaType === 'image' ? (
                 <Field
                   label=""
-                  hint="Link direto para imagem (.jpg, .png, .webp)"
+                  hint={wt.step3.imagemHint}
                   error={
                     form.imageUrl && !/\.(jpe?g|png|gif|webp|bmp)(\?.*)?$/i.test(form.imageUrl)
-                      ? 'Use o link direto de uma imagem (.jpg, .png, .webp), não uma URL de página web'
+                      ? wt.step3.imagemError
                       : undefined
                   }
                 >
@@ -645,16 +663,16 @@ export default function CampaignWizard({ pages }: Props) {
                     type="url"
                     value={form.imageUrl}
                     onChange={e => update('imageUrl', e.target.value)}
-                    placeholder="https://cdn.exemplo.com/imagem.jpg"
+                    placeholder={wt.step3.imagemPlaceholder}
                   />
                 </Field>
               ) : (
                 <Field
                   label=""
-                  hint="Link direto para vídeo (.mp4, .mov) — a Meta irá baixar e processar o arquivo"
+                  hint={wt.step3.videoHint}
                   error={
                     form.videoUrl && !/\.(mp4|mov|avi|mkv|wmv|flv|webm)(\?.*)?$/i.test(form.videoUrl)
-                      ? 'Use o link direto de um arquivo de vídeo (.mp4, .mov), não uma URL de página web'
+                      ? wt.step3.videoError
                       : undefined
                   }
                 >
@@ -662,7 +680,7 @@ export default function CampaignWizard({ pages }: Props) {
                     type="url"
                     value={form.videoUrl ?? ''}
                     onChange={e => update('videoUrl', e.target.value)}
-                    placeholder="https://cdn.exemplo.com/video.mp4"
+                    placeholder={wt.step3.videoPlaceholder}
                   />
                 </Field>
               )}
@@ -674,36 +692,36 @@ export default function CampaignWizard({ pages }: Props) {
         {step === 3 && (
           <div className="space-y-4">
             <p className="text-sm text-gray-400">
-              Revise todos os detalhes antes de publicar. A campanha será criada diretamente no Meta Ads Manager.
+              {wt.step4.revisarIntro}
             </p>
 
             {[
               {
-                title: '📣 Campanha',
+                title: wt.step4.campanhaSectionTitulo,
                 items: [
-                  ['Nome', form.campaignName],
-                  ['Objetivo', OBJECTIVES.find(o => o.value === form.objective)?.label ?? form.objective],
-                  ['Orçamento Diário', `R$ ${parseFloat(form.dailyBudgetBRL || '0').toFixed(2)}`],
-                  ['Início', form.startPaused ? 'Pausada (ativar manualmente)' : 'Ativa imediatamente'],
+                  [wt.step4.labelNome, form.campaignName],
+                  [wt.step4.labelObjetivo, OBJECTIVES.find(o => o.value === form.objective)?.label ?? form.objective],
+                  [wt.step4.labelOrcamentoDiario, `R$ ${parseFloat(form.dailyBudgetBRL || '0').toFixed(2)}`],
+                  [wt.step4.labelInicio, form.startPaused ? wt.step4.valorPausada : wt.step4.valorAtivaImediatamente],
                 ],
               },
               {
-                title: '👥 Público',
+                title: wt.step4.publicoSectionTitulo,
                 items: [
-                  ['Faixa Etária', `${form.ageMin} – ${form.ageMax} anos`],
-                  ['Gênero', form.genders === 'all' ? 'Todos' : form.genders === 'male' ? 'Masculino' : 'Feminino'],
-                  ['Localização', 'Brasil (BR)'],
-                  ['Otimização', form.optimizationGoal ?? 'LINK_CLICKS'],
+                  [wt.step4.labelFaixaEtaria, wt.step4.faixaEtariaValor(form.ageMin, form.ageMax)],
+                  [wt.step4.labelGenero, form.genders === 'all' ? wt.step2.generoTodos : form.genders === 'male' ? wt.step2.generoMasculino : wt.step2.generoFeminino],
+                  [wt.step4.labelLocalizacao, 'Brasil (BR)'],
+                  [wt.step4.labelOtimizacao, form.optimizationGoal ?? 'LINK_CLICKS'],
                 ],
               },
               {
-                title: '🎨 Criativo',
+                title: wt.step4.criativoSectionTitulo,
                 items: [
-                  ['Página', pages.find(p => p.id === form.pageId)?.name ?? form.pageId],
-                  ['Headline', form.headline],
-                  ['URL', form.destinationUrl],
-                  ['CTA', CTA_OPTIONS.find(c => c.value === form.callToAction)?.label ?? form.callToAction ?? '—'],
-                  ['Mídia', form.mediaType === 'video' ? `Vídeo: ${form.videoUrl || '—'}` : `Imagem: ${form.imageUrl || '—'}`],
+                  [wt.step4.labelPagina, pages.find(p => p.id === form.pageId)?.name ?? form.pageId],
+                  [wt.step4.labelHeadline, form.headline],
+                  [wt.step4.labelUrl, form.destinationUrl],
+                  [wt.step4.labelCta, CTA_OPTIONS.find(c => c.value === form.callToAction)?.label ?? form.callToAction ?? '—'],
+                  [wt.step4.labelMidia, form.mediaType === 'video' ? wt.step4.midiaVideoValor(form.videoUrl || '—') : wt.step4.midiaImagemValor(form.imageUrl || '—')],
                 ],
               },
             ].map(section => (
@@ -739,7 +757,7 @@ export default function CampaignWizard({ pages }: Props) {
           className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-700 text-sm text-gray-400 hover:text-white hover:border-gray-500 transition-all disabled:opacity-40"
         >
           <ChevronLeft className="w-4 h-4" />
-          Anterior
+          {wt.footer.anterior}
         </button>
 
         {step < STEPS.length - 1 ? (
@@ -759,7 +777,7 @@ export default function CampaignWizard({ pages }: Props) {
             }
             className="inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-neon-cyan/10 border border-neon-cyan/30 text-neon-cyan text-sm font-semibold hover:bg-neon-cyan/20 transition-all disabled:opacity-40"
           >
-            Próximo
+            {wt.footer.proximo}
             <ChevronRight className="w-4 h-4" />
           </button>
         ) : (
@@ -770,9 +788,9 @@ export default function CampaignWizard({ pages }: Props) {
             className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-neon-cyan to-neon-purple text-black text-sm font-bold hover:opacity-90 transition-all disabled:opacity-50"
           >
             {isPending ? (
-              <><Loader2 className="w-4 h-4 animate-spin" /> Criando na Meta…</>
+              <><Loader2 className="w-4 h-4 animate-spin" /> {wt.footer.criandoNaMeta}</>
             ) : (
-              <><Zap className="w-4 h-4" /> Criar Campanha</>
+              <><Zap className="w-4 h-4" /> {wt.footer.criarCampanha}</>
             )}
           </button>
         )}

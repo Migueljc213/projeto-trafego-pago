@@ -8,6 +8,7 @@ import { syncMetaCampaignsAction } from '@/actions/campaigns'
 import { savePixelAction, removePixelAction } from '@/actions/pixel'
 import { listBusinessesAction, selectBusinessManagerAction } from '@/actions/business'
 import { useRouter } from 'next/navigation'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 interface MetaBusinessOption {
   id: string
@@ -41,10 +42,13 @@ interface Props {
 }
 
 function TokenStatusBadge({ expiresAt }: { expiresAt: string | null }) {
+  const { dict } = useLanguage()
+  const d = dict.account.configuracoesClient.tokenBadge
+
   if (!expiresAt) {
     return (
       <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-gray-500/15 text-gray-400 border border-gray-600/25">
-        <Clock className="w-3 h-3" /> Sem data de expiração
+        <Clock className="w-3 h-3" /> {d.noExpiry}
       </span>
     )
   }
@@ -56,25 +60,27 @@ function TokenStatusBadge({ expiresAt }: { expiresAt: string | null }) {
   if (daysLeft < 0) {
     return (
       <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-500/15 text-red-400 border border-red-500/25">
-        <XCircle className="w-3 h-3" /> Token expirado
+        <XCircle className="w-3 h-3" /> {d.expired}
       </span>
     )
   }
   if (daysLeft <= 7) {
     return (
       <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-orange-500/15 text-orange-400 border border-orange-500/25">
-        <AlertTriangle className="w-3 h-3" /> Expira em {daysLeft}d
+        <AlertTriangle className="w-3 h-3" /> {d.expiresInDays.replace('{days}', String(daysLeft))}
       </span>
     )
   }
   return (
     <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-500/15 text-green-400 border border-green-500/25">
-      <CheckCircle className="w-3 h-3" /> Válido · {daysLeft}d restantes
+      <CheckCircle className="w-3 h-3" /> {d.validDaysLeft.replace('{days}', String(daysLeft))}
     </span>
   )
 }
 
 export default function ConfiguracoesClient({ bm, googleAdsConnected }: Props) {
+  const { dict } = useLanguage()
+  const d = dict.account.configuracoesClient
   const router = useRouter()
   const [syncingAccounts, startSyncAccounts] = useTransition()
   const [syncingCampaigns, startSyncCampaigns] = useTransition()
@@ -93,9 +99,9 @@ export default function ConfiguracoesClient({ bm, googleAdsConnected }: Props) {
       const result = await listBusinessesAction()
       if (result.success) {
         setBusinesses(result.data ?? [])
-        if (!result.data?.length) setBmMsg({ type: 'error', text: 'Nenhuma Business Manager encontrada para esta conta Meta.' })
+        if (!result.data?.length) setBmMsg({ type: 'error', text: d.messages.noBusinessFound })
       } else {
-        setBmMsg({ type: 'error', text: result.error ?? 'Erro ao buscar Business Managers' })
+        setBmMsg({ type: 'error', text: result.error ?? d.messages.errorFetchingBusinesses })
       }
     } finally {
       setLoadingBusinesses(false)
@@ -107,11 +113,11 @@ export default function ConfiguracoesClient({ bm, googleAdsConnected }: Props) {
     startSelectingBm(async () => {
       const result = await selectBusinessManagerAction(id, name)
       if (result.success) {
-        setBmMsg({ type: 'success', text: `Business Manager "${name}" conectada com sucesso.` })
+        setBmMsg({ type: 'success', text: d.messages.businessConnected.replace('{name}', name) })
         setBusinesses(null)
         router.refresh()
       } else {
-        setBmMsg({ type: 'error', text: result.error ?? 'Erro ao selecionar Business Manager' })
+        setBmMsg({ type: 'error', text: result.error ?? d.messages.errorSelectingBusiness })
       }
     })
   }
@@ -138,9 +144,9 @@ export default function ConfiguracoesClient({ bm, googleAdsConnected }: Props) {
       const data = await res.json()
       if (data.pixels) {
         setPixelOptions(data.pixels)
-        if (data.pixels.length === 0) setPixelMsg({ type: 'error', text: 'Nenhum pixel encontrado nesta conta. Crie um pixel no Meta Events Manager.' })
+        if (data.pixels.length === 0) setPixelMsg({ type: 'error', text: d.messages.noPixelsFound })
       } else {
-        setPixelMsg({ type: 'error', text: data.error ?? 'Erro ao buscar pixels' })
+        setPixelMsg({ type: 'error', text: data.error ?? d.messages.errorFetchingPixels })
       }
     } finally {
       setLoadingPixels(false)
@@ -149,7 +155,7 @@ export default function ConfiguracoesClient({ bm, googleAdsConnected }: Props) {
 
   function handleSavePixel() {
     const pixel = pixelOptions.find(p => p.id === selectedPixelId)
-    if (!selectedPixelId) { setPixelMsg({ type: 'error', text: 'Selecione um pixel' }); return }
+    if (!selectedPixelId) { setPixelMsg({ type: 'error', text: d.messages.selectAPixel }); return }
     setPixelMsg(null)
     startSavePixel(async () => {
       const result = await savePixelAction({
@@ -158,10 +164,10 @@ export default function ConfiguracoesClient({ bm, googleAdsConnected }: Props) {
         adAccountId: firstAccount?.id,
       })
       if (result.success) {
-        setPixelMsg({ type: 'success', text: 'Pixel vinculado com sucesso! O objetivo "Conversões" está disponível.' })
+        setPixelMsg({ type: 'success', text: d.messages.pixelLinked })
         router.refresh()
       } else {
-        setPixelMsg({ type: 'error', text: result.error ?? 'Erro ao salvar pixel' })
+        setPixelMsg({ type: 'error', text: result.error ?? d.messages.errorSavingPixel })
       }
     })
   }
@@ -173,10 +179,10 @@ export default function ConfiguracoesClient({ bm, googleAdsConnected }: Props) {
       if (result.success) {
         setSelectedPixelId('')
         setPixelOptions([])
-        setPixelMsg({ type: 'success', text: 'Pixel removido.' })
+        setPixelMsg({ type: 'success', text: d.messages.pixelRemoved })
         router.refresh()
       } else {
-        setPixelMsg({ type: 'error', text: result.error ?? 'Erro ao remover pixel' })
+        setPixelMsg({ type: 'error', text: result.error ?? d.messages.errorRemovingPixel })
       }
     })
   }
@@ -186,10 +192,10 @@ export default function ConfiguracoesClient({ bm, googleAdsConnected }: Props) {
     startSyncAccounts(async () => {
       const result = await listAdAccountsAction()
       if (result.success) {
-        setSyncMsg({ type: 'success', text: `${result.data?.length ?? 0} conta(s) de anúncio sincronizada(s)` })
+        setSyncMsg({ type: 'success', text: d.messages.accountsSynced.replace('{count}', String(result.data?.length ?? 0)) })
         router.refresh()
       } else {
-        setSyncMsg({ type: 'error', text: result.error ?? 'Erro ao sincronizar contas' })
+        setSyncMsg({ type: 'error', text: result.error ?? d.messages.errorSyncingAccounts })
       }
     })
   }
@@ -199,10 +205,10 @@ export default function ConfiguracoesClient({ bm, googleAdsConnected }: Props) {
     startSyncCampaigns(async () => {
       const result = await syncMetaCampaignsAction()
       if (result.success && result.data) {
-        setSyncMsg({ type: 'success', text: `${result.data.synced} campanhas sincronizadas, ${result.data.updated} atualizadas` })
+        setSyncMsg({ type: 'success', text: d.messages.campaignsSynced.replace('{synced}', String(result.data.synced)).replace('{updated}', String(result.data.updated)) })
         router.refresh()
       } else {
-        setSyncMsg({ type: 'error', text: result.error ?? 'Erro ao sincronizar campanhas' })
+        setSyncMsg({ type: 'error', text: result.error ?? d.messages.errorSyncingCampaigns })
       }
     })
   }
@@ -226,8 +232,8 @@ export default function ConfiguracoesClient({ bm, googleAdsConnected }: Props) {
             <Link2 className="w-4 h-4 text-blue-400" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-white">Conta Meta</h3>
-            <p className="text-xs text-gray-500">Business Manager e token de acesso</p>
+            <h3 className="text-sm font-semibold text-white">{d.metaCard.title}</h3>
+            <p className="text-xs text-gray-500">{d.metaCard.subtitle}</p>
           </div>
         </div>
 
@@ -235,12 +241,12 @@ export default function ConfiguracoesClient({ bm, googleAdsConnected }: Props) {
           <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="p-3 rounded-lg bg-white/3 border border-gray-800">
-                <p className="text-xs text-gray-500 mb-1">Business Manager</p>
+                <p className="text-xs text-gray-500 mb-1">{d.metaCard.businessManagerLabel}</p>
                 <p className="text-sm font-medium text-gray-200 truncate">{bm.name}</p>
                 <p className="text-xs text-gray-600 font-mono truncate">{bm.metaBmId}</p>
               </div>
               <div className="p-3 rounded-lg bg-white/3 border border-gray-800">
-                <p className="text-xs text-gray-500 mb-1">Status do Token</p>
+                <p className="text-xs text-gray-500 mb-1">{d.metaCard.tokenStatusLabel}</p>
                 <TokenStatusBadge expiresAt={bm.tokenExpiresAt} />
               </div>
             </div>
@@ -262,17 +268,17 @@ export default function ConfiguracoesClient({ bm, googleAdsConnected }: Props) {
                 className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-700 text-xs text-gray-400 hover:text-white hover:border-gray-500 transition-all disabled:opacity-50"
               >
                 {loadingBusinesses ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Building2 className="w-3.5 h-3.5" />}
-                Selecionar Business Manager
+                {d.metaCard.selectBusinessManager}
               </button>
             ) : (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs text-gray-500">Escolha a Business Manager que o FunnelGuard AI vai gerenciar</p>
+                  <p className="text-xs text-gray-500">{d.metaCard.chooseBusinessManager}</p>
                   <button
                     onClick={() => { setBusinesses(null); setBmMsg(null) }}
                     className="text-xs text-gray-600 hover:text-gray-300"
                   >
-                    Cancelar
+                    {d.metaCard.cancel}
                   </button>
                 </div>
                 <div className="divide-y divide-gray-800 rounded-lg border border-gray-800 overflow-hidden">
@@ -306,13 +312,13 @@ export default function ConfiguracoesClient({ bm, googleAdsConnected }: Props) {
               <div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/25 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4 text-orange-400 flex-shrink-0" />
-                  <p className="text-xs text-orange-300">Token próximo do vencimento. Reconecte para gerar um novo token de 60 dias.</p>
+                  <p className="text-xs text-orange-300">{d.metaCard.tokenExpiringWarning}</p>
                 </div>
                 <button
                   onClick={() => signIn('facebook')}
                   className="flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold bg-orange-500/20 border border-orange-500/40 text-orange-300 hover:bg-orange-500/30 transition-all"
                 >
-                  Reconectar
+                  {d.metaCard.reconnect}
                 </button>
               </div>
             )}
@@ -321,7 +327,7 @@ export default function ConfiguracoesClient({ bm, googleAdsConnected }: Props) {
               className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-700 text-xs text-gray-400 hover:text-white hover:border-gray-500 transition-all"
             >
               <Link2 className="w-3.5 h-3.5" />
-              Reconectar conta Meta
+              {d.metaCard.reconnectMetaAccount}
             </button>
           </div>
         ) : (
@@ -329,7 +335,7 @@ export default function ConfiguracoesClient({ bm, googleAdsConnected }: Props) {
             <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/25 flex items-start gap-3">
               <AlertTriangle className="w-4 h-4 text-yellow-400 flex-shrink-0 mt-0.5" />
               <p className="text-xs text-yellow-300">
-                Nenhuma conta Meta conectada. Conecte sua conta para gerenciar campanhas e acessar dados de performance.
+                {d.metaCard.noAccountConnected}
               </p>
             </div>
             <button
@@ -337,7 +343,7 @@ export default function ConfiguracoesClient({ bm, googleAdsConnected }: Props) {
               className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-all"
             >
               <Link2 className="w-4 h-4" />
-              Conectar conta Meta
+              {d.metaCard.connectMetaAccount}
             </button>
           </div>
         )}
@@ -350,8 +356,8 @@ export default function ConfiguracoesClient({ bm, googleAdsConnected }: Props) {
             <BarChart2 className="w-4 h-4 text-green-400" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-white">Google Ads</h3>
-            <p className="text-xs text-gray-500">Conecte para ver campanhas Search, Display, Shopping e YouTube</p>
+            <h3 className="text-sm font-semibold text-white">{d.googleAdsCard.title}</h3>
+            <p className="text-xs text-gray-500">{d.googleAdsCard.subtitle}</p>
           </div>
         </div>
 
@@ -360,24 +366,23 @@ export default function ConfiguracoesClient({ bm, googleAdsConnected }: Props) {
             <div className="p-3 rounded-lg bg-green-500/8 border border-green-500/20 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <CheckCircle className="w-4 h-4 text-green-400" />
-                <p className="text-sm font-medium text-green-400">Conta conectada</p>
+                <p className="text-sm font-medium text-green-400">{d.googleAdsCard.connected}</p>
               </div>
-              <span className="text-xs text-gray-500">Token salvo</span>
+              <span className="text-xs text-gray-500">{d.googleAdsCard.tokenSaved}</span>
             </div>
             <a
               href="/api/auth/google-ads"
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-700 text-xs text-gray-400 hover:text-white hover:border-gray-500 transition-all"
             >
               <Link2 className="w-3.5 h-3.5" />
-              Reconectar Google Ads
+              {d.googleAdsCard.reconnect}
             </a>
           </div>
         ) : (
           <div className="space-y-3">
             <div className="p-3 rounded-lg bg-blue-500/8 border border-blue-500/20">
               <p className="text-xs text-gray-400 leading-relaxed">
-                Conecte sua conta Google Ads para visualizar campanhas Search, Display, Shopping e YouTube em conjunto com suas campanhas Meta Ads.
-                Requer Developer Token aprovado na Google Ads API.
+                {d.googleAdsCard.description}
               </p>
             </div>
             <a
@@ -385,14 +390,14 @@ export default function ConfiguracoesClient({ bm, googleAdsConnected }: Props) {
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-semibold transition-all"
             >
               <BarChart2 className="w-4 h-4" />
-              Conectar Google Ads
+              {d.googleAdsCard.connect}
             </a>
             <a
               href="/docs/integracao-google-ads.md"
               className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-neon-cyan transition-colors"
             >
               <ChevronRight className="w-3 h-3" />
-              Ver guia de configuração →
+              {d.googleAdsCard.configGuide}
             </a>
           </div>
         )}
@@ -403,8 +408,8 @@ export default function ConfiguracoesClient({ bm, googleAdsConnected }: Props) {
         <div className="glass-card rounded-xl border border-gray-800 overflow-hidden">
           <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-gray-800">
             <div>
-              <h3 className="text-sm font-semibold text-white">Contas de Anúncio</h3>
-              <p className="text-xs text-gray-500 mt-0.5">{bm.adAccounts.length} conta(s) sincronizada(s)</p>
+              <h3 className="text-sm font-semibold text-white">{d.adAccountsCard.title}</h3>
+              <p className="text-xs text-gray-500 mt-0.5">{d.adAccountsCard.syncedCount.replace('{count}', String(bm.adAccounts.length))}</p>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -413,7 +418,7 @@ export default function ConfiguracoesClient({ bm, googleAdsConnected }: Props) {
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-700 text-xs text-gray-400 hover:text-white hover:border-gray-500 transition-all disabled:opacity-50"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${syncingAccounts ? 'animate-spin' : ''}`} />
-                Sincronizar contas
+                {d.adAccountsCard.syncAccounts}
               </button>
               <button
                 onClick={handleSyncCampaigns}
@@ -421,13 +426,13 @@ export default function ConfiguracoesClient({ bm, googleAdsConnected }: Props) {
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-700 text-xs text-gray-400 hover:text-white hover:border-gray-500 transition-all disabled:opacity-50"
               >
                 {syncingCampaigns ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-                Sincronizar campanhas
+                {d.adAccountsCard.syncCampaigns}
               </button>
             </div>
           </div>
           {bm.adAccounts.length === 0 ? (
             <div className="p-6 text-center">
-              <p className="text-sm text-gray-500">Nenhuma conta encontrada. Clique em "Sincronizar contas" para buscar da Meta.</p>
+              <p className="text-sm text-gray-500">{d.adAccountsCard.noAccountsFound}</p>
             </div>
           ) : (
             <div className="divide-y divide-gray-800">
@@ -444,7 +449,7 @@ export default function ConfiguracoesClient({ bm, googleAdsConnected }: Props) {
                       ? 'bg-green-500/10 border-green-500/20 text-green-400'
                       : 'bg-gray-500/10 border-gray-600/20 text-gray-500'
                   }`}>
-                    {acc.status === 1 ? 'Ativa' : 'Inativa'}
+                    {acc.status === 1 ? d.adAccountsCard.active : d.adAccountsCard.inactive}
                   </span>
                 </div>
               ))}
@@ -462,8 +467,8 @@ export default function ConfiguracoesClient({ bm, googleAdsConnected }: Props) {
               <Zap className="w-3.5 h-3.5 text-neon-purple" />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-white">Meta Pixel</h3>
-              <p className="text-xs text-gray-500">Necessário para o objetivo "Conversões"</p>
+              <h3 className="text-sm font-semibold text-white">{d.pixelCard.title}</h3>
+              <p className="text-xs text-gray-500">{d.pixelCard.subtitle}</p>
             </div>
           </div>
 
@@ -481,7 +486,7 @@ export default function ConfiguracoesClient({ bm, googleAdsConnected }: Props) {
             <div className="space-y-3">
               <div className="p-3 rounded-lg bg-green-500/8 border border-green-500/20 flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs text-gray-500 mb-0.5">Pixel vinculado</p>
+                  <p className="text-xs text-gray-500 mb-0.5">{d.pixelCard.pixelLinked}</p>
                   <p className="text-sm font-semibold text-green-400">{firstAccount.pixelName ?? firstAccount.pixelId}</p>
                   <p className="text-xs text-gray-600 font-mono">{firstAccount.pixelId}</p>
                 </div>
@@ -493,13 +498,13 @@ export default function ConfiguracoesClient({ bm, googleAdsConnected }: Props) {
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-500/20 text-xs text-red-400 hover:bg-red-500/10 transition-all disabled:opacity-50"
               >
                 {removingPixel ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-                Desvincular pixel
+                {d.pixelCard.unlinkPixel}
               </button>
             </div>
           ) : (
             <div className="space-y-3">
               <p className="text-xs text-gray-500">
-                Vincule um Pixel Meta para usar o objetivo "Conversões" nas campanhas e rastrear eventos de compra.
+                {d.pixelCard.linkPixelDesc}
               </p>
               {pixelOptions.length === 0 ? (
                 <button
@@ -508,7 +513,7 @@ export default function ConfiguracoesClient({ bm, googleAdsConnected }: Props) {
                   className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-gray-700 text-xs text-gray-400 hover:text-white hover:border-gray-500 transition-all disabled:opacity-50"
                 >
                   {loadingPixels ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-                  Buscar pixels da Meta
+                  {d.pixelCard.fetchPixels}
                 </button>
               ) : (
                 <div className="space-y-2">
@@ -517,7 +522,7 @@ export default function ConfiguracoesClient({ bm, googleAdsConnected }: Props) {
                     onChange={e => setSelectedPixelId(e.target.value)}
                     className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:border-neon-cyan focus:outline-none"
                   >
-                    <option value="">Selecione um pixel…</option>
+                    <option value="">{d.pixelCard.selectPixelOption}</option>
                     {pixelOptions.map(p => (
                       <option key={p.id} value={p.id}>
                         {p.name} ({p.id})
@@ -531,13 +536,13 @@ export default function ConfiguracoesClient({ bm, googleAdsConnected }: Props) {
                       className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-neon-purple/10 border border-neon-purple/30 text-neon-purple text-xs font-semibold hover:bg-neon-purple/20 transition-all disabled:opacity-50"
                     >
                       {savingPixel ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle className="w-3.5 h-3.5" />}
-                      Vincular pixel
+                      {d.pixelCard.linkPixel}
                     </button>
                     <button
                       onClick={loadPixels}
                       disabled={loadingPixels}
                       className="px-2.5 py-2 rounded-lg border border-gray-700 text-gray-500 hover:text-gray-300 transition-all disabled:opacity-50"
-                      title="Recarregar lista"
+                      title={d.pixelCard.reloadList}
                     >
                       <RefreshCw className={`w-3.5 h-3.5 ${loadingPixels ? 'animate-spin' : ''}`} />
                     </button>
@@ -551,7 +556,7 @@ export default function ConfiguracoesClient({ bm, googleAdsConnected }: Props) {
                 className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-neon-cyan transition-colors"
               >
                 <ChevronRight className="w-3 h-3" />
-                Criar pixel no Meta Events Manager →
+                {d.pixelCard.createPixelLink}
               </a>
             </div>
           )}
@@ -564,17 +569,17 @@ export default function ConfiguracoesClient({ bm, googleAdsConnected }: Props) {
               <span className="text-neon-cyan text-xs font-bold">C</span>
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-white">Conversions API (CAPI)</h3>
-              <p className="text-xs text-gray-500">Endpoint: /api/capi/event</p>
+              <h3 className="text-sm font-semibold text-white">{d.capiCard.title}</h3>
+              <p className="text-xs text-gray-500">{d.capiCard.subtitle}</p>
             </div>
           </div>
           <div className="space-y-3">
             <div className="p-3 rounded-lg bg-white/3 border border-gray-800">
-              <p className="text-xs text-gray-500 mb-1">Pixel ID (env)</p>
-              <p className="text-sm font-mono text-gray-200">{process.env.NEXT_PUBLIC_META_PIXEL_ID ?? 'Configure META_PIXEL_ID no .env'}</p>
+              <p className="text-xs text-gray-500 mb-1">{d.capiCard.pixelIdLabel}</p>
+              <p className="text-sm font-mono text-gray-200">{process.env.NEXT_PUBLIC_META_PIXEL_ID ?? d.capiCard.pixelIdMissing}</p>
             </div>
             <div className="p-3 rounded-lg bg-white/3 border border-gray-800">
-              <p className="text-xs text-gray-500 mb-1.5">Eventos suportados</p>
+              <p className="text-xs text-gray-500 mb-1.5">{d.capiCard.supportedEvents}</p>
               <div className="flex flex-wrap gap-1.5">
                 {['PageView', 'ViewContent', 'AddToCart', 'InitiateCheckout', 'Purchase', 'Lead'].map(evt => (
                   <span key={evt} className="px-2 py-0.5 rounded bg-neon-cyan/10 border border-neon-cyan/20 text-neon-cyan text-xs font-mono">
@@ -589,7 +594,7 @@ export default function ConfiguracoesClient({ bm, googleAdsConnected }: Props) {
               className="flex items-center gap-2 text-xs text-gray-500 hover:text-neon-cyan transition-colors"
             >
               <ChevronRight className="w-3 h-3" />
-              Ver health check do endpoint CAPI
+              {d.capiCard.viewHealthCheck}
             </a>
           </div>
         </div>
@@ -601,16 +606,16 @@ export default function ConfiguracoesClient({ bm, googleAdsConnected }: Props) {
               <span className="text-neon-purple text-xs font-bold">IA</span>
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-white">Parâmetros do Auto-Pilot</h3>
-              <p className="text-xs text-gray-500">Thresholds usados pela IA</p>
+              <h3 className="text-sm font-semibold text-white">{d.aiSettingsCard.title}</h3>
+              <p className="text-xs text-gray-500">{d.aiSettingsCard.subtitle}</p>
             </div>
           </div>
           <div className="space-y-2">
             {[
-              { label: 'ROAS mínimo para pausar', value: '2.0x', color: 'text-red-400' },
-              { label: 'ROAS para escalar (+25%)', value: '4.0x', color: 'text-green-400' },
-              { label: 'Frequência máxima de alerta', value: '3.5', color: 'text-orange-400' },
-              { label: 'Aumento máx. de budget/ação', value: '25%', color: 'text-neon-cyan' },
+              { label: d.aiSettingsCard.minRoasToPause, value: '2.0x', color: 'text-red-400' },
+              { label: d.aiSettingsCard.roasToScale, value: '4.0x', color: 'text-green-400' },
+              { label: d.aiSettingsCard.maxAlertFrequency, value: '3.5', color: 'text-orange-400' },
+              { label: d.aiSettingsCard.maxBudgetIncrease, value: '25%', color: 'text-neon-cyan' },
             ].map(s => (
               <div key={s.label} className="flex items-center justify-between p-2.5 rounded-lg bg-white/3 border border-gray-800">
                 <p className="text-xs text-gray-400">{s.label}</p>

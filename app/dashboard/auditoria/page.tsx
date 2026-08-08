@@ -3,10 +3,15 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import FunnelVisualizer from '@/components/dashboard/FunnelVisualizer'
 import LpAuditorForm from '@/components/dashboard/LpAuditorForm'
+import { getDictionary, getServerLanguage } from '@/lib/i18n/language'
 
-export const metadata = { title: 'Auditoria de Funil | FunnelGuard AI' }
+export async function generateMetadata() {
+  const dict = getDictionary(await getServerLanguage())
+  return { title: dict.audit.auditoriaPage.metaTitle }
+}
 
 export default async function AuditoriaPage() {
+  const dict = getDictionary(await getServerLanguage())
   const session = await getServerSession(authOptions)
   const adAccount = session?.user?.id
     ? await prisma.adAccount.findFirst({
@@ -33,14 +38,17 @@ export default async function AuditoriaPage() {
   }
 
   const severityLabel: Record<string, string> = {
-    CRITICAL: 'Crítico', HIGH: 'Alto', MEDIUM: 'Médio', LOW: 'Baixo',
+    CRITICAL: dict.audit.auditoriaPage.severityLabels.critical,
+    HIGH: dict.audit.auditoriaPage.severityLabels.high,
+    MEDIUM: dict.audit.auditoriaPage.severityLabels.medium,
+    LOW: dict.audit.auditoriaPage.severityLabels.low,
   }
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-white">Auditoria de Funil</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Análise completa da sua Landing Page e rastreamento</p>
+        <h1 className="text-xl font-bold text-white">{dict.audit.auditoriaPage.title}</h1>
+        <p className="text-sm text-gray-500 mt-0.5">{dict.audit.auditoriaPage.subtitle}</p>
       </div>
 
       {criticalCount > 0 && (
@@ -50,12 +58,12 @@ export default async function AuditoriaPage() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-orange-300">
-              {criticalCount} problema{criticalCount > 1 ? 's' : ''} crítico{criticalCount > 1 ? 's' : ''} detectado{criticalCount > 1 ? 's' : ''}
+              {dict.audit.auditoriaPage.criticalIssuesTitle(criticalCount)}
             </p>
             <p className="text-xs text-orange-400/70 mt-0.5">
-              Perda estimada de{' '}
+              {dict.audit.auditoriaPage.estimatedLossPrefix}{' '}
               <span className="font-bold text-orange-300">
-                R$ {totalLoss.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/mês
+                R$ {totalLoss.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}{dict.audit.auditoriaPage.perMonth}
               </span>
             </p>
           </div>
@@ -70,7 +78,7 @@ export default async function AuditoriaPage() {
           {/* Problemas encontrados */}
           {audits.length > 0 && (
             <div className="glass-card rounded-xl p-5 border border-gray-800">
-              <h3 className="text-sm font-semibold text-white mb-4">Problemas Detectados</h3>
+              <h3 className="text-sm font-semibold text-white mb-4">{dict.audit.auditoriaPage.issuesDetected}</h3>
               <div className="space-y-3">
                 {audits.map(audit => (
                   <div key={audit.id} className="flex items-start gap-3 p-3 rounded-lg bg-white/3 border border-gray-800">
@@ -86,7 +94,7 @@ export default async function AuditoriaPage() {
                     </div>
                     {audit.estimatedRevenueLoss && (
                       <span className="text-xs font-bold text-red-400 flex-shrink-0">
-                        -{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(audit.estimatedRevenueLoss)}/mês
+                        -{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(audit.estimatedRevenueLoss)}{dict.audit.auditoriaPage.perMonth}
                       </span>
                     )}
                   </div>
@@ -100,15 +108,15 @@ export default async function AuditoriaPage() {
 
         <div className="xl:col-span-1">
           <div className="glass-card rounded-xl p-5 border border-gray-800">
-            <h3 className="text-sm font-semibold text-white mb-4">O que a IA verifica</h3>
+            <h3 className="text-sm font-semibold text-white mb-4">{dict.audit.auditoriaPage.whatAiChecks}</h3>
             <ul className="space-y-3 text-sm text-gray-400">
               {[
-                { icon: '📡', label: 'Meta Pixel instalado e disparando' },
-                { icon: '📱', label: 'Experiência mobile (iPhone 14 Pro)' },
-                { icon: '⚡', label: 'LCP — velocidade de carregamento' },
-                { icon: '🎯', label: 'CTA visível e clicável (min 44×44px)' },
-                { icon: '🔗', label: 'Links quebrados na página' },
-                { icon: '📊', label: 'Correlação CTR × taxa de conversão' },
+                { icon: '📡', label: dict.audit.auditoriaPage.checklist.pixel },
+                { icon: '📱', label: dict.audit.auditoriaPage.checklist.mobile },
+                { icon: '⚡', label: dict.audit.auditoriaPage.checklist.lcp },
+                { icon: '🎯', label: dict.audit.auditoriaPage.checklist.cta },
+                { icon: '🔗', label: dict.audit.auditoriaPage.checklist.brokenLinks },
+                { icon: '📊', label: dict.audit.auditoriaPage.checklist.correlation },
               ].map(({ icon, label }) => (
                 <li key={label} className="flex items-center gap-2">
                   <span>{icon}</span>

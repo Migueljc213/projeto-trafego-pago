@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { PLANS } from '@/lib/stripe'
 import { CheckoutButton, PortalButton } from './PlanButtons'
 import { Check, Zap } from 'lucide-react'
+import { getDictionary, getServerLanguage } from '@/lib/i18n/language'
 
 export const metadata = { title: 'Planos | FunnelGuard AI' }
 
@@ -15,12 +16,15 @@ export default async function PlanosPage() {
 
   const currentPlan = subscription?.status === 'active' ? subscription.plan : null
 
+  const dict = getDictionary(await getServerLanguage())
+  const d = dict.account.planosPage
+
   return (
     <div className="space-y-8">
       <div className="text-center">
-        <h1 className="text-2xl font-bold text-white">Escolha seu plano</h1>
+        <h1 className="text-2xl font-bold text-white">{d.title}</h1>
         <p className="text-sm text-gray-400 mt-2">
-          Cancele a qualquer momento. Sem multa.
+          {d.subtitle}
         </p>
       </div>
 
@@ -31,11 +35,11 @@ export default async function PlanosPage() {
             <Zap className="w-5 h-5 text-neon-cyan" />
             <div>
               <p className="text-sm font-semibold text-white">
-                Plano {PLANS[currentPlan as keyof typeof PLANS]?.name ?? currentPlan} ativo
+                {d.planoAtivo.replace('{plan}', PLANS[currentPlan as keyof typeof PLANS]?.name ?? currentPlan)}
               </p>
               {subscription?.currentPeriodEnd && (
                 <p className="text-xs text-gray-400">
-                  Renova em {subscription.currentPeriodEnd.toLocaleDateString('pt-BR')}
+                  {d.renovaEm.replace('{date}', subscription.currentPeriodEnd.toLocaleDateString('pt-BR'))}
                 </p>
               )}
             </div>
@@ -63,7 +67,7 @@ export default async function PlanosPage() {
                 {isPro && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                     <span className="px-3 py-1 rounded-full text-xs font-semibold bg-neon-cyan text-black">
-                      Mais popular
+                      {d.mostPopular}
                     </span>
                   </div>
                 )}
@@ -72,7 +76,7 @@ export default async function PlanosPage() {
                   <p className="text-sm font-medium text-gray-400 mb-1">{plan.name}</p>
                   <div className="flex items-baseline gap-1 mb-2">
                     <span className="text-4xl font-bold text-white">{plan.price}</span>
-                    <span className="text-gray-500 text-sm">/mês</span>
+                    <span className="text-gray-500 text-sm">{d.perMonth}</span>
                   </div>
                   <p className="text-sm text-gray-400">{plan.description}</p>
                 </div>
@@ -88,7 +92,7 @@ export default async function PlanosPage() {
 
                 {isCurrentPlan ? (
                   <div className="w-full py-3 rounded-xl text-center text-sm font-semibold bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/20">
-                    Plano atual
+                    {d.currentPlan}
                   </div>
                 ) : (
                   <CheckoutButton plan={key} isPro={isPro} />
@@ -101,7 +105,7 @@ export default async function PlanosPage() {
 
       {/* Garantia */}
       <p className="text-center text-xs text-gray-500">
-        🔒 Pagamento seguro via Stripe &nbsp;·&nbsp; Cancele em até 7 dias para reembolso total
+        {d.guarantee}
       </p>
     </div>
   )

@@ -4,10 +4,12 @@ import { prisma } from '@/lib/prisma'
 import { decrypt } from '@/lib/encryption'
 import { getMyPages } from '@/lib/meta-api'
 import CampaignWizard from './CampaignWizard'
+import { getDictionary, getServerLanguage } from '@/lib/i18n/language'
 
 export const metadata = { title: 'Nova Campanha | FunnelGuard AI' }
 
 export default async function CriarCampanhaPage() {
+  const dict = getDictionary(await getServerLanguage())
   const session = await getServerSession(authOptions)
 
   // Busca páginas disponíveis para o criativo
@@ -41,17 +43,17 @@ export default async function CriarCampanhaPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-white">Nova Campanha</h1>
+        <h1 className="text-xl font-bold text-white">{dict.campaigns.campaignWizard.page.titulo}</h1>
         <p className="text-sm text-gray-500 mt-0.5">
-          Crie uma campanha completa na Meta Ads em 4 passos
+          {dict.campaigns.campaignWizard.page.subtitulo}
         </p>
       </div>
 
       {!hasMeta && (
         <div className="p-4 rounded-xl border border-yellow-500/30 bg-yellow-500/5 text-sm text-yellow-300">
-          Sua conta Meta não está conectada. Vá em{' '}
-          <a href="/dashboard/configuracoes" className="underline">Configurações</a>{' '}
-          e conecte sua conta antes de criar campanhas.
+          {dict.campaigns.campaignWizard.page.metaWarningPart1}{' '}
+          <a href="/dashboard/configuracoes" className="underline">{dict.campaigns.campaignWizard.page.metaWarningLink}</a>{' '}
+          {dict.campaigns.campaignWizard.page.metaWarningPart2}
         </div>
       )}
 

@@ -10,6 +10,7 @@ import RoasForecast from '@/components/dashboard/RoasForecast'
 import GoogleAdsCampaignList from '@/components/dashboard/GoogleAdsCampaignList'
 import { getCampaignRows, getAIInsightsFeed, getUserAdAccounts, getRoasByCampaign, getCreativeRanking } from '@/lib/dashboard-data'
 import { getGoogleAdsCampaigns } from '@/actions/sync-google-ads'
+import { getDictionary, getServerLanguage } from '@/lib/i18n/language'
 
 export const metadata = { title: 'Campanhas IA | FunnelGuard AI' }
 
@@ -20,6 +21,7 @@ export default async function CampanhasPage({
 }: {
   searchParams: { account?: string; days?: string }
 }) {
+  const dict = getDictionary(await getServerLanguage())
   const adAccountId = searchParams.account
   const days = (VALID_DAYS as readonly number[]).includes(Number(searchParams.days))
     ? Number(searchParams.days)
@@ -43,19 +45,15 @@ export default async function CampanhasPage({
     ? campaigns.reduce((s, c) => s + c.roas * c.spend, 0) / totalSpend
     : 0
 
-  const DAYS_LABEL: Record<number, string> = {
-    7: 'Últimos 7 dias',
-    30: 'Últimos 30 dias',
-    90: 'Últimos 90 dias',
-  }
+  const DAYS_LABEL = dict.campanhasPage.diasLabel
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-white">Campanhas IA</h1>
+          <h1 className="text-xl font-bold text-white">{dict.campanhasPage.titulo}</h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            {DAYS_LABEL[days]} &bull; Gerenciamento inteligente de campanhas Meta Ads
+            {DAYS_LABEL[days]} &bull; {dict.campanhasPage.subtituloSufixo}
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
@@ -64,7 +62,7 @@ export default async function CampanhasPage({
           {autoPilotCount > 0 && (
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-neon-cyan/10 border border-neon-cyan/20">
               <span className="w-1.5 h-1.5 rounded-full bg-neon-cyan animate-pulse block" />
-              <span className="text-xs text-neon-cyan font-medium">{autoPilotCount} com AI Auto-Pilot</span>
+              <span className="text-xs text-neon-cyan font-medium">{dict.campanhasPage.autoPilotBadge(autoPilotCount)}</span>
             </div>
           )}
         </div>
@@ -72,10 +70,10 @@ export default async function CampanhasPage({
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: 'Campanhas Ativas', value: String(activeCount), color: 'text-green-400' },
-          { label: 'ROAS Médio', value: `${avgRoas.toFixed(1)}x`, color: 'text-neon-cyan' },
-          { label: 'Gasto Total', value: `R$ ${totalSpend.toFixed(0)}`, color: 'text-white' },
-          { label: 'Conversões', value: String(totalConversions), color: 'text-neon-purple' },
+          { label: dict.campanhasPage.statCampanhasAtivas, value: String(activeCount), color: 'text-green-400' },
+          { label: dict.campanhasPage.statRoasMedio, value: `${avgRoas.toFixed(1)}x`, color: 'text-neon-cyan' },
+          { label: dict.campanhasPage.statGastoTotal, value: `R$ ${totalSpend.toFixed(0)}`, color: 'text-white' },
+          { label: dict.campanhasPage.statConversoes, value: String(totalConversions), color: 'text-neon-purple' },
         ].map(item => (
           <div key={item.label} className="glass-card rounded-xl p-4 border border-gray-800">
             <p className="text-xs text-gray-500 mb-1">{item.label}</p>

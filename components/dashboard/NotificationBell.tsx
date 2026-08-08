@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Bell, Zap, Pause, TrendingUp, AlertTriangle, Eye, X } from 'lucide-react'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
+import type { Dictionary } from '@/lib/i18n/language'
 
 interface Notification {
   id: string
@@ -27,17 +29,19 @@ const TYPE_DOT: Record<string, string> = {
   insight: 'bg-neon-cyan',
 }
 
-function timeAgo(iso: string): string {
+function timeAgo(iso: string, t: Dictionary['dashboardHome']['notificationBell']): string {
   const diff = Date.now() - new Date(iso).getTime()
   const mins = Math.floor(diff / 60000)
-  if (mins < 1) return 'agora'
-  if (mins < 60) return `${mins}min atrás`
+  if (mins < 1) return t.agora
+  if (mins < 60) return t.minAgo(mins)
   const hrs = Math.floor(mins / 60)
-  if (hrs < 24) return `${hrs}h atrás`
-  return `${Math.floor(hrs / 24)}d atrás`
+  if (hrs < 24) return t.hAgo(hrs)
+  return t.dAgo(Math.floor(hrs / 24))
 }
 
 export default function NotificationBell() {
+  const { dict } = useLanguage()
+  const t = dict.dashboardHome.notificationBell
   const [open, setOpen] = useState(false)
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unread, setUnread] = useState(0)
@@ -86,7 +90,7 @@ export default function NotificationBell() {
       {/* Bell button */}
       <button
         onClick={handleOpen}
-        title="Notificações da IA"
+        title={t.title}
         className="relative flex items-center justify-center w-8 h-8 rounded-lg text-gray-400 hover:text-gray-200 hover:bg-white/5 transition-all duration-200"
       >
         <Bell className="w-4 h-4" />
@@ -104,7 +108,7 @@ export default function NotificationBell() {
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
             <div className="flex items-center gap-2">
               <Zap className="w-3.5 h-3.5 text-neon-cyan" />
-              <span className="text-sm font-semibold text-white">Decisões da IA</span>
+              <span className="text-sm font-semibold text-white">{t.dropdownTitle}</span>
             </div>
             <button
               onClick={() => setOpen(false)}
@@ -123,7 +127,7 @@ export default function NotificationBell() {
             ) : notifications.length === 0 ? (
               <div className="py-10 text-center">
                 <Bell className="w-6 h-6 text-gray-700 mx-auto mb-2" />
-                <p className="text-xs text-gray-500">Nenhuma decisão da IA ainda</p>
+                <p className="text-xs text-gray-500">{t.emptyState}</p>
               </div>
             ) : (
               <ul className="divide-y divide-gray-800/60">
@@ -140,7 +144,7 @@ export default function NotificationBell() {
                         {n.value && (
                           <span className="text-[10px] text-neon-cyan/70 font-mono">{n.value}</span>
                         )}
-                        <span className="text-[10px] text-gray-600 ml-auto">{timeAgo(n.createdAt)}</span>
+                        <span className="text-[10px] text-gray-600 ml-auto">{timeAgo(n.createdAt, t)}</span>
                       </div>
                     </div>
                   </li>
@@ -152,7 +156,7 @@ export default function NotificationBell() {
           {/* Footer */}
           <div className="px-4 py-2.5 border-t border-gray-800 text-center">
             <a href="/dashboard/campanhas" className="text-xs text-neon-cyan/70 hover:text-neon-cyan transition-colors">
-              Ver todas as campanhas →
+              {t.viewAllCampaigns}
             </a>
           </div>
         </div>

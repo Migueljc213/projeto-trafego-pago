@@ -4,8 +4,11 @@ import { useState, useTransition } from 'react'
 import { createCheckoutSession, createPortalSession } from '@/actions/billing'
 import type { PlanKey } from '@/lib/stripe'
 import { Loader2 } from 'lucide-react'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 export function CheckoutButton({ plan, isPro }: { plan: PlanKey; isPro: boolean }) {
+  const { dict } = useLanguage()
+  const d = dict.account.planButtons
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
@@ -15,7 +18,7 @@ export function CheckoutButton({ plan, isPro }: { plan: PlanKey; isPro: boolean 
       try {
         await createCheckoutSession(plan)
       } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Erro ao iniciar checkout'
+        const msg = err instanceof Error ? err.message : d.errorCheckout
         setError(msg)
       }
     })
@@ -33,7 +36,7 @@ export function CheckoutButton({ plan, isPro }: { plan: PlanKey; isPro: boolean 
         } disabled:opacity-60 disabled:cursor-not-allowed`}
       >
         {pending && <Loader2 className="w-4 h-4 animate-spin" />}
-        {pending ? 'Redirecionando...' : 'Assinar agora'}
+        {pending ? d.redirecting : d.subscribeNow}
       </button>
       {error && <p className="text-xs text-red-400 text-center">{error}</p>}
     </div>
@@ -41,6 +44,8 @@ export function CheckoutButton({ plan, isPro }: { plan: PlanKey; isPro: boolean 
 }
 
 export function PortalButton() {
+  const { dict } = useLanguage()
+  const d = dict.account.planButtons
   const [pending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
@@ -50,7 +55,7 @@ export function PortalButton() {
       try {
         await createPortalSession()
       } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Erro ao abrir portal'
+        const msg = err instanceof Error ? err.message : d.errorPortal
         setError(msg)
       }
     })
@@ -64,7 +69,7 @@ export function PortalButton() {
         className="px-4 py-2 rounded-lg text-xs font-medium text-neon-cyan border border-neon-cyan/30 hover:bg-neon-cyan/10 transition-colors disabled:opacity-60 flex items-center gap-1.5"
       >
         {pending && <Loader2 className="w-3 h-3 animate-spin" />}
-        {pending ? 'Abrindo...' : 'Gerenciar assinatura'}
+        {pending ? d.opening : d.manageSubscription}
       </button>
       {error && <p className="text-xs text-red-400 text-right">{error}</p>}
     </div>

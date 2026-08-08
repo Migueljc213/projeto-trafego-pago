@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { generateAdCopyAction } from '@/actions/ad-creation'
 import type { AdCreationResult, AdCopyVariation } from '@/lib/ai/ad-creation-helper'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 // ─── Copy Card ────────────────────────────────────────────────────────────────
 
@@ -30,6 +31,8 @@ function CopyCard({
   index: number
   type: 'headline' | 'primaryText'
 }) {
+  const { dict } = useLanguage()
+  const t = dict.campaigns.adCreationAssistant
   const [copiedHeadline, setCopiedHeadline] = useState(false)
   const [copiedText, setCopiedText] = useState(false)
 

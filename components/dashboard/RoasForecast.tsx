@@ -3,32 +3,38 @@
 import { useState } from 'react'
 import { TrendingUp, TrendingDown, Minus, Loader2, Sparkles, RefreshCw, AlertCircle } from 'lucide-react'
 import type { RoasForecast, RoasForecastDay } from '@/app/api/ai/roas-forecast/route'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
+import type { Dictionary } from '@/lib/i18n/language'
 
-const TREND_CONFIG = {
-  UP: {
-    icon: TrendingUp,
-    color: 'text-green-400',
-    bg: 'bg-green-500/10 border-green-500/20',
-    label: 'Tendência de alta',
-  },
-  DOWN: {
-    icon: TrendingDown,
-    color: 'text-red-400',
-    bg: 'bg-red-500/10 border-red-500/20',
-    label: 'Tendência de queda',
-  },
-  STABLE: {
-    icon: Minus,
-    color: 'text-blue-400',
-    bg: 'bg-blue-500/10 border-blue-500/20',
-    label: 'Estável',
-  },
+function trendConfig(t: Dictionary['dashboardHome']['roasForecast']) {
+  return {
+    UP: {
+      icon: TrendingUp,
+      color: 'text-green-400',
+      bg: 'bg-green-500/10 border-green-500/20',
+      label: t.trendUp,
+    },
+    DOWN: {
+      icon: TrendingDown,
+      color: 'text-red-400',
+      bg: 'bg-red-500/10 border-red-500/20',
+      label: t.trendDown,
+    },
+    STABLE: {
+      icon: Minus,
+      color: 'text-blue-400',
+      bg: 'bg-blue-500/10 border-blue-500/20',
+      label: t.trendStable,
+    },
+  }
 }
 
-const CONFIDENCE_LABEL: Record<string, string> = {
-  high: 'Alta confiança',
-  medium: 'Confiança média',
-  low: 'Baixa confiança',
+function confidenceLabel(t: Dictionary['dashboardHome']['roasForecast']): Record<string, string> {
+  return {
+    high: t.confidenceHigh,
+    medium: t.confidenceMedium,
+    low: t.confidenceLow,
+  }
 }
 
 const CONFIDENCE_COLOR: Record<string, string> = {
@@ -66,6 +72,10 @@ interface Props {
 }
 
 export default function RoasForecast({ campaignId, campaignName }: Props) {
+  const { dict } = useLanguage()
+  const t = dict.dashboardHome.roasForecast
+  const TREND_CONFIG = trendConfig(t)
+  const CONFIDENCE_LABEL = confidenceLabel(t)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [forecast, setForecast] = useState<RoasForecast | null>(null)
@@ -87,7 +97,7 @@ export default function RoasForecast({ campaignId, campaignName }: Props) {
         setForecast(data.forecast)
       }
     } catch {
-      setError('Erro de rede. Tente novamente.')
+      setError(t.networkError)
     } finally {
       setLoading(false)
     }
@@ -103,7 +113,7 @@ export default function RoasForecast({ campaignId, campaignName }: Props) {
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-neon-purple" />
           <div>
-            <h3 className="text-sm font-semibold text-white">Previsão de ROAS — próximos 7 dias</h3>
+            <h3 className="text-sm font-semibold text-white">{t.title}</h3>
             <p className="text-xs text-gray-500 mt-0.5 truncate max-w-xs">{campaignName}</p>
           </div>
         </div>
@@ -113,10 +123,10 @@ export default function RoasForecast({ campaignId, campaignName }: Props) {
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neon-purple/15 border border-neon-purple/30 text-neon-purple text-xs font-semibold hover:bg-neon-purple/25 transition-all disabled:opacity-40"
         >
           {loading
-            ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Prevendo…</>
+            ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> {t.predicting}</>
             : forecast
-              ? <><RefreshCw className="w-3.5 h-3.5" /> Atualizar previsão</>
-              : <><Sparkles className="w-3.5 h-3.5" /> Gerar previsão</>
+              ? <><RefreshCw className="w-3.5 h-3.5" /> {t.updateForecast}</>
+              : <><Sparkles className="w-3.5 h-3.5" /> {t.generateForecast}</>
           }
         </button>
       </div>
@@ -131,7 +141,7 @@ export default function RoasForecast({ campaignId, campaignName }: Props) {
       {!forecast && !loading && !error && (
         <div className="p-5 text-center">
           <p className="text-xs text-gray-600">
-            Clique em "Gerar previsão" para que a IA analise o histórico da campanha e projete o ROAS dos próximos 7 dias.
+            {t.emptyState}
           </p>
         </div>
       )}
@@ -139,7 +149,7 @@ export default function RoasForecast({ campaignId, campaignName }: Props) {
       {loading && (
         <div className="flex items-center justify-center py-8 gap-2 text-gray-500 text-xs">
           <Loader2 className="w-4 h-4 animate-spin text-neon-purple" />
-          Analisando histórico de {campaignName}…
+          {t.analyzing(campaignName)}
         </div>
       )}
 
@@ -175,7 +185,7 @@ export default function RoasForecast({ campaignId, campaignName }: Props) {
           <div className="p-3 rounded-lg bg-gray-800/40 border border-gray-700/50 space-y-2">
             <p className="text-xs text-gray-300 leading-relaxed">{forecast.weekSummary}</p>
             <p className="text-xs text-neon-cyan font-medium">
-              Recomendação: {forecast.recommendation}
+              {t.recommendation} {forecast.recommendation}
             </p>
           </div>
         </div>

@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { AlertTriangle, RefreshCw, Wifi, WifiOff } from 'lucide-react'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 interface Props {
   error: Error & { digest?: string }
@@ -9,6 +10,9 @@ interface Props {
 }
 
 export default function DashboardError({ error, reset }: Props) {
+  const { dict } = useLanguage()
+  const t = dict.dashboardHome.errorPage
+
   useEffect(() => {
     // Loga o erro para auditoria (sem expor no console de produção)
     if (process.env.NODE_ENV === 'production') {
@@ -49,17 +53,17 @@ export default function DashboardError({ error, reset }: Props) {
         <div>
           <h2 className="text-lg font-bold text-white mb-2">
             {isMetaError
-              ? 'Sincronizando com a Meta…'
+              ? t.titleMeta
               : isNetworkError
-              ? 'Conexão instável'
-              : 'Algo deu errado'}
+              ? t.titleNetwork
+              : t.titleGeneric}
           </h2>
           <p className="text-sm text-gray-400 leading-relaxed">
             {isMetaError
-              ? 'A API da Meta está temporariamente indisponível ou seu token de acesso precisa ser renovado. Seus dados estão seguros — o Auto-Pilot continuará funcionando com as últimas configurações salvas.'
+              ? t.descMeta
               : isNetworkError
-              ? 'Não foi possível conectar ao servidor neste momento. Verifique sua conexão e tente novamente.'
-              : 'Ocorreu um erro inesperado no dashboard. Nossa equipe foi notificada automaticamente.'}
+              ? t.descNetwork
+              : t.descGeneric}
           </p>
         </div>
 
@@ -68,7 +72,7 @@ export default function DashboardError({ error, reset }: Props) {
           <div className="p-3 rounded-lg bg-red-500/5 border border-red-500/20 text-left">
             <p className="text-xs font-mono text-red-400 break-all">{error.message}</p>
             {error.digest && (
-              <p className="text-xs font-mono text-gray-600 mt-1">digest: {error.digest}</p>
+              <p className="text-xs font-mono text-gray-600 mt-1">{t.digestPrefix} {error.digest}</p>
             )}
           </div>
         )}
@@ -80,24 +84,24 @@ export default function DashboardError({ error, reset }: Props) {
             className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-neon-cyan/10 border border-neon-cyan/30 text-neon-cyan text-sm font-semibold hover:bg-neon-cyan/20 transition-all"
           >
             <RefreshCw className="w-4 h-4" />
-            Tentar novamente
+            {t.retryButton}
           </button>
           <a
             href="/dashboard"
             className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border border-gray-700 text-gray-400 text-sm font-medium hover:text-white hover:border-gray-500 transition-all"
           >
-            Ir para o início
+            {t.goHome}
           </a>
         </div>
 
         {isMetaError && (
           <div className="p-3 rounded-xl border border-yellow-500/20 bg-yellow-500/5">
-            <p className="text-xs text-yellow-300 font-medium mb-1">Precisa renovar a conexão?</p>
+            <p className="text-xs text-yellow-300 font-medium mb-1">{t.reconnectTitle}</p>
             <a
               href="/dashboard/configuracoes?reconnect=meta"
               className="text-xs text-yellow-400 hover:text-yellow-300 underline transition-colors"
             >
-              Ir para Configurações → Reconectar Meta
+              {t.reconnectLink}
             </a>
           </div>
         )}

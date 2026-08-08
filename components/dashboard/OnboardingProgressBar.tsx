@@ -1,19 +1,18 @@
 'use client'
 
 import { CheckCircle2, Circle } from 'lucide-react'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 interface Props {
   step: number
   hasCompletedOnboarding: boolean
 }
 
-const STEPS = [
-  { label: 'Conectar Facebook' },
-  { label: 'Conta de Anúncios' },
-  { label: 'Concorrentes' },
-]
-
 export default function OnboardingProgressBar({ step, hasCompletedOnboarding }: Props) {
+  const { dict } = useLanguage()
+  const t = dict.dashboardHome.onboardingProgressBar
+  const STEPS = t.stepLabels.map((label) => ({ label }))
+
   if (hasCompletedOnboarding) return null
 
   const pct = Math.min(Math.round(((step - 1) / STEPS.length) * 100), 100)
@@ -22,9 +21,9 @@ export default function OnboardingProgressBar({ step, hasCompletedOnboarding }: 
     <div className="w-full mb-6 glass-card border border-neon-cyan/30 rounded-xl p-4">
       <div className="flex items-center justify-between mb-3">
         <div>
-          <p className="text-sm font-semibold text-white">Setup do FunnelGuard</p>
+          <p className="text-sm font-semibold text-white">{t.title}</p>
           <p className="text-xs text-gray-400 mt-0.5">
-            Complete a configuração para ativar o monitoramento total
+            {t.subtitle}
           </p>
         </div>
         <span className="text-xs font-bold text-neon-cyan font-mono">{pct}%</span>

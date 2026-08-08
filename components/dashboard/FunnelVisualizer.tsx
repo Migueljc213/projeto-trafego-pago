@@ -3,8 +3,10 @@
 import { useState, useEffect } from 'react';
 import { AlertTriangle, ChevronDown, BarChart3 } from 'lucide-react';
 import type { FunnelStage } from '@/lib/types';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
+import type { Dictionary } from '@/lib/i18n/language';
 
-function StageBar({ stage, isLast }: { stage: FunnelStage; isLast: boolean }) {
+function StageBar({ stage, isLast, t }: { stage: FunnelStage; isLast: boolean; t: Dictionary['dashboardHome']['funnelVisualizer'] }) {
   const [animated, setAnimated] = useState(false);
 
   useEffect(() => {
@@ -60,7 +62,7 @@ function StageBar({ stage, isLast }: { stage: FunnelStage; isLast: boolean }) {
             {stage.hasIssue && (
               <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border font-medium ${colors.badge}`}>
                 <AlertTriangle className="w-3 h-3" />
-                Problema
+                {t.problemBadge}
               </span>
             )}
           </div>
@@ -78,11 +80,11 @@ function StageBar({ stage, isLast }: { stage: FunnelStage; isLast: boolean }) {
             <span className="font-mono font-semibold text-gray-200">
               {stage.visitors.toLocaleString('pt-BR')}
             </span>{' '}
-            visitantes
+            {t.visitors}
           </span>
           {stage.id !== '1' && (
             <span className="text-gray-500">
-              <span className="font-mono text-gray-400">{stage.conversions.toLocaleString('pt-BR')}</span> convertidos
+              <span className="font-mono text-gray-400">{stage.conversions.toLocaleString('pt-BR')}</span> {t.converted}
             </span>
           )}
         </div>
@@ -109,6 +111,9 @@ interface Props {
 }
 
 export default function FunnelVisualizer({ stages = [] }: Props) {
+  const { dict } = useLanguage();
+  const t = dict.dashboardHome.funnelVisualizer;
+
   if (stages.length === 0) {
     return (
       <div className="glass-card rounded-xl p-8 border border-gray-800 flex flex-col items-center justify-center text-center gap-3">
@@ -116,9 +121,9 @@ export default function FunnelVisualizer({ stages = [] }: Props) {
           <BarChart3 className="w-6 h-6 text-gray-600" />
         </div>
         <div>
-          <p className="text-sm font-medium text-gray-400">Nenhum dado de funil disponível</p>
+          <p className="text-sm font-medium text-gray-400">{t.noData}</p>
           <p className="text-xs text-gray-600 mt-1">
-            Execute uma auditoria de LP para visualizar as etapas do funil com dados reais.
+            {t.noDataSub}
           </p>
         </div>
       </div>
@@ -135,12 +140,12 @@ export default function FunnelVisualizer({ stages = [] }: Props) {
     <div className="glass-card rounded-xl p-5 border border-gray-800">
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h3 className="text-base font-semibold text-white">Auditoria de Funil</h3>
-          <p className="text-xs text-gray-500 mt-0.5">Taxa geral de conversao</p>
+          <h3 className="text-base font-semibold text-white">{t.title}</h3>
+          <p className="text-xs text-gray-500 mt-0.5">{t.subtitle}</p>
         </div>
         <div className="text-right">
           <span className="text-2xl font-bold text-neon-cyan font-mono">{overallRate}%</span>
-          <p className="text-xs text-gray-500 mt-0.5">Anuncio → Compra</p>
+          <p className="text-xs text-gray-500 mt-0.5">{t.fromAdToPurchase}</p>
         </div>
       </div>
 
@@ -150,6 +155,7 @@ export default function FunnelVisualizer({ stages = [] }: Props) {
             key={stage.id}
             stage={stage}
             isLast={idx === stages.length - 1}
+            t={t}
           />
         ))}
       </div>
@@ -157,12 +163,12 @@ export default function FunnelVisualizer({ stages = [] }: Props) {
       {stages.filter(s => s.hasIssue).length > 0 && (
         <div className="mt-4 p-3 rounded-lg bg-orange-500/10 border border-orange-500/20">
           <p className="text-xs text-orange-300">
-            <span className="font-bold">{stages.filter(s => s.hasIssue).length} problema{stages.filter(s => s.hasIssue).length > 1 ? 's' : ''} detectado{stages.filter(s => s.hasIssue).length > 1 ? 's' : ''}</span>
-            {' '}no funil. Corrigindo os gargalos identificados, estima-se recuperar{' '}
+            <span className="font-bold">{t.issuesCount(stages.filter(s => s.hasIssue).length)}</span>
+            {' '}{t.issuesMiddle}{' '}
             <span className="font-bold text-orange-200">
-              R$ {stages.reduce((s, st) => s + (st.hasIssue ? (st.visitors * 0.1) : 0), 0).toFixed(0)}/mês
+              R$ {stages.reduce((s, st) => s + (st.hasIssue ? (st.visitors * 0.1) : 0), 0).toFixed(0)}{t.perMonth}
             </span>{' '}
-            em receita perdida.
+            {t.issuesEnd}
           </p>
         </div>
       )}

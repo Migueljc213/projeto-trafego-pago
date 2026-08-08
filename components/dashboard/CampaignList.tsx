@@ -7,31 +7,35 @@ import type { CampaignRow } from '@/lib/dashboard-data'
 import { toggleAutoPilotAction, updateCampaignBudgetAction, toggleCampaignStatusAction } from '@/actions/campaigns'
 import { useToast } from '@/lib/toast'
 import AdRewriter from '@/components/dashboard/AdRewriter'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
+import type { Dictionary } from '@/lib/i18n/language'
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status, t }: { status: string; t: Dictionary['campaigns']['campaignList'] }) {
   if (status === 'ACTIVE') {
     return (
       <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium bg-green-500/15 text-green-400 border border-green-500/25">
         <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse inline-block" />
-        Ativa
+        {t.statusAtiva}
       </span>
     )
   }
   if (status === 'PAUSED') {
     return (
       <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-gray-500/15 text-gray-400 border border-gray-600/25">
-        <Pause className="w-3 h-3" /> Pausada
+        <Pause className="w-3 h-3" /> {t.statusPausada}
       </span>
     )
   }
   return (
     <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-yellow-500/15 text-yellow-400 border border-yellow-500/25">
-      <Clock className="w-3 h-3" /> Em Processo
+      <Clock className="w-3 h-3" /> {t.statusEmProcesso}
     </span>
   )
 }
 
 function CampaignCard({ campaign }: { campaign: CampaignRow }) {
+  const { dict } = useLanguage()
+  const t = dict.campaigns.campaignList
   const { toast } = useToast()
   const [autoPilot, setAutoPilot] = useState(campaign.aiAutoPilot)
   const [status, setStatus] = useState(campaign.status)
@@ -54,12 +58,12 @@ function CampaignCard({ campaign }: { campaign: CampaignRow }) {
       })
       if (!result.success) {
         setStatus(status) // rollback
-        setError(result.error ?? 'Erro ao atualizar status')
-        toast({ type: 'error', title: 'Erro ao atualizar status', description: result.error })
+        setError(result.error ?? t.erroAtualizarStatus)
+        toast({ type: 'error', title: t.erroAtualizarStatus, description: result.error })
       } else {
         toast({
           type: newStatus === 'PAUSED' ? 'warning' : 'success',
-          title: newStatus === 'PAUSED' ? 'Campanha pausada' : 'Campanha ativada',
+          title: newStatus === 'PAUSED' ? t.campanhaPausadaToast : t.campanhaAtivadaToast,
           description: campaign.name,
         })
       }
@@ -69,7 +73,7 @@ function CampaignCard({ campaign }: { campaign: CampaignRow }) {
   function handleSaveBudget() {
     const val = parseFloat(budgetInput)
     if (isNaN(val) || val < 5) {
-      setError('Orçamento mínimo: R$5,00/dia')
+      setError(t.orcamentoMinimoErro)
       return
     }
     setError(null)
@@ -77,10 +81,10 @@ function CampaignCard({ campaign }: { campaign: CampaignRow }) {
       const result = await updateCampaignBudgetAction({ campaignId: campaign.id, dailyBudgetBRL: val })
       if (result.success) {
         setEditingBudget(false)
-        toast({ type: 'success', title: 'Orçamento atualizado', description: `${campaign.name} → R$ ${val.toFixed(0)}/dia` })
+        toast({ type: 'success', title: t.orcamentoAtualizadoTitulo, description: t.orcamentoAtualizadoDesc(campaign.name, val.toFixed(0)) })
       } else {
-        setError(result.error ?? 'Erro ao atualizar orçamento')
-        toast({ type: 'error', title: 'Erro ao atualizar orçamento', description: result.error })
+        setError(result.error ?? t.erroAtualizarOrcamento)
+        toast({ type: 'error', title: t.erroAtualizarOrcamento, description: result.error })
       }
     })
   }
@@ -97,12 +101,12 @@ function CampaignCard({ campaign }: { campaign: CampaignRow }) {
       })
       if (!result.success) {
         setAutoPilot(!newValue) // rollback
-        setError(result.error ?? 'Erro ao atualizar Auto-Pilot')
-        toast({ type: 'error', title: 'Erro no Auto-Pilot', description: result.error })
+        setError(result.error ?? t.erroAutoPilot)
+        toast({ type: 'error', title: t.erroAutoPilotTitulo, description: result.error })
       } else {
         toast({
           type: 'info',
-          title: newValue ? 'Auto-Pilot ativado' : 'Auto-Pilot desativado',
+          title: newValue ? t.autoPilotAtivadoToast : t.autoPilotDesativadoToast,
           description: campaign.name,
         })
       }
@@ -126,31 +130,31 @@ function CampaignCard({ campaign }: { campaign: CampaignRow }) {
             <h4 className="text-sm font-semibold text-gray-100 truncate">{campaign.name}</h4>
             {autoPilot && (
               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-neon-cyan/20 text-neon-cyan border border-neon-cyan/30">
-                <Zap className="w-3 h-3" /> IA gerenciando
+                <Zap className="w-3 h-3" /> {t.iaGerenciando}
               </span>
             )}
             {campaign.pacingAlert === 'FAST' && (
               <span
-                title={`Gasto hoje: R$${(campaign.todaySpend ?? 0).toFixed(0)} — acima do ritmo esperado para este horário. A campanha pode esgotar o orçamento antes do fim do dia.`}
+                title={t.gastandoRapidoTooltip((campaign.todaySpend ?? 0).toFixed(0))}
                 className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-orange-500/15 text-orange-400 border border-orange-500/25 cursor-help"
               >
-                <Flame className="w-3 h-3" /> Gastando rápido
+                <Flame className="w-3 h-3" /> {t.gastandoRapido}
               </span>
             )}
             {campaign.pacingAlert === 'SLOW' && (
               <span
-                title={`Gasto hoje: R$${(campaign.todaySpend ?? 0).toFixed(0)} — abaixo do ritmo esperado. A Meta pode estar limitando a entrega.`}
+                title={t.subentregandoTooltip((campaign.todaySpend ?? 0).toFixed(0))}
                 className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-blue-500/15 text-blue-400 border border-blue-500/25 cursor-help"
               >
-                <AlertCircle className="w-3 h-3" /> Subentregando
+                <AlertCircle className="w-3 h-3" /> {t.subentregando}
               </span>
             )}
           </div>
           <div className="flex flex-wrap items-center gap-2 mb-2">
-            <StatusBadge status={status} />
+            <StatusBadge status={status} t={t} />
             {campaign.lastAiAction && (
               <span className="text-xs text-gray-500 font-mono truncate max-w-[200px]">
-                última ação: {campaign.lastAiAction}
+                {t.ultimaAcao(campaign.lastAiAction)}
               </span>
             )}
           </div>
@@ -161,7 +165,7 @@ function CampaignCard({ campaign }: { campaign: CampaignRow }) {
 
         <div className="flex flex-wrap items-center gap-4 text-right">
           <div>
-            <p className="text-xs text-gray-500 mb-0.5">Orçamento/dia</p>
+            <p className="text-xs text-gray-500 mb-0.5">{t.orcamentoDia}</p>
             {editingBudget ? (
               <div className="flex items-center gap-1">
                 <span className="text-xs text-gray-400">R$</span>
@@ -194,18 +198,18 @@ function CampaignCard({ campaign }: { campaign: CampaignRow }) {
             )}
           </div>
           <div>
-            <p className="text-xs text-gray-500 mb-0.5">Spend total</p>
+            <p className="text-xs text-gray-500 mb-0.5">{t.spendTotal}</p>
             <p className="text-sm font-semibold font-mono text-gray-200">
               R$ {campaign.spend.toFixed(0)}
             </p>
             {campaign.todaySpend !== null && (
               <p className="text-[10px] text-gray-600 font-mono mt-0.5">
-                hoje: R$ {campaign.todaySpend.toFixed(0)}
+                {t.hojeSpend(campaign.todaySpend.toFixed(0))}
               </p>
             )}
           </div>
           <div>
-            <p className="text-xs text-gray-500 mb-0.5">ROAS</p>
+            <p className="text-xs text-gray-500 mb-0.5">{t.roasLabel}</p>
             <div className="flex items-center gap-1 justify-end">
               {campaign.roas >= 2
                 ? <TrendingUp className="w-3 h-3 text-green-400" />
@@ -217,15 +221,15 @@ function CampaignCard({ campaign }: { campaign: CampaignRow }) {
             </div>
           </div>
           <div>
-            <p className="text-xs text-gray-500 mb-0.5">Conversões</p>
+            <p className="text-xs text-gray-500 mb-0.5">{t.conversoesLabel}</p>
             <p className="text-sm font-semibold font-mono text-gray-200">{campaign.conversions}</p>
           </div>
           <div className="flex flex-col items-end gap-1">
-            <p className="text-xs text-gray-500">Status</p>
+            <p className="text-xs text-gray-500">{t.statusLabel}</p>
             <button
               onClick={handleToggleStatus}
               disabled={statusPending || status === 'DELETED' || status === 'ARCHIVED'}
-              title={status === 'ACTIVE' ? 'Pausar campanha' : 'Ativar campanha'}
+              title={status === 'ACTIVE' ? t.pausarCampanhaTooltip : t.ativarCampanhaTooltip}
               className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-all disabled:opacity-50 ${
                 status === 'ACTIVE'
                   ? 'bg-gray-700 hover:bg-red-500/20 hover:text-red-400 text-gray-300 border border-gray-600'
@@ -235,18 +239,18 @@ function CampaignCard({ campaign }: { campaign: CampaignRow }) {
               {statusPending ? (
                 <Loader2 className="w-3 h-3 animate-spin" />
               ) : status === 'ACTIVE' ? (
-                <><Pause className="w-3 h-3" /> Pausar</>
+                <><Pause className="w-3 h-3" /> {t.pausar}</>
               ) : (
-                <><Play className="w-3 h-3" /> Ativar</>
+                <><Play className="w-3 h-3" /> {t.ativar}</>
               )}
             </button>
           </div>
           <div className="flex flex-col items-end gap-1">
-            <p className="text-xs text-gray-500">Auto-Pilot</p>
+            <p className="text-xs text-gray-500">{t.autoPilotLabel}</p>
             <button
               onClick={handleToggle}
               disabled={isPending}
-              title={autoPilot ? 'Desativar Auto-Pilot' : 'Ativar Auto-Pilot'}
+              title={autoPilot ? t.desativarAutoPilotTooltip : t.ativarAutoPilotTooltip}
               className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-300 disabled:opacity-60 ${
                 autoPilot ? 'bg-neon-cyan' : 'bg-gray-700'
               }`}
@@ -285,15 +289,17 @@ interface Props {
 }
 
 export default function CampaignList({ campaigns, onSync, syncing }: Props) {
+  const { dict } = useLanguage()
+  const t = dict.campaigns.campaignList
   const activeCount = campaigns.filter(c => c.status === 'ACTIVE').length
   const autoPilotCount = campaigns.filter(c => c.aiAutoPilot).length
 
   if (campaigns.length === 0) {
     return (
       <div className="glass-card rounded-xl border border-gray-800 p-10 text-center space-y-4">
-        <p className="text-gray-400 text-sm font-medium">Nenhuma campanha encontrada</p>
+        <p className="text-gray-400 text-sm font-medium">{t.nenhumaCampanha}</p>
         <p className="text-gray-600 text-xs">
-          Conecte sua conta Meta ou crie sua primeira campanha para começar.
+          {t.nenhumaCampanhaHint}
         </p>
         <div className="flex items-center justify-center gap-3">
           {onSync && (
@@ -303,7 +309,7 @@ export default function CampaignList({ campaigns, onSync, syncing }: Props) {
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-700 text-xs text-gray-400 hover:text-white hover:border-gray-500 transition-all disabled:opacity-50"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
-              Sincronizar com Meta
+              {t.sincronizarMeta}
             </button>
           )}
           <Link
@@ -311,7 +317,7 @@ export default function CampaignList({ campaigns, onSync, syncing }: Props) {
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-neon-cyan/10 border border-neon-cyan/30 text-neon-cyan text-xs font-semibold hover:bg-neon-cyan/20 transition-all"
           >
             <Plus className="w-3.5 h-3.5" />
-            Nova Campanha
+            {t.novaCampanha}
           </Link>
         </div>
       </div>
@@ -322,9 +328,9 @@ export default function CampaignList({ campaigns, onSync, syncing }: Props) {
     <div className="glass-card rounded-xl border border-gray-800 overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-gray-800">
         <div>
-          <h3 className="text-base font-semibold text-white">Campanhas Meta</h3>
+          <h3 className="text-base font-semibold text-white">{t.campanhasMeta}</h3>
           <p className="text-xs text-gray-500 mt-0.5">
-            {activeCount} ativas &bull; {autoPilotCount} com AI Auto-Pilot
+            {activeCount} {t.ativasSufixo} &bull; {autoPilotCount} {t.autoPilotSufixo}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -332,11 +338,11 @@ export default function CampaignList({ campaigns, onSync, syncing }: Props) {
             <button
               onClick={onSync}
               disabled={syncing}
-              title="Sincronizar campanhas com a Meta agora"
+              title={t.sincronizarTooltip}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-700 text-xs text-gray-400 hover:text-white hover:border-gray-500 transition-all disabled:opacity-50"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
-              Sincronizar
+              {t.sincronizar}
             </button>
           )}
           <Link
@@ -344,11 +350,11 @@ export default function CampaignList({ campaigns, onSync, syncing }: Props) {
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neon-cyan/10 border border-neon-cyan/30 text-neon-cyan text-xs font-semibold hover:bg-neon-cyan/20 transition-all"
           >
             <Plus className="w-3.5 h-3.5" />
-            Nova Campanha
+            {t.novaCampanha}
           </Link>
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neon-purple/10 border border-neon-purple/20">
             <Zap className="w-3.5 h-3.5 text-neon-purple" />
-            <span className="text-xs font-medium text-neon-purple">{autoPilotCount} em Auto-Pilot</span>
+            <span className="text-xs font-medium text-neon-purple">{autoPilotCount} {t.badgeEmAutoPilot}</span>
           </div>
         </div>
       </div>

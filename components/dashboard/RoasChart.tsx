@@ -5,6 +5,7 @@ import {
   Tooltip, ResponsiveContainer, Legend, ReferenceLine,
 } from 'recharts'
 import type { RoasByCampaignData } from '@/lib/dashboard-data'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 // Palette cycles through these for each campaign line
 const PALETTE = [
@@ -39,13 +40,15 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
 }
 
 export default function RoasChart({ data }: { data: RoasByCampaignData }) {
+  const { dict } = useLanguage()
+  const t = dict.dashboardHome.roasChart
   const { points, campaignNames, predKeys = [] } = data
 
   if (points.length === 0) {
     return (
       <div className="glass-card rounded-xl p-5 border border-gray-800 flex flex-col items-center justify-center h-64 gap-2">
-        <p className="text-gray-500 text-sm">Sem dados de ROAS por campanha</p>
-        <p className="text-gray-600 text-xs">Aguardando insights diários sincronizados</p>
+        <p className="text-gray-500 text-sm">{t.noData}</p>
+        <p className="text-gray-600 text-xs">{t.noDataSub}</p>
       </div>
     )
   }
@@ -59,22 +62,22 @@ export default function RoasChart({ data }: { data: RoasByCampaignData }) {
     <div className="glass-card rounded-xl p-5 border border-gray-800">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
         <div>
-          <h3 className="text-base font-semibold text-white">ROAS por Campanha</h3>
+          <h3 className="text-base font-semibold text-white">{t.title}</h3>
           <p className="text-xs text-gray-500 mt-0.5">
-            Top {campaignNames.length} campanhas por gasto
-            {predKeys.length > 0 && <span className="ml-2 text-neon-purple/70">· previsão 7 dias</span>}
+            {t.topCampaignsCount(campaignNames.length)}
+            {predKeys.length > 0 && <span className="ml-2 text-neon-purple/70">{t.forecast7d}</span>}
           </p>
         </div>
         <div className="flex items-center gap-3">
           {predKeys.length > 0 && (
             <div className="flex items-center gap-1.5">
               <span className="w-4 border-t border-dashed border-neon-purple/50 inline-block" />
-              <span className="text-[10px] text-neon-purple/70">Previsão</span>
+              <span className="text-[10px] text-neon-purple/70">{t.forecastLegend}</span>
             </div>
           )}
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-green-500/10 border border-green-500/20">
             <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block" />
-            <span className="text-xs text-green-400 font-medium">Meta ROAS: 3x</span>
+            <span className="text-xs text-green-400 font-medium">{t.metaRoasBadge}</span>
           </div>
         </div>
       </div>
@@ -99,14 +102,14 @@ export default function RoasChart({ data }: { data: RoasByCampaignData }) {
             y={3}
             stroke="rgba(34,197,94,0.4)"
             strokeDasharray="4 4"
-            label={{ value: 'Meta 3x', position: 'right', fontSize: 9, fill: 'rgba(34,197,94,0.6)' }}
+            label={{ value: t.metaLine, position: 'right', fontSize: 9, fill: 'rgba(34,197,94,0.6)' }}
           />
           {firstPredDate && (
             <ReferenceLine
               x={firstPredDate}
               stroke="rgba(139,92,246,0.3)"
               strokeDasharray="2 3"
-              label={{ value: 'hoje', position: 'insideTopLeft', fontSize: 9, fill: 'rgba(139,92,246,0.5)' }}
+              label={{ value: t.todayLine, position: 'insideTopLeft', fontSize: 9, fill: 'rgba(139,92,246,0.5)' }}
             />
           )}
           <Tooltip content={<CustomTooltip />} />

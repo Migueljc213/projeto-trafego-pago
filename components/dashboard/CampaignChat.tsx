@@ -3,24 +3,21 @@
 import { useState, useRef, useEffect } from 'react'
 import { MessageSquare, Send, Loader2, Zap, X, ChevronDown } from 'lucide-react'
 import type { CampaignRow } from '@/lib/dashboard-data'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 interface Message {
   role: 'user' | 'assistant'
   content: string
 }
 
-const SUGGESTIONS = [
-  'Por que meu ROAS está baixo?',
-  'Quais campanhas devo pausar?',
-  'Como melhorar meu CTR?',
-  'Qual campanha está gastando mais rápido?',
-]
-
 interface Props {
   campaigns: CampaignRow[]
 }
 
 export default function CampaignChat({ campaigns }: Props) {
+  const { dict } = useLanguage()
+  const t = dict.campaigns.campaignChat
+  const SUGGESTIONS = t.sugestoes
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -48,10 +45,10 @@ export default function CampaignChat({ campaigns }: Props) {
       const data = await res.json()
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: data.reply ?? data.error ?? 'Erro ao obter resposta',
+        content: data.reply ?? data.error ?? t.erroResposta,
       }])
     } catch {
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Erro de rede. Tente novamente.' }])
+      setMessages(prev => [...prev, { role: 'assistant', content: t.erroRede }])
     } finally {
       setLoading(false)
     }
@@ -69,9 +66,9 @@ export default function CampaignChat({ campaigns }: Props) {
         <div className="flex items-center gap-2">
           <Zap className="w-4 h-4 text-neon-purple" />
           <div className="text-left">
-            <p className="text-sm font-semibold text-white">Chat com a IA</p>
+            <p className="text-sm font-semibold text-white">{t.titulo}</p>
             <p className="text-xs text-gray-500">
-              {activeCampaigns} campanha{activeCampaigns !== 1 ? 's' : ''} ativa{activeCampaigns !== 1 ? 's' : ''} no contexto
+              {t.campanhasAtivasContexto(activeCampaigns)}
             </p>
           </div>
         </div>
@@ -85,7 +82,7 @@ export default function CampaignChat({ campaigns }: Props) {
             {messages.length === 0 && (
               <div className="space-y-3">
                 <p className="text-xs text-gray-500 text-center py-2">
-                  Pergunte qualquer coisa sobre suas campanhas
+                  {t.perguntePlaceholderVazio}
                 </p>
                 <div className="grid grid-cols-1 gap-1.5">
                   {SUGGESTIONS.map(s => (
@@ -112,7 +109,7 @@ export default function CampaignChat({ campaigns }: Props) {
                   {m.role === 'assistant' && (
                     <div className="flex items-center gap-1 mb-1">
                       <Zap className="w-2.5 h-2.5 text-neon-purple" />
-                      <span className="text-[10px] text-neon-purple font-semibold">FunnelGuard AI</span>
+                      <span className="text-[10px] text-neon-purple font-semibold">{t.nomeAssistente}</span>
                     </div>
                   )}
                   {m.content.split('\n').map((line, j) => (
@@ -126,7 +123,7 @@ export default function CampaignChat({ campaigns }: Props) {
               <div className="flex justify-start">
                 <div className="bg-gray-800/80 border border-gray-700 px-3 py-2 rounded-xl flex items-center gap-2">
                   <Loader2 className="w-3 h-3 animate-spin text-neon-purple" />
-                  <span className="text-xs text-gray-500">Analisando suas campanhas…</span>
+                  <span className="text-xs text-gray-500">{t.analisando}</span>
                 </div>
               </div>
             )}
@@ -141,7 +138,7 @@ export default function CampaignChat({ campaigns }: Props) {
                 onClick={() => setMessages([])}
                 className="flex items-center gap-1 text-[10px] text-gray-600 hover:text-gray-400 transition-colors mb-2"
               >
-                <X className="w-3 h-3" /> Limpar conversa
+                <X className="w-3 h-3" /> {t.limparConversa}
               </button>
             )}
             <div className="flex items-center gap-2">
@@ -150,7 +147,7 @@ export default function CampaignChat({ campaigns }: Props) {
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(input) } }}
-                placeholder="Pergunte sobre suas campanhas…"
+                placeholder={t.perguntaInputPlaceholder}
                 disabled={loading}
                 className="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:border-neon-purple focus:outline-none transition-colors disabled:opacity-50"
               />
