@@ -88,6 +88,8 @@ interface Props {
 }
 
 export default function AdRewriter({ campaignId, campaignName, roas, minRoas, ctr = 0, frequency = 0 }: Props) {
+  const { dict } = useLanguage()
+  const t = dict.campaigns.adRewriter
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
