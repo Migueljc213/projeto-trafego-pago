@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Users, Loader2, RefreshCw, Monitor, Smartphone } from 'lucide-react'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 interface DemoRow {
   age?: string
@@ -19,25 +20,6 @@ interface Props {
   campaignId: string
   campaignName: string
   days?: number
-}
-
-const GENDER_LABEL: Record<string, string> = {
-  male: 'Masculino',
-  female: 'Feminino',
-  unknown: 'Desconhecido',
-}
-
-const PLATFORM_LABEL: Record<string, string> = {
-  facebook: 'Facebook',
-  instagram: 'Instagram',
-  messenger: 'Messenger',
-  audience_network: 'Audience Network',
-}
-
-const DEVICE_LABEL: Record<string, string> = {
-  mobile: 'Mobile',
-  desktop: 'Desktop',
-  tablet: 'Tablet',
 }
 
 function BarRow({ label, value, max, secondary }: {
@@ -64,6 +46,11 @@ function BarRow({ label, value, max, secondary }: {
 }
 
 export default function AudienceInsights({ campaignId, campaignName, days = 30 }: Props) {
+  const { dict } = useLanguage()
+  const t = dict.campaigns.audienceInsights
+  const GENDER_LABEL = t.genderLabel
+  const PLATFORM_LABEL = t.platformLabel
+  const DEVICE_LABEL = t.deviceLabel
   const [tab, setTab] = useState<'demo' | 'platform'>('demo')
   const [demographics, setDemographics] = useState<DemoRow[]>([])
   const [platforms, setPlatforms] = useState<DemoRow[]>([])
@@ -80,9 +67,9 @@ export default function AudienceInsights({ campaignId, campaignName, days = 30 }
       if (!res.ok || data.error) {
         const msg: string = data.error ?? ''
         if (res.status === 401 || res.status === 403 || /token|auth|oauth|permission/i.test(msg)) {
-          setError('Token Meta inválido — conecte sua conta nas Configurações')
+          setError(t.tokenInvalido)
         } else {
-          setError(msg || 'Erro ao buscar insights de audiência')
+          setError(msg || t.erroBuscarInsights)
         }
       } else {
         setDemographics(data.demographics ?? [])
@@ -90,7 +77,7 @@ export default function AudienceInsights({ campaignId, campaignName, days = 30 }
         setLoaded(true)
       }
     } catch {
-      setError('Erro de conexão ao buscar insights — tente novamente')
+      setError(t.erroConexao)
     } finally {
       setLoading(false)
     }
@@ -98,7 +85,7 @@ export default function AudienceInsights({ campaignId, campaignName, days = 30 }
 
   // Aggregate demographics: group by age, sum impressions per gender
   const byAge = demographics.reduce<Record<string, { male: number; female: number; total: number }>>((acc, r) => {
-    const age = r.age ?? 'Desconhecido'
+    const age = r.age ?? t.faixaEtariaDesconhecida
     if (!acc[age]) acc[age] = { male: 0, female: 0, total: 0 }
     if (r.gender === 'male') acc[age].male += r.impressions
     else if (r.gender === 'female') acc[age].female += r.impressions
@@ -139,7 +126,7 @@ export default function AudienceInsights({ campaignId, campaignName, days = 30 }
         <div className="flex items-center gap-2">
           <Users className="w-4 h-4 text-neon-cyan" />
           <div>
-            <h3 className="text-sm font-semibold text-white">Audience Insights</h3>
+            <h3 className="text-sm font-semibold text-white">{t.titulo}</h3>
             <p className="text-xs text-gray-500 truncate max-w-[220px]">{campaignName}</p>
           </div>
         </div>
@@ -150,24 +137,24 @@ export default function AudienceInsights({ campaignId, campaignName, days = 30 }
                 onClick={() => setTab('demo')}
                 className={`px-3 py-1.5 transition-colors ${tab === 'demo' ? 'bg-neon-cyan/15 text-neon-cyan' : 'text-gray-400 hover:text-gray-200'}`}
               >
-                Demográfico
+                {t.demografico}
               </button>
               <button
                 onClick={() => setTab('platform')}
                 className={`px-3 py-1.5 transition-colors ${tab === 'platform' ? 'bg-neon-cyan/15 text-neon-cyan' : 'text-gray-400 hover:text-gray-200'}`}
               >
-                Plataforma
+                {t.plataforma}
               </button>
             </div>
           )}
           <button
             onClick={fetchInsights}
             disabled={loading}
-            title="Carregar/atualizar audience insights"
+            title={t.tooltipCarregar}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-700 text-xs text-gray-400 hover:text-white hover:border-gray-500 transition-all disabled:opacity-50"
           >
             {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-            {loaded ? 'Atualizar' : 'Carregar insights'}
+            {loaded ? t.atualizar : t.carregarInsights}
           </button>
         </div>
       </div>
@@ -181,14 +168,14 @@ export default function AudienceInsights({ campaignId, campaignName, days = 30 }
 
         {!loaded && !loading && !error && (
           <p className="text-xs text-gray-500 text-center py-6">
-            Clique em "Carregar insights" para ver o breakdown demográfico desta campanha (últimos {days} dias).
+            {t.clickCarregar(days)}
           </p>
         )}
 
         {loading && (
           <div className="flex items-center justify-center py-8 gap-2 text-gray-500 text-xs">
             <Loader2 className="w-4 h-4 animate-spin" />
-            Buscando dados da Meta API…
+            {t.buscandoDadosMeta}
           </div>
         )}
 
@@ -196,9 +183,9 @@ export default function AudienceInsights({ campaignId, campaignName, days = 30 }
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {/* Faixa etária */}
             <div>
-              <p className="text-xs font-semibold text-gray-400 mb-3 uppercase tracking-wide">Faixa Etária — Impressões</p>
+              <p className="text-xs font-semibold text-gray-400 mb-3 uppercase tracking-wide">{t.faixaEtariaImpressoes}</p>
               {ageEntries.length === 0 ? (
-                <p className="text-xs text-gray-600">Sem dados</p>
+                <p className="text-xs text-gray-600">{t.semDados}</p>
               ) : (
                 <div className="space-y-2.5">
                   {ageEntries.map(([age, v]) => (
@@ -216,9 +203,9 @@ export default function AudienceInsights({ campaignId, campaignName, days = 30 }
 
             {/* Gênero */}
             <div>
-              <p className="text-xs font-semibold text-gray-400 mb-3 uppercase tracking-wide">Gênero — Impressões</p>
+              <p className="text-xs font-semibold text-gray-400 mb-3 uppercase tracking-wide">{t.generoImpressoes}</p>
               {Object.keys(byGender).length === 0 ? (
-                <p className="text-xs text-gray-600">Sem dados</p>
+                <p className="text-xs text-gray-600">{t.semDados}</p>
               ) : (
                 <div className="space-y-3">
                   {Object.entries(byGender).sort((a, b) => b[1] - a[1]).map(([gender, imp]) => (
@@ -241,10 +228,10 @@ export default function AudienceInsights({ campaignId, campaignName, days = 30 }
             {/* Plataforma */}
             <div>
               <p className="text-xs font-semibold text-gray-400 mb-3 uppercase tracking-wide flex items-center gap-1.5">
-                <Monitor className="w-3 h-3" /> Plataforma — Impressões
+                <Monitor className="w-3 h-3" /> {t.plataformaImpressoes}
               </p>
               {Object.keys(byPlatform).length === 0 ? (
-                <p className="text-xs text-gray-600">Sem dados</p>
+                <p className="text-xs text-gray-600">{t.semDados}</p>
               ) : (
                 <div className="space-y-2.5">
                   {Object.entries(byPlatform).sort((a, b) => b[1] - a[1]).map(([p, imp]) => (
@@ -263,10 +250,10 @@ export default function AudienceInsights({ campaignId, campaignName, days = 30 }
             {/* Dispositivo */}
             <div>
               <p className="text-xs font-semibold text-gray-400 mb-3 uppercase tracking-wide flex items-center gap-1.5">
-                <Smartphone className="w-3 h-3" /> Dispositivo — Impressões
+                <Smartphone className="w-3 h-3" /> {t.dispositivoImpressoes}
               </p>
               {Object.keys(byDevice).length === 0 ? (
-                <p className="text-xs text-gray-600">Sem dados</p>
+                <p className="text-xs text-gray-600">{t.semDados}</p>
               ) : (
                 <div className="space-y-2.5">
                   {Object.entries(byDevice).sort((a, b) => b[1] - a[1]).map(([d, imp]) => (

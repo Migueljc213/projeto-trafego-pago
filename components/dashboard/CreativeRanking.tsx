@@ -3,18 +3,9 @@
 import { useState } from 'react'
 import { TrendingUp, TrendingDown, Award, ChevronUp, ChevronDown } from 'lucide-react'
 import type { CreativeRankRow } from '@/lib/dashboard-data'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 type SortKey = 'score' | 'roas' | 'ctr' | 'cpa' | 'cpc' | 'spend' | 'conversions'
-
-const SORT_LABELS: Record<SortKey, string> = {
-  score: 'Score IA',
-  roas: 'ROAS',
-  ctr: 'CTR',
-  cpa: 'CPA',
-  cpc: 'CPC',
-  spend: 'Gasto',
-  conversions: 'Conversões',
-}
 
 function ScoreBadge({ score }: { score: number }) {
   const color =
@@ -46,6 +37,9 @@ function fmt(val: number, type: 'currency' | 'pct' | 'number'): string {
 const MEDAL_COLORS = ['text-yellow-400', 'text-gray-300', 'text-amber-600']
 
 export default function CreativeRanking({ rows }: { rows: CreativeRankRow[] }) {
+  const { dict } = useLanguage()
+  const t = dict.campaigns.creativeRanking
+  const SORT_LABELS = t.sortLabels
   const [sortKey, setSortKey] = useState<SortKey>('score')
   const [asc, setAsc] = useState(false)
 
@@ -76,7 +70,7 @@ export default function CreativeRanking({ rows }: { rows: CreativeRankRow[] }) {
     return (
       <div className="glass-card rounded-xl p-5 border border-gray-800 flex flex-col items-center justify-center gap-2 min-h-[200px]">
         <Award className="w-6 h-6 text-gray-700" />
-        <p className="text-gray-500 text-sm">Sem dados de campanhas ainda</p>
+        <p className="text-gray-500 text-sm">{t.semDadosCampanhas}</p>
       </div>
     )
   }
@@ -87,9 +81,9 @@ export default function CreativeRanking({ rows }: { rows: CreativeRankRow[] }) {
         <div>
           <h3 className="text-base font-semibold text-white flex items-center gap-2">
             <Award className="w-4 h-4 text-yellow-400" />
-            Ranking de Criativos
+            {t.tituloRanking}
           </h3>
-          <p className="text-xs text-gray-500 mt-0.5">Score composto: ROAS 40% · CTR 25% · CPA 25% · Gasto 10%</p>
+          <p className="text-xs text-gray-500 mt-0.5">{t.scoreDesc}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {(['score', 'roas', 'ctr', 'cpa'] as SortKey[]).map((k) => (
@@ -103,13 +97,13 @@ export default function CreativeRanking({ rows }: { rows: CreativeRankRow[] }) {
           <thead>
             <tr className="border-b border-gray-800/60">
               <th className="px-4 py-2.5 text-left text-gray-500 font-medium w-6">#</th>
-              <th className="px-4 py-2.5 text-left text-gray-500 font-medium">Campanha</th>
-              <th className="px-4 py-2.5 text-right text-gray-500 font-medium">Score</th>
-              <th className="px-4 py-2.5 text-right text-gray-500 font-medium">ROAS</th>
-              <th className="px-4 py-2.5 text-right text-gray-500 font-medium hidden sm:table-cell">CTR</th>
-              <th className="px-4 py-2.5 text-right text-gray-500 font-medium hidden sm:table-cell">CPA</th>
-              <th className="px-4 py-2.5 text-right text-gray-500 font-medium hidden md:table-cell">Gasto</th>
-              <th className="px-4 py-2.5 text-right text-gray-500 font-medium hidden md:table-cell">Conv.</th>
+              <th className="px-4 py-2.5 text-left text-gray-500 font-medium">{t.colCampanha}</th>
+              <th className="px-4 py-2.5 text-right text-gray-500 font-medium">{t.colScore}</th>
+              <th className="px-4 py-2.5 text-right text-gray-500 font-medium">{t.colRoas}</th>
+              <th className="px-4 py-2.5 text-right text-gray-500 font-medium hidden sm:table-cell">{t.colCtr}</th>
+              <th className="px-4 py-2.5 text-right text-gray-500 font-medium hidden sm:table-cell">{t.colCpa}</th>
+              <th className="px-4 py-2.5 text-right text-gray-500 font-medium hidden md:table-cell">{t.colGasto}</th>
+              <th className="px-4 py-2.5 text-right text-gray-500 font-medium hidden md:table-cell">{t.colConv}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-800/40">

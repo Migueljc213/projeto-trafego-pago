@@ -1,60 +1,39 @@
-import type { Metadata } from 'next'
 import { Trash2, CheckCircle2, Clock, Mail } from 'lucide-react'
+import { getDictionary, getServerLanguage } from '@/lib/i18n/language'
 
-export const metadata: Metadata = {
-  title: 'Instruções de Exclusão de Dados | FunnelGuard AI',
-  description:
-    'Como solicitar a exclusão dos seus dados no FunnelGuard AI — exigência obrigatória da Meta para apps com Login do Facebook.',
+export async function generateMetadata() {
+  const dict = getDictionary(await getServerLanguage())
+  const t = dict.adminLoginLegal.dataDeletion
+  return {
+    title: t.metaTitle,
+    description: t.metaDescription,
+  }
 }
 
-export default function DataDeletionPage() {
+export default async function DataDeletionPage() {
+  const dict = getDictionary(await getServerLanguage())
+  const t = dict.adminLoginLegal.dataDeletion
+
   const steps = [
-    {
-      icon: Mail,
-      title: 'Envie a solicitação',
-      description: 'Envie um e-mail para privacidade@funnelguard.ai com o assunto "Exclusão de Dados" e o e-mail associado à sua conta FunnelGuard AI.',
-    },
-    {
-      icon: CheckCircle2,
-      title: 'Confirmação em 48h',
-      description: 'Nossa equipe confirmará o recebimento da solicitação dentro de 48 horas úteis e iniciará o processo de exclusão.',
-    },
-    {
-      icon: Clock,
-      title: 'Exclusão em até 30 dias',
-      description: 'Todos os seus dados pessoais serão permanentemente excluídos de nossos sistemas dentro de 30 dias corridos, conforme exigido pela LGPD.',
-    },
+    { icon: Mail, title: t.steps[0].title, description: t.steps[0].description },
+    { icon: CheckCircle2, title: t.steps[1].title, description: t.steps[1].description },
+    { icon: Clock, title: t.steps[2].title, description: t.steps[2].description },
   ]
 
-  const whatIsDeleted = [
-    'Sua conta de usuário e dados de perfil (nome, e-mail, foto)',
-    'Tokens de acesso à Meta Ads API (imediatamente revogados)',
-    'Histórico de campanhas e métricas de desempenho',
-    'Logs de decisões do Auto-Pilot',
-    'Dados de auditoria de landing pages',
-    'Histórico de preços de concorrentes',
-    'Criativos gerados pelo Lab de Criativos',
-    'Dados de assinatura (somente no FunnelGuard AI — o Stripe mantém registros conforme suas obrigações legais)',
-  ]
-
-  const whatIsRetained = [
-    'Registros de faturamento por até 5 anos (obrigação fiscal)',
-    'Logs de acesso anonimizados por até 6 meses (obrigação de segurança)',
-  ]
+  const whatIsDeleted = t.deletedItems
+  const whatIsRetained = t.retainedItems
 
   return (
     <article>
       {/* Header */}
       <div className="mb-10">
-        <p className="text-xs font-semibold text-red-400 uppercase tracking-wider mb-2">Exigência Meta Platform</p>
+        <p className="text-xs font-semibold text-red-400 uppercase tracking-wider mb-2">{t.badge}</p>
         <h1 className="text-3xl font-extrabold text-white mb-3 flex items-center gap-3">
           <Trash2 className="w-7 h-7 text-red-400" />
-          Instruções de Exclusão de Dados
+          {t.title}
         </h1>
         <p className="text-sm text-gray-400 max-w-2xl leading-relaxed">
-          Esta página atende à exigência obrigatória da Meta Platforms para aplicativos que utilizam
-          o Login com o Facebook. Ela descreve como você pode solicitar a exclusão completa dos seus
-          dados do FunnelGuard AI.
+          {t.intro}
         </p>
       </div>
 
@@ -64,12 +43,11 @@ export default function DataDeletionPage() {
           <span className="text-base">ℹ️</span>
         </div>
         <div>
-          <p className="text-sm font-semibold text-blue-300 mb-1">Nota sobre o Login com o Facebook</p>
+          <p className="text-sm font-semibold text-blue-300 mb-1">{t.metaNoteTitle}</p>
           <p className="text-sm text-gray-400 leading-relaxed">
-            Se você usou o "Entrar com o Facebook" para criar sua conta, revogar o acesso do aplicativo
-            nas configurações do Facebook (<strong className="text-gray-300">Facebook → Configurações → Aplicativos e Sites → FunnelGuard AI → Remover</strong>)
-            revogará imediatamente os tokens de acesso. Esta página trata da exclusão dos dados
-            armazenados em nossos servidores.
+            {t.metaNoteBefore}
+            <strong className="text-gray-300">{t.metaNoteBold}</strong>
+            {t.metaNoteAfter}
           </p>
         </div>
       </div>
@@ -77,7 +55,7 @@ export default function DataDeletionPage() {
       {/* Steps */}
       <div className="mb-10">
         <h2 className="text-base font-bold text-white mb-5 border-l-2 border-red-500 pl-3">
-          Como solicitar a exclusão
+          {t.stepsTitle}
         </h2>
         <div className="grid gap-4 md:grid-cols-3">
           {steps.map((step, i) => {
@@ -101,9 +79,9 @@ export default function DataDeletionPage() {
       {/* CTA Email */}
       <div className="p-5 rounded-xl border border-neon-cyan/25 bg-neon-cyan/5 mb-10 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p className="text-sm font-bold text-white">Solicitar exclusão agora</p>
+          <p className="text-sm font-bold text-white">{t.ctaTitle}</p>
           <p className="text-xs text-gray-400 mt-0.5">
-            Envie e-mail com o assunto: <span className="font-mono text-neon-cyan">"Exclusão de Dados — [seu e-mail]"</span>
+            {t.ctaBefore}<span className="font-mono text-neon-cyan">{t.ctaCode}</span>
           </p>
         </div>
         <a
@@ -119,7 +97,7 @@ export default function DataDeletionPage() {
       <div className="grid md:grid-cols-2 gap-6 mb-10">
         <div>
           <h2 className="text-base font-bold text-white mb-4 border-l-2 border-red-500 pl-3">
-            O que será excluído
+            {t.deletedTitle}
           </h2>
           <ul className="space-y-2">
             {whatIsDeleted.map((item) => (
@@ -132,7 +110,7 @@ export default function DataDeletionPage() {
         </div>
         <div>
           <h2 className="text-base font-bold text-white mb-4 border-l-2 border-yellow-500 pl-3">
-            O que pode ser retido (obrigação legal)
+            {t.retainedTitle}
           </h2>
           <ul className="space-y-2">
             {whatIsRetained.map((item) => (
@@ -143,7 +121,7 @@ export default function DataDeletionPage() {
             ))}
           </ul>
           <p className="text-xs text-gray-600 mt-4">
-            Após o prazo legal, esses dados também serão excluídos permanentemente.
+            {t.retainedNote}
           </p>
         </div>
       </div>
@@ -151,14 +129,14 @@ export default function DataDeletionPage() {
       {/* Confirmation URL para o Meta */}
       <div className="p-4 rounded-xl border border-gray-800 bg-white/2">
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-          URL de Confirmação (para o Meta App Review)
+          {t.confirmationTitle}
         </p>
         <p className="text-sm text-gray-400 leading-relaxed">
-          Esta página está disponível publicamente em:{' '}
+          {t.confirmationBefore}
           <code className="text-neon-cyan font-mono text-xs bg-neon-cyan/10 px-2 py-0.5 rounded">
             https://funnelguard.ai/data-deletion
           </code>
-          . Após o processamento da exclusão, o solicitante receberá um código de confirmação por e-mail.
+          {t.confirmationAfter}
         </p>
       </div>
     </article>

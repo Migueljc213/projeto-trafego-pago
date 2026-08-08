@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Search, Loader2, ExternalLink, Facebook, Instagram, Monitor } from 'lucide-react'
 import type { AdLibraryAd } from '@/lib/meta-api'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 const PLATFORM_ICON: Record<string, React.ReactNode> = {
   facebook: <Facebook className="w-3 h-3" />,
@@ -11,6 +12,8 @@ const PLATFORM_ICON: Record<string, React.ReactNode> = {
 }
 
 function AdCard({ ad }: { ad: AdLibraryAd }) {
+  const { dict } = useLanguage()
+  const t = dict.campaigns.adLibrarySearch
   const startDate = ad.deliveryStartTime
     ? new Date(ad.deliveryStartTime).toLocaleDateString('pt-BR')
     : null
@@ -30,7 +33,7 @@ function AdCard({ ad }: { ad: AdLibraryAd }) {
         <div className="flex-1 min-w-0">
           <p className="text-xs font-semibold text-white truncate">{ad.pageName}</p>
           {startDate && (
-            <p className="text-[10px] text-gray-600 mt-0.5">Ativo desde {startDate}</p>
+            <p className="text-[10px] text-gray-600 mt-0.5">{t.ativoDesde(startDate)}</p>
           )}
         </div>
         <div className="flex items-center gap-1 text-gray-500 flex-shrink-0">
@@ -60,12 +63,12 @@ function AdCard({ ad }: { ad: AdLibraryAd }) {
         <div className="flex flex-col gap-0.5">
           {impressionRange && (
             <span className="text-[10px] text-gray-500">
-              <span className="text-gray-400 font-medium">Impressões:</span> {impressionRange}
+              <span className="text-gray-400 font-medium">{t.impressoesLabel}</span> {impressionRange}
             </span>
           )}
           {spendRange && (
             <span className="text-[10px] text-gray-500">
-              <span className="text-gray-400 font-medium">Gasto:</span> {spendRange}
+              <span className="text-gray-400 font-medium">{t.gastoLabel}</span> {spendRange}
             </span>
           )}
         </div>
@@ -76,7 +79,7 @@ function AdCard({ ad }: { ad: AdLibraryAd }) {
             rel="noopener noreferrer"
             className="flex items-center gap-1 text-[10px] text-neon-purple hover:text-neon-purple/80 transition-colors flex-shrink-0"
           >
-            Ver anúncio <ExternalLink className="w-2.5 h-2.5" />
+            {t.verAnuncio} <ExternalLink className="w-2.5 h-2.5" />
           </a>
         )}
       </div>
@@ -85,6 +88,8 @@ function AdCard({ ad }: { ad: AdLibraryAd }) {
 }
 
 export default function AdLibrarySearch() {
+  const { dict } = useLanguage()
+  const t = dict.campaigns.adLibrarySearch
   const [query, setQuery] = useState('')
   const [ads, setAds] = useState<AdLibraryAd[]>([])
   const [loading, setLoading] = useState(false)
@@ -107,7 +112,7 @@ export default function AdLibrarySearch() {
         setAds(data.ads ?? [])
       }
     } catch {
-      setError('Erro de rede. Tente novamente.')
+      setError(t.erroRede)
     } finally {
       setLoading(false)
     }
@@ -118,10 +123,10 @@ export default function AdLibrarySearch() {
       <div className="px-5 py-4 border-b border-gray-800">
         <div className="flex items-center gap-2 mb-1">
           <Search className="w-4 h-4 text-neon-purple" />
-          <h3 className="text-sm font-semibold text-white">Meta Ad Library</h3>
+          <h3 className="text-sm font-semibold text-white">{t.tituloMetaAdLibrary}</h3>
         </div>
         <p className="text-xs text-gray-500">
-          Veja os anúncios ativos dos seus concorrentes no Brasil
+          {t.subtitulo}
         </p>
       </div>
 
@@ -133,7 +138,7 @@ export default function AdLibrarySearch() {
             value={query}
             onChange={e => setQuery(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') search() }}
-            placeholder="Ex: Hotmart, Kiwify, nome da marca…"
+            placeholder={t.inputPlaceholder}
             disabled={loading}
             className="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:border-neon-purple focus:outline-none transition-colors disabled:opacity-50"
           />
@@ -143,7 +148,7 @@ export default function AdLibrarySearch() {
             className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-neon-purple/20 border border-neon-purple/30 text-neon-purple text-xs font-medium hover:bg-neon-purple/30 transition-all disabled:opacity-40"
           >
             {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
-            Buscar
+            {t.buscar}
           </button>
         </div>
 
@@ -158,28 +163,28 @@ export default function AdLibrarySearch() {
         {loading && (
           <div className="flex items-center justify-center py-8 gap-2 text-gray-500 text-xs">
             <Loader2 className="w-4 h-4 animate-spin" />
-            Buscando na Meta Ad Library…
+            {t.buscandoNaMeta}
           </div>
         )}
 
         {/* Empty state */}
         {!loading && searched && !error && ads.length === 0 && (
           <p className="text-xs text-gray-500 text-center py-6">
-            Nenhum anúncio ativo encontrado no Brasil para este termo.
+            {t.nenhumAnuncio}
           </p>
         )}
 
         {/* Initial state */}
         {!searched && !loading && (
           <p className="text-xs text-gray-500 text-center py-4">
-            Pesquise pelo nome de uma marca ou concorrente para ver os anúncios que estão rodando agora.
+            {t.pesquiseMarca}
           </p>
         )}
 
         {/* Results grid */}
         {!loading && ads.length > 0 && (
           <>
-            <p className="text-xs text-gray-500">{ads.length} anúncio{ads.length !== 1 ? 's' : ''} encontrado{ads.length !== 1 ? 's' : ''}</p>
+            <p className="text-xs text-gray-500">{t.anunciosEncontrados(ads.length)}</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {ads.map(ad => (
                 <AdCard key={ad.id} ad={ad} />

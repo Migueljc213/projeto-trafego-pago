@@ -3,24 +3,13 @@
 import { useState } from 'react'
 import { Users, Loader2, Sparkles, ChevronRight, RefreshCw } from 'lucide-react'
 import type { AudienceSuggestion } from '@/app/api/ai/audience-suggestions/route'
-
-const PLACEMENT_LABEL: Record<string, string> = {
-  facebook_feed: 'Facebook Feed',
-  instagram_feed: 'Instagram Feed',
-  instagram_reels: 'Instagram Reels',
-  instagram_stories: 'Instagram Stories',
-  facebook_stories: 'Facebook Stories',
-  audience_network: 'Audience Network',
-  messenger_inbox: 'Messenger',
-}
-
-const GENDER_LABEL: Record<string, string> = {
-  all: 'Todos os gêneros',
-  male: 'Masculino',
-  female: 'Feminino',
-}
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 export default function AudienceSuggestions() {
+  const { dict } = useLanguage()
+  const t = dict.campaigns.audienceSuggestions
+  const PLACEMENT_LABEL = t.placementLabel
+  const GENDER_LABEL = t.genderLabel
   const [productDescription, setProductDescription] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -43,7 +32,7 @@ export default function AudienceSuggestions() {
         setResult(data.suggestion)
       }
     } catch {
-      setError('Erro de rede. Tente novamente.')
+      setError(t.erroRede)
     } finally {
       setLoading(false)
     }
@@ -54,10 +43,10 @@ export default function AudienceSuggestions() {
       <div className="px-5 py-4 border-b border-gray-800">
         <div className="flex items-center gap-2 mb-1">
           <Users className="w-4 h-4 text-neon-cyan" />
-          <h3 className="text-sm font-semibold text-white">Sugestão de Público via IA</h3>
+          <h3 className="text-sm font-semibold text-white">{t.tituloSugestaoPublico}</h3>
         </div>
         <p className="text-xs text-gray-500">
-          Analisa suas campanhas e sugere interesses, faixa etária, posicionamentos e públicos semente para LAL
+          {t.subtitulo}
         </p>
       </div>
 
@@ -65,12 +54,12 @@ export default function AudienceSuggestions() {
         {/* Optional product description */}
         <div>
           <label className="block text-xs text-gray-400 mb-1.5 font-medium">
-            Descrição do produto/serviço <span className="text-gray-600">(opcional — melhora a precisão)</span>
+            {t.descricaoProdutoLabel} <span className="text-gray-600">{t.opcionalHint}</span>
           </label>
           <textarea
             value={productDescription}
             onChange={e => setProductDescription(e.target.value)}
-            placeholder="Ex: Curso online de marketing digital para empreendedores iniciantes, foco em Instagram e Meta Ads, R$497"
+            placeholder={t.descricaoPlaceholder}
             rows={2}
             disabled={loading}
             className="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:border-neon-cyan focus:outline-none transition-colors resize-none disabled:opacity-50"
@@ -83,8 +72,8 @@ export default function AudienceSuggestions() {
           className="flex items-center gap-2 px-4 py-2 rounded-lg bg-neon-cyan/15 border border-neon-cyan/30 text-neon-cyan text-xs font-semibold hover:bg-neon-cyan/25 transition-all disabled:opacity-40"
         >
           {loading
-            ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Analisando campanhas…</>
-            : <><Sparkles className="w-3.5 h-3.5" /> {result ? 'Regenerar sugestões' : 'Gerar sugestões de público'}</>
+            ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> {t.analisandoCampanhas}</>
+            : <><Sparkles className="w-3.5 h-3.5" /> {result ? t.regenerarSugestoes : t.gerarSugestoes}</>
           }
         </button>
 
@@ -97,7 +86,7 @@ export default function AudienceSuggestions() {
             {/* Reasoning */}
             <div className="p-3 rounded-lg bg-neon-cyan/5 border border-neon-cyan/15">
               <p className="text-xs text-gray-300 leading-relaxed">
-                <span className="text-neon-cyan font-semibold">Análise da IA: </span>
+                <span className="text-neon-cyan font-semibold">{t.analiseIA}</span>
                 {result.reasoning}
               </p>
             </div>
@@ -106,7 +95,7 @@ export default function AudienceSuggestions() {
               {/* Interests */}
               <div>
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
-                  Interesses sugeridos ({result.interests?.length ?? 0})
+                  {t.interessesSugeridos(result.interests?.length ?? 0)}
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   {(result.interests ?? []).map(interest => (
@@ -123,16 +112,16 @@ export default function AudienceSuggestions() {
               {/* Demographics */}
               <div className="space-y-3">
                 <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Demográfico</p>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">{t.demografico}</p>
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-gray-500">Faixa etária</span>
+                      <span className="text-gray-500">{t.faixaEtariaLabel}</span>
                       <span className="text-white font-semibold font-mono">
-                        {result.ageRange?.min ?? 18}–{result.ageRange?.max ?? 65} anos
+                        {t.anosValor(result.ageRange?.min ?? 18, result.ageRange?.max ?? 65)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-gray-500">Gênero</span>
+                      <span className="text-gray-500">{t.generoLabel}</span>
                       <span className="text-white font-semibold">
                         {GENDER_LABEL[result.gender ?? 'all']}
                       </span>
@@ -142,7 +131,7 @@ export default function AudienceSuggestions() {
 
                 {/* Placements */}
                 <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Posicionamentos</p>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">{t.posicionamentos}</p>
                   <div className="flex flex-wrap gap-1.5">
                     {(result.placements ?? []).map(p => (
                       <span key={p} className="px-2 py-1 rounded-full text-[11px] bg-green-500/10 border border-green-500/20 text-green-400">
@@ -158,7 +147,7 @@ export default function AudienceSuggestions() {
             {result.lookalikes?.length > 0 && (
               <div>
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
-                  Públicos semente para LAL (Lookalike)
+                  {t.publicosSemente}
                 </p>
                 <div className="space-y-2">
                   {result.lookalikes.map((lal, i) => (
@@ -179,7 +168,7 @@ export default function AudienceSuggestions() {
               disabled={loading}
               className="flex items-center gap-1 text-[11px] text-gray-600 hover:text-gray-400 transition-colors"
             >
-              <RefreshCw className="w-3 h-3" /> Regenerar com dados atualizados
+              <RefreshCw className="w-3 h-3" /> {t.regenerarComDados}
             </button>
           </div>
         )}

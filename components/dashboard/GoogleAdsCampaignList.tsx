@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { TrendingUp, TrendingDown, RefreshCw, Loader2, Monitor, Search, ShoppingBag, Play, Video } from 'lucide-react'
 import { syncGoogleAdsAction } from '@/actions/sync-google-ads'
 import { useToast } from '@/lib/toast'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
+import type { Dictionary } from '@/lib/i18n/language'
 
 const CHANNEL_ICON: Record<string, React.ReactNode> = {
   SEARCH: <Search className="w-3 h-3" />,
@@ -12,14 +14,6 @@ const CHANNEL_ICON: Record<string, React.ReactNode> = {
   SHOPPING: <ShoppingBag className="w-3 h-3" />,
   VIDEO: <Video className="w-3 h-3" />,
   PERFORMANCE_MAX: <Play className="w-3 h-3" />,
-}
-
-const CHANNEL_LABEL: Record<string, string> = {
-  SEARCH: 'Search',
-  DISPLAY: 'Display',
-  SHOPPING: 'Shopping',
-  VIDEO: 'YouTube',
-  PERFORMANCE_MAX: 'Pmax',
 }
 
 interface Campaign {

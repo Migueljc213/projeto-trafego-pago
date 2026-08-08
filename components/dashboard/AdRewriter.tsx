@@ -114,7 +114,7 @@ export default function AdRewriter({ campaignId, campaignName, roas, minRoas, ct
         setResult(data.result)
       }
     } catch {
-      setError('Erro de rede. Tente novamente.')
+      setError(t.erroRede)
     } finally {
       setLoading(false)
     }
@@ -132,10 +132,10 @@ export default function AdRewriter({ campaignId, campaignName, roas, minRoas, ct
       >
         <div className="flex items-center gap-2">
           <Wand2 className="w-3.5 h-3.5 text-neon-purple" />
-          <span className="text-xs font-medium text-gray-300">Reescrever Criativo com IA</span>
+          <span className="text-xs font-medium text-gray-300">{t.reescreverCriativo}</span>
           {hasIssue && (
             <span className="flex items-center gap-1 text-[10px] text-yellow-400">
-              <AlertTriangle className="w-3 h-3" /> Problema detectado
+              <AlertTriangle className="w-3 h-3" /> {t.problemaDetectado}
             </span>
           )}
         </div>
@@ -151,7 +151,7 @@ export default function AdRewriter({ campaignId, campaignName, roas, minRoas, ct
           {loading && (
             <div className="flex items-center justify-center py-6 gap-2 text-gray-500 text-xs">
               <Loader2 className="w-4 h-4 animate-spin text-neon-purple" />
-              Gerando variações de copy para "{campaignName}"…
+              {t.gerandoVariacoes(campaignName)}
             </div>
           )}
 
@@ -159,7 +159,7 @@ export default function AdRewriter({ campaignId, campaignName, roas, minRoas, ct
             <>
               <div className="p-2 rounded-lg bg-yellow-500/5 border border-yellow-500/20">
                 <p className="text-[11px] text-yellow-400">
-                  <span className="font-semibold">Problema: </span>{result.problem}
+                  <span className="font-semibold">{t.problemaLabel}</span>{result.problem}
                 </p>
               </div>
               <div className="space-y-3">
@@ -172,7 +172,7 @@ export default function AdRewriter({ campaignId, campaignName, roas, minRoas, ct
                 disabled={loading}
                 className="flex items-center gap-1 text-[11px] text-gray-600 hover:text-gray-400 transition-colors mt-1"
               >
-                <Wand2 className="w-3 h-3" /> Regenerar variações
+                <Wand2 className="w-3 h-3" /> {t.regenerarVariacoes}
               </button>
             </>
           )}
