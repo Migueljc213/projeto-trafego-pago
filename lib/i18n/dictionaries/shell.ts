@@ -21,11 +21,14 @@ export const pt = {
     signOut: 'Sair',
   },
   header: {
-    login: 'Entrar',
-    getStarted: 'Começar Agora',
-    navHow: 'Como Funciona',
-    navFeatures: 'Recursos',
-    navPricing: 'Preços',
+    nav: {
+      features: 'Funcionalidades',
+      comparison: 'Comparativo',
+      simulator: 'Simulador',
+      waitlist: 'Lista de Espera',
+    },
+    cta: 'Solicitar Acesso Antecipado',
+    toggleMenu: 'Abrir menu',
   },
   dashboardLayout: {
     title: 'Dashboard | FunnelGuard AI',
@@ -58,11 +61,14 @@ export const en = {
     signOut: 'Sign out',
   },
   header: {
-    login: 'Log in',
-    getStarted: 'Get Started',
-    navHow: 'How It Works',
-    navFeatures: 'Features',
-    navPricing: 'Pricing',
+    nav: {
+      features: 'Features',
+      comparison: 'Comparison',
+      simulator: 'Simulator',
+      waitlist: 'Waitlist',
+    },
+    cta: 'Request Early Access',
+    toggleMenu: 'Toggle menu',
   },
   dashboardLayout: {
     title: 'Dashboard | FunnelGuard AI',

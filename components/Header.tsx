@@ -3,17 +3,20 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, Zap } from "lucide-react";
-
-const navLinks = [
-  { label: "Funcionalidades", href: "#features" },
-  { label: "Comparativo", href: "#comparison" },
-  { label: "Simulador", href: "#simulator" },
-  { label: "Lista de Espera", href: "#waitlist" },
-];
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { useLanguage } from "@/lib/i18n/LanguageContext";
 
 export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { dict } = useLanguage();
+
+  const navLinks = [
+    { label: dict.header.nav.features, href: "#features" },
+    { label: dict.header.nav.comparison, href: "#comparison" },
+    { label: dict.header.nav.simulator, href: "#simulator" },
+    { label: dict.header.nav.waitlist, href: "#waitlist" },
+  ];
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -63,6 +66,7 @@ export default function Header() {
 
           {/* CTA Button */}
           <div className="hidden md:flex items-center gap-4">
+            <LanguageSwitcher />
             <motion.a
               href="#waitlist"
               whileHover={{ scale: 1.03 }}
@@ -72,7 +76,7 @@ export default function Header() {
               <span className="absolute inset-0 bg-gradient-to-r from-neon-cyan to-neon-purple opacity-90 group-hover:opacity-100 transition-opacity" />
               <span className="absolute inset-0 border border-neon-cyan/30 rounded-lg" />
               <Zap className="relative w-3.5 h-3.5" />
-              <span className="relative">Solicitar Acesso Antecipado</span>
+              <span className="relative">{dict.header.cta}</span>
             </motion.a>
           </div>
 
@@ -80,7 +84,7 @@ export default function Header() {
           <button
             className="md:hidden text-gray-400 hover:text-white transition-colors"
             onClick={() => setMobileOpen(!mobileOpen)}
-            aria-label="Toggle menu"
+            aria-label={dict.header.toggleMenu}
           >
             {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
@@ -108,12 +112,13 @@ export default function Header() {
                   {link.label}
                 </a>
               ))}
+              <LanguageSwitcher className="mt-3" />
               <a
                 href="#waitlist"
                 onClick={() => setMobileOpen(false)}
                 className="block mt-3 px-4 py-3 rounded-lg text-sm font-semibold text-center text-white bg-gradient-to-r from-neon-cyan to-neon-purple"
               >
-                Solicitar Acesso Antecipado
+                {dict.header.cta}
               </a>
             </div>
           </motion.div>

@@ -172,7 +172,7 @@ export default function Sidebar() {
             </div>
             <div className="min-w-0">
               <p className="text-xs font-medium text-gray-200 truncate">{userName}</p>
-              <p className="text-xs text-gray-500 truncate">Ver perfil</p>
+              <p className="text-xs text-gray-500 truncate">{dict.sidebar.viewProfile}</p>
             </div>
           </Link>
           <div className="ml-2 flex-shrink-0">
@@ -186,7 +186,7 @@ export default function Sidebar() {
             className="flex items-center gap-3 px-3 py-2.5 mb-1 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-400/10 transition-all duration-200 border border-transparent"
           >
             <ShieldAlert className="w-4 h-4 flex-shrink-0" />
-            <span className="text-sm font-medium">Super Admin</span>
+            <span className="text-sm font-medium">{dict.sidebar.superAdmin}</span>
           </Link>
         )}
         <button
@@ -194,7 +194,7 @@ export default function Sidebar() {
           className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-all duration-200 w-full group"
         >
           <LogOut className="w-4 h-4 group-hover:text-red-400 flex-shrink-0" />
-          <span className="text-sm font-medium">Sair</span>
+          <span className="text-sm font-medium">{dict.sidebar.signOut}</span>
         </button>
       </div>
     </div>
