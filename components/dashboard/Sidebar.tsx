@@ -22,69 +22,72 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import NotificationBell from '@/components/dashboard/NotificationBell'
-
-const navItems = [
-  {
-    href: '/dashboard',
-    label: 'Visao Geral',
-    icon: LayoutDashboard,
-  },
-  {
-    href: '/dashboard/campanhas',
-    label: 'Campanhas IA',
-    icon: Megaphone,
-  },
-  {
-    href: '/dashboard/diagnostico',
-    label: 'Centro de Diagnostico',
-    icon: ScanSearch,
-    badge: 'NOVO',
-  },
-  {
-    href: '/dashboard/auditoria',
-    label: 'Auditoria de Funil',
-    icon: GitBranch,
-  },
-  {
-    href: '/dashboard/precos',
-    label: 'Monitor de Precos',
-    icon: TrendingUp,
-  },
-  {
-    href: '/dashboard/criar-campanha',
-    label: 'Nova Campanha',
-    icon: Megaphone,
-    badge: 'NEW',
-  },
-  {
-    href: '/dashboard/laboratorio',
-    label: 'Lab de Criativos',
-    icon: FlaskConical,
-    badge: 'IA',
-  },
-  {
-    href: '/dashboard/planos',
-    label: 'Planos',
-    icon: CreditCard,
-  },
-  {
-    href: '/dashboard/configuracoes',
-    label: 'Configuracoes',
-    icon: Settings,
-  },
-  {
-    href: '/dashboard/suporte',
-    label: 'Suporte White Glove',
-    icon: Headphones,
-  },
-];
+import LanguageSwitcher from '@/components/LanguageSwitcher'
+import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 export default function Sidebar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const { data: session } = useSession();
-  const userName = session?.user?.name ?? 'Usuário';
+  const { dict } = useLanguage();
+  const userName = session?.user?.name ?? dict.sidebar.defaultUserName;
   const userInitial = userName.charAt(0).toUpperCase();
+
+  const navItems = [
+    {
+      href: '/dashboard',
+      label: dict.sidebar.nav.overview,
+      icon: LayoutDashboard,
+    },
+    {
+      href: '/dashboard/campanhas',
+      label: dict.sidebar.nav.campaigns,
+      icon: Megaphone,
+    },
+    {
+      href: '/dashboard/diagnostico',
+      label: dict.sidebar.nav.diagnostics,
+      icon: ScanSearch,
+      badge: dict.sidebar.badgeNew,
+    },
+    {
+      href: '/dashboard/auditoria',
+      label: dict.sidebar.nav.funnelAudit,
+      icon: GitBranch,
+    },
+    {
+      href: '/dashboard/precos',
+      label: dict.sidebar.nav.priceMonitor,
+      icon: TrendingUp,
+    },
+    {
+      href: '/dashboard/criar-campanha',
+      label: dict.sidebar.nav.newCampaign,
+      icon: Megaphone,
+      badge: 'NEW',
+    },
+    {
+      href: '/dashboard/laboratorio',
+      label: dict.sidebar.nav.creativeLab,
+      icon: FlaskConical,
+      badge: 'IA',
+    },
+    {
+      href: '/dashboard/planos',
+      label: dict.sidebar.nav.plans,
+      icon: CreditCard,
+    },
+    {
+      href: '/dashboard/configuracoes',
+      label: dict.sidebar.nav.settings,
+      icon: Settings,
+    },
+    {
+      href: '/dashboard/suporte',
+      label: dict.sidebar.nav.support,
+      icon: Headphones,
+    },
+  ];
 
   const isAdmin = session?.user?.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL
 
@@ -116,9 +119,11 @@ export default function Sidebar() {
             <span className="w-2 h-2 rounded-full bg-neon-cyan block absolute animate-ping opacity-75"></span>
           </div>
           <Zap className="w-3 h-3 text-neon-cyan" />
-          <span className="text-neon-cyan text-xs font-semibold">IA Ativa</span>
+          <span className="text-neon-cyan text-xs font-semibold">{dict.sidebar.aiActive}</span>
           <span className="ml-auto text-neon-cyan/60 text-xs font-mono">24/7</span>
         </div>
+
+        <LanguageSwitcher className="mt-4 w-full justify-center" />
       </div>
 
       {/* Nav Items */}

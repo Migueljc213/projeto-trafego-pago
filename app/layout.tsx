@@ -3,6 +3,7 @@ import "./globals.css";
 import Providers from "@/components/Providers";
 import { Suspense } from "react";
 import MetaPixel from "@/components/MetaPixel";
+import { getServerLanguage } from "@/lib/i18n/language";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://funnelguard.ai"),
@@ -67,13 +68,15 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const language = await getServerLanguage();
+
   return (
-    <html lang="en" className="dark">
+    <html lang={language} className="dark">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
@@ -86,7 +89,7 @@ export default function RootLayout({
         <Suspense fallback={null}>
           <MetaPixel />
         </Suspense>
-        <Providers>{children}</Providers>
+        <Providers initialLanguage={language}>{children}</Providers>
       </body>
     </html>
   );
