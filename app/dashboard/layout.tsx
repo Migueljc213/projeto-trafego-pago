@@ -8,10 +8,14 @@ import OnboardingProgressBar from '@/components/dashboard/OnboardingProgressBar'
 import OnboardingWizard from '@/components/dashboard/OnboardingWizard'
 import { getOnboardingStatusAction } from '@/actions/onboarding'
 import { ToastProvider } from '@/lib/toast'
+import { getDictionary, getServerLanguage } from '@/lib/i18n/language'
 
-export const metadata = {
-  title: 'Dashboard | FunnelGuard AI',
-  description: 'Gerencie suas campanhas, funil e concorrentes com IA',
+export async function generateMetadata() {
+  const dict = getDictionary(await getServerLanguage())
+  return {
+    title: dict.dashboardLayout.title,
+    description: dict.dashboardLayout.description,
+  }
 }
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {

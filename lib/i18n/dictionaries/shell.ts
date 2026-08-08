@@ -37,7 +37,7 @@ export const pt = {
   languageSwitcher: {
     label: 'Idioma',
   },
-} as const
+}
 
 export const en = {
   sidebar: {

@@ -38,7 +38,7 @@ export const pt = {
     required: 'Obrigatório',
     optional: 'Opcional',
   },
-} as const
+}
 
 export const en = {
   languageName: 'English',
