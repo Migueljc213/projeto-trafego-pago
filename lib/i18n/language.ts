@@ -1,5 +1,3 @@
-// Núcleo do sistema de idiomas — sem 'use client', pode ser importado em Server Components.
-import { cookies } from 'next/headers'
 import { dictionaries } from './dictionaries'
 
 export type Language = 'pt' | 'en'
@@ -17,8 +15,9 @@ export function parseLanguage(value: string | undefined | null): Language {
   return value === 'en' ? 'en' : DEFAULT_LANGUAGE
 }
 
-// Uso em Server Components / layouts para renderizar texto já no idioma correto.
+// Only callable in Server Components — cookies() is a server-only API.
 export async function getServerLanguage(): Promise<Language> {
+  const { cookies } = await import('next/headers')
   const store = await cookies()
   return parseLanguage(store.get(LANGUAGE_COOKIE)?.value)
 }
