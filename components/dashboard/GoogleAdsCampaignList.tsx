@@ -39,8 +39,9 @@ function StatusDot({ status }: { status: string }) {
   return <span className="w-1.5 h-1.5 rounded-full bg-red-400 inline-block" />
 }
 
-function CampaignRow({ campaign }: { campaign: Campaign }) {
+function CampaignRow({ campaign, t }: { campaign: Campaign; t: Dictionary['campaigns']['googleAdsCampaignList'] }) {
   const isGood = campaign.roas >= 2
+  const CHANNEL_LABEL = t.channelLabel
   return (
     <div className="flex flex-wrap items-center gap-3 px-5 py-3 border-b border-gray-800/50 last:border-0 hover:bg-white/2 transition-colors">
       <StatusDot status={campaign.status} />
@@ -58,15 +59,15 @@ function CampaignRow({ campaign }: { campaign: Campaign }) {
 
       <div className="flex flex-wrap items-center gap-4 text-right">
         <div>
-          <p className="text-[10px] text-gray-500">Orçamento/dia</p>
+          <p className="text-[10px] text-gray-500">{t.orcamentoDia}</p>
           <p className="text-xs font-semibold font-mono text-gray-300">R$ {campaign.dailyBudget.toFixed(0)}</p>
         </div>
         <div>
-          <p className="text-[10px] text-gray-500">Gasto</p>
+          <p className="text-[10px] text-gray-500">{t.gastoLabel}</p>
           <p className="text-xs font-semibold font-mono text-gray-300">R$ {campaign.spend.toFixed(0)}</p>
         </div>
         <div>
-          <p className="text-[10px] text-gray-500">ROAS</p>
+          <p className="text-[10px] text-gray-500">{t.roasLabel}</p>
           <div className="flex items-center gap-1 justify-end">
             {isGood
               ? <TrendingUp className="w-3 h-3 text-green-400" />
@@ -78,11 +79,11 @@ function CampaignRow({ campaign }: { campaign: Campaign }) {
           </div>
         </div>
         <div>
-          <p className="text-[10px] text-gray-500">CTR</p>
+          <p className="text-[10px] text-gray-500">{t.ctrLabel}</p>
           <p className="text-xs font-semibold font-mono text-gray-300">{campaign.ctr.toFixed(2)}%</p>
         </div>
         <div>
-          <p className="text-[10px] text-gray-500">Conv.</p>
+          <p className="text-[10px] text-gray-500">{t.convLabel}</p>
           <p className="text-xs font-semibold font-mono text-gray-300">{campaign.conversions.toFixed(0)}</p>
         </div>
       </div>
@@ -95,22 +96,27 @@ interface Props {
 }
 
 export default function GoogleAdsCampaignList({ campaigns }: Props) {
+  const { dict } = useLanguage()
+  const t = dict.campaigns.googleAdsCampaignList
   const { toast } = useToast()
   const router = useRouter()
   const [syncing, startSync] = useTransition()
   const [syncMsg, setSyncMsg] = useState<string | null>(null)
+  const [syncIsError, setSyncIsError] = useState(false)
 
   function handleSync() {
     setSyncMsg(null)
     startSync(async () => {
       const result = await syncGoogleAdsAction()
       if (result.success && result.data) {
-        setSyncMsg(`Sincronizado: ${result.data.accounts} conta(s), ${result.data.campaigns} campanhas`)
-        toast({ type: 'success', title: 'Google Ads sincronizado', description: `${result.data.campaigns} campanhas atualizadas` })
+        setSyncIsError(false)
+        setSyncMsg(t.syncMsgSuccess(result.data.accounts, result.data.campaigns))
+        toast({ type: 'success', title: t.syncSuccessTitulo, description: t.syncSuccessDesc(result.data.campaigns) })
         router.refresh()
       } else {
-        setSyncMsg(result.error ?? 'Erro ao sincronizar')
-        toast({ type: 'error', title: 'Erro ao sincronizar Google Ads', description: result.error })
+        setSyncIsError(true)
+        setSyncMsg(result.error ?? t.syncMsgError)
+        toast({ type: 'error', title: t.syncErrorTitulo, description: result.error })
       }
     })
   }
@@ -119,9 +125,9 @@ export default function GoogleAdsCampaignList({ campaigns }: Props) {
     <div className="glass-card rounded-xl border border-gray-800 overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-gray-800">
         <div>
-          <h3 className="text-base font-semibold text-white">Campanhas Google Ads</h3>
+          <h3 className="text-base font-semibold text-white">{t.campanhasGoogleAds}</h3>
           <p className="text-xs text-gray-500 mt-0.5">
-            {campaigns.filter(c => c.status === 'ENABLED').length} ativas &bull; {campaigns.length} total
+            {campaigns.filter(c => c.status === 'ENABLED').length} {t.ativasSufixo} &bull; {campaigns.length} {t.totalSufixo}
           </p>
         </div>
         <button
@@ -130,13 +136,13 @@ export default function GoogleAdsCampaignList({ campaigns }: Props) {
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-700 text-xs text-gray-400 hover:text-white hover:border-gray-500 transition-all disabled:opacity-50"
         >
           {syncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-          Sincronizar
+          {t.sincronizar}
         </button>
       </div>
 
       {syncMsg && (
         <div className={`mx-5 mt-3 px-3 py-2 rounded-lg text-xs border ${
-          syncMsg.startsWith('Erro') || syncMsg.startsWith('invalid') || syncMsg.startsWith('Google')
+          syncIsError
             ? 'bg-red-500/10 border-red-500/30 text-red-400'
             : 'bg-green-500/10 border-green-500/30 text-green-400'
         }`}>
@@ -146,12 +152,12 @@ export default function GoogleAdsCampaignList({ campaigns }: Props) {
 
       {campaigns.length === 0 ? (
         <div className="p-8 text-center space-y-2">
-          <p className="text-sm text-gray-500">Nenhuma campanha encontrada.</p>
-          <p className="text-xs text-gray-600">Clique em "Sincronizar" para buscar campanhas do Google Ads.</p>
+          <p className="text-sm text-gray-500">{t.nenhumaCampanhaEncontrada}</p>
+          <p className="text-xs text-gray-600">{t.cliqueSincronizar}</p>
         </div>
       ) : (
         <div>
-          {campaigns.map(c => <CampaignRow key={c.id} campaign={c} />)}
+          {campaigns.map(c => <CampaignRow key={c.id} campaign={c} t={t} />)}
         </div>
       )}
     </div>
