@@ -7,6 +7,7 @@ export type { Language, Dictionary } from './dictionary'
 
 // Uso em Server Components / layouts para renderizar texto já no idioma correto.
 export async function getServerLanguage(): Promise<Language> {
+  const { cookies } = await import('next/headers')
   const store = await cookies()
   return parseLanguage(store.get(LANGUAGE_COOKIE)?.value)
 }
