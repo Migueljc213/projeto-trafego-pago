@@ -1,21 +1,9 @@
-// Núcleo do sistema de idiomas — sem 'use client', pode ser importado em Server Components.
+// Núcleo server-only do sistema de idiomas — usa next/headers, só pode ser importado em Server Components.
 import { cookies } from 'next/headers'
-import { dictionaries } from './dictionaries'
+import { LANGUAGE_COOKIE, parseLanguage, type Language } from './dictionary'
 
-export type Language = 'pt' | 'en'
-
-export const LANGUAGE_COOKIE = 'fg_lang'
-export const DEFAULT_LANGUAGE: Language = 'pt'
-
-export type Dictionary = typeof dictionaries.pt
-
-export function getDictionary(language: Language): Dictionary {
-  return dictionaries[language]
-}
-
-export function parseLanguage(value: string | undefined | null): Language {
-  return value === 'en' ? 'en' : DEFAULT_LANGUAGE
-}
+export { LANGUAGE_COOKIE, DEFAULT_LANGUAGE, getDictionary, parseLanguage } from './dictionary'
+export type { Language, Dictionary } from './dictionary'
 
 // Uso em Server Components / layouts para renderizar texto já no idioma correto.
 export async function getServerLanguage(): Promise<Language> {

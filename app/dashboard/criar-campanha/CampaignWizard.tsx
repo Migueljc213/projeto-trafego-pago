@@ -708,7 +708,7 @@ export default function CampaignWizard({ pages }: Props) {
               {
                 title: wt.step4.publicoSectionTitulo,
                 items: [
-                  [wt.step4.labelFaixaEtaria, wt.step4.faixaEtariaValor(form.ageMin, form.ageMax)],
+                  [wt.step4.labelFaixaEtaria, wt.step4.faixaEtariaValor(form.ageMin ?? 18, form.ageMax ?? 65)],
                   [wt.step4.labelGenero, form.genders === 'all' ? wt.step2.generoTodos : form.genders === 'male' ? wt.step2.generoMasculino : wt.step2.generoFeminino],
                   [wt.step4.labelLocalizacao, 'Brasil (BR)'],
                   [wt.step4.labelOtimizacao, form.optimizationGoal ?? 'LINK_CLICKS'],

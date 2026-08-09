@@ -1,7 +1,7 @@
 'use client'
 
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react'
-import { LANGUAGE_COOKIE, type Language, type Dictionary, getDictionary } from './language'
+import { LANGUAGE_COOKIE, type Language, type Dictionary, getDictionary } from './dictionary'
 
 interface LanguageContextValue {
   language: Language
