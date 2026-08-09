@@ -5,8 +5,6 @@ import OpenAI from 'openai'
 import { NextResponse } from 'next/server'
 import { checkRateLimit } from '@/lib/rate-limit'
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-
 export interface AdVariant {
   angle: string
   headline: string
@@ -22,6 +20,7 @@ export interface RewriteAdResult {
 }
 
 export async function POST(request: Request) {
+  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })

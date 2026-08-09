@@ -5,8 +5,6 @@ import OpenAI from 'openai'
 import { NextResponse } from 'next/server'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
-
 const MAX_MESSAGE_LENGTH = 1000
 const MAX_HISTORY_ITEMS = 8
 
@@ -16,6 +14,7 @@ const MAX_HISTORY_ITEMS = 8
  * Responde perguntas sobre as campanhas do usuário usando GPT-4o-mini.
  */
 export async function POST(request: Request) {
+  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
